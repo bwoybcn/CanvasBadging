@@ -20,3 +20,4 @@ dist/
 .idea/
 .vscode/
 *.tsbuildinfo
+backend/var/

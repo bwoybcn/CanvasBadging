@@ -12,6 +12,7 @@ x-backend-env: &backend-env
   OC_SIGNER_URL: http://signer:8790
   OC_PUBLIC_BASE_URL: ${OC_PUBLIC_BASE_URL:-http://localhost:8000}
   OC_LOG_JSON: ${OC_LOG_JSON:-true}
+  OC_STORAGE_DIR: /var/lib/opencredential/assets
 
 services:
   postgres:
@@ -57,6 +58,8 @@ services:
   api:
     image: opencredential-api:dev
     environment: *backend-env
+    volumes:
+      - assets:/var/lib/opencredential/assets
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -66,6 +69,8 @@ services:
     image: opencredential-api:dev
     environment: *backend-env
     command: ["oc", "worker"]
+    volumes:
+      - assets:/var/lib/opencredential/assets
     healthcheck:
       disable: true # the image's check probes the api port
     depends_on:
@@ -83,4 +88,5 @@ services:
 
 volumes:
   pgdata:
+  assets:
   caddydata:

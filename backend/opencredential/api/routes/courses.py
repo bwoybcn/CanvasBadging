@@ -1,0 +1,172 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""``/api/v1/courses``: course pickers, Canvas refresh and progress (spec §4.4, §8.2, §13)."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from fastapi import APIRouter
+from pydantic import BaseModel
+from sqlalchemy import select
+
+from opencredential import audit
+from opencredential.api.deps import ActorDep, RequestIdDep, SettingsDep, TenantDb
+from opencredential.authz import policy as authz
+from opencredential.db.models import Course, LmsAssignment, LmsModule, SyncRun
+from opencredential.eligibility import progress
+from opencredential.errors import NotFound, RateLimited
+from opencredential.jobs import enqueue
+from opencredential.sync import sync_state
+
+router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
+
+
+class CourseOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    course_code: str | None
+    status: str
+    roles: list[str]
+
+
+def _course(
+    db: TenantDb, actor: authz.Actor, course_id: uuid.UUID, *, staff: bool = True
+) -> Course:
+    course = db.get(Course, course_id)
+    if course is None:
+        raise NotFound("NOT_FOUND", "No such course.")
+    if staff:
+        if not authz.is_course_staff(db, actor, course):
+            raise NotFound("NOT_FOUND", "No such course.")
+    elif not (authz.is_course_staff(db, actor, course) or authz.is_student_in(actor, course.id)):
+        raise NotFound("NOT_FOUND", "No such course.")
+    return course
+
+
+@router.get("", response_model=list[CourseOut])
+def my_courses(db: TenantDb, actor: ActorDep) -> list[CourseOut]:
+    ids = actor.course_ids({"student", "lecturer", "course_admin"})
+    q = select(Course)
+    if not actor.is_inst_admin and not actor.has("dept_admin"):
+        q = q.where(Course.id.in_(ids))
+    out = []
+    for c in db.scalars(q.order_by(Course.title)):
+        roles = sorted(actor.course_roles(c.id))
+        if not roles and authz.is_course_staff(db, actor, c):
+            roles = ["admin"]
+        if roles:
+            out.append(
+                CourseOut(
+                    id=c.id, title=c.title, course_code=c.course_code, status=c.status, roles=roles
+                )
+            )
+    return out
+
+
+@router.get("/{course_id}/issuers")
+def course_issuers(course_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
+    course = _course(db, actor, course_id)
+    return [
+        {"id": str(i.id), "name": i.name, "did": i.did}
+        for i in authz.usable_issuers(db, actor, course)
+    ]
+
+
+@router.get("/{course_id}/canvas/modules")
+def course_modules(course_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
+    course = _course(db, actor, course_id)
+    rows = db.scalars(
+        select(LmsModule)
+        .where(LmsModule.course_id == course.id, LmsModule.workflow_state != "deleted")
+        .order_by(LmsModule.canvas_module_id)
+    )
+    return {
+        "items": [
+            {
+                "id": m.canvas_module_id,
+                "name": m.name,
+                "published": m.workflow_state == "active",
+                "has_requirements": m.has_requirements,
+                "requirement_type": m.requirement_type,
+                "usable": m.has_requirements,
+            }
+            for m in rows
+        ],
+        "sync": sync_state(db, course.id),
+    }
+
+
+@router.get("/{course_id}/canvas/assignments")
+def course_assignments(course_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
+    course = _course(db, actor, course_id)
+    rows = db.scalars(
+        select(LmsAssignment)
+        .where(LmsAssignment.course_id == course.id, LmsAssignment.deleted.is_(False))
+        .order_by(LmsAssignment.name)
+    )
+    return {
+        "items": [
+            {
+                "id": a.canvas_assignment_id,
+                "name": a.name,
+                "points_possible": a.points_possible,
+                "published": a.published,
+                "score_rules_allowed": bool(a.points_possible),
+            }
+            for a in rows
+        ],
+        "sync": sync_state(db, course.id),
+    }
+
+
+@router.get("/{course_id}/sync")
+def get_sync(course_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
+    course = _course(db, actor, course_id, staff=False)
+    return sync_state(db, course.id)
+
+
+@router.post("/{course_id}/sync", status_code=202)
+def request_sync(
+    course_id: uuid.UUID, db: TenantDb, actor: ActorDep, settings: SettingsDep, rid: RequestIdDep
+) -> dict[str, Any]:
+    """On-demand refresh from Canvas (rate-limited per course, spec §4.4)."""
+    course = _course(db, actor, course_id, staff=False)
+    recent = db.scalar(
+        select(SyncRun.started_at)
+        .where(SyncRun.course_id == course.id, SyncRun.kind == "on_demand")
+        .order_by(SyncRun.started_at.desc())
+        .limit(1)
+    )
+    window = timedelta(seconds=settings.sync_min_interval_seconds)
+    if recent is not None and datetime.now(UTC) - recent < window:
+        raise RateLimited(
+            "SYNC_RATE_LIMITED", "This course was refreshed recently. Try again in a few minutes."
+        )
+    job = enqueue.defer(
+        db,
+        enqueue.SYNC_COURSE,
+        queue="sync",
+        institution_id=actor.institution_id,
+        args={"course_id": str(course.id), "kind": "on_demand"},
+        subject_type="course",
+        subject_id=course.id,
+        queueing_lock=f"sync:{course.id}",
+    )
+    audit.record(
+        db,
+        action="course.sync_requested",
+        resource_type="course",
+        resource_id=course.id,
+        institution_id=actor.institution_id,
+        actor_user_id=actor.user_id,
+        request_id=rid,
+    )
+    return {"queued": job is not None, "job_id": job}
+
+
+@router.get("/{course_id}/progress")
+def course_progress(course_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
+    course = _course(db, actor, course_id)
+    return progress.course_progress(db, course)

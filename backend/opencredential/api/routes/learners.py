@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -11,7 +12,9 @@ from sqlalchemy import select
 
 from opencredential.api.deps import ClaimsDep, TenantDb
 from opencredential.api.errors import ApiError
+from opencredential.authz import policy
 from opencredential.db.models import Course, Institution, Membership, User
+from opencredential.eligibility import progress
 
 router = APIRouter(prefix="/api/v1/learners", tags=["learners"])
 
@@ -78,3 +81,14 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
         memberships=memberships,
         session_method=claims.method,
     )
+
+
+@router.get("/me/achievements")
+def my_achievements(claims: ClaimsDep, db: TenantDb) -> list[dict[str, Any]]:
+    """Badges available in my courses with per-requirement progress (spec §8.1-8.2).
+
+    Computed from the latest synced Canvas data without recording anything. ``confirmed`` marks
+    requirements the data confirms; pending ones say what they are waiting for.
+    """
+    actor = policy.load_actor(db, claims.user_id, claims.institution_id)
+    return progress.learner_achievements(db, actor.user_id, actor.course_ids({"student"}))

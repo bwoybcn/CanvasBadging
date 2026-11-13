@@ -10,7 +10,7 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from opencredential.api.errors import ApiError
-from opencredential.authz import sessions
+from opencredential.authz import policy, sessions
 from opencredential.db.session import tenant_session
 from opencredential.settings import Settings, get_settings
 
@@ -38,3 +38,18 @@ def tenant_db(claims: ClaimsDep) -> Iterator[Session]:
 
 
 TenantDb = Annotated[Session, Depends(tenant_db)]
+
+
+def current_actor(claims: ClaimsDep, db: TenantDb) -> policy.Actor:
+    """The caller with roles freshly read from ``memberships`` (ADR-0013)."""
+    return policy.load_actor(db, claims.user_id, claims.institution_id)
+
+
+ActorDep = Annotated[policy.Actor, Depends(current_actor)]
+
+
+def request_id(request: Request) -> str | None:
+    return getattr(request.state, "request_id", None)
+
+
+RequestIdDep = Annotated[str | None, Depends(request_id)]
