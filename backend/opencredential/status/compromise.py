@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Key-compromise response (spec §15.5, docs/security/key-compromise.md, steps 2-6).
 
-Runs in one transaction: replacement key activated, compromised key revoked and removed from the
-DID document, its private material destroyed, every credential it signed revoked with reason
-``key_compromise``, and every status list of the issuer re-signed with the replacement key.
+Runs in one transaction; the signer is told to destroy the key only once it commits. A
+replacement key is activated when the compromised key was the active one; the compromised key is
+revoked and removed from the DID document and its private material destroyed; every credential
+it signed is revoked with reason ``key_compromise``; and every status list of the issuer is
+re-signed with the issuer's current key.
 Notifying holders and reissuing are separate, deliberate steps (see the runbook).
 """
 
@@ -57,7 +59,10 @@ def respond_to_compromise(
     # Every list of this issuer was signed by some key; re-sign them all with the new key.
     lists |= set(db.scalars(select(StatusList.id).where(StatusList.issuer_id == key.issuer_id)))
     republished = 0
-    if result.replacement_key_id is not None:
+    # Re-sign whenever the issuer still has a signing key: the replacement made just now, or
+    # the current key when the compromised one had already been rotated out (lists it signed
+    # would otherwise fail verification and the new revocations would stay unpublished).
+    if key_service.active_key(db, key.issuer_id) is not None:
         for list_id in lists:
             status_service.publish(db, list_id, signer, settings)
             republished += 1

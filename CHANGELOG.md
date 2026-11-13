@@ -6,6 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+- Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):
+  - The signer checks its shared secret on the route it matched, so percent-encoded or
+    absolute-form paths (`/%761/sign`) no longer skip authentication (S1).
+  - The public verifier only fetches DID documents and status lists from public internet
+    addresses, re-checks HTTPS on every redirect and no longer reports connection error detail (S2).
+  - A credential waiting for its signature is never signed once its award has been rejected or
+    the learner erased; erasure cancels such rows (C1).
+  - Courses that are not switched on are never read from Canvas, so a student's refresh cannot
+    evaluate or award there (C2).
+  - Compromising a key that was already rotated out re-signs the issuer's status lists with the
+    current key (C3).
+  - The signer retires or destroys a key only after the database change commits, with a queued
+    job as the durable retry (C4).
+
 ### Added
 - Release hardening (W8, spec Phase 8): course activation ("Switch on micro-credentials for this
   course", with an initial Canvas read and an institution policy for first launch); course award

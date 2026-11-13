@@ -123,6 +123,37 @@ def test_only_active_courses_join_scheduled_reconciliation(client: TestClient, o
     assert _sync_jobs(owner_conn, w.course_id) == []
 
 
+def test_inactive_course_is_never_read_from_canvas(client: TestClient, owner_conn) -> None:  # type: ignore[no-untyped-def]
+    """Review finding C2: a student's on-demand refresh, or a sync job queued before the course
+    was switched off, must not read Canvas and so cannot evaluate or award."""
+    w = build_world(client)
+    _manual_badge(w, _authorised_issuer(w))
+    _set_status(w, "inactive")
+    _clear_sync_jobs(owner_conn, w.course_id)
+
+    r = w.post("s1", f"/api/v1/courses/{w.course_id}/sync")
+    assert r.status_code == 409 and r.json()["code"] == "COURSE_NOT_ACTIVE"
+    assert _sync_jobs(owner_conn, w.course_id) == []
+
+    out = tasks.sync_course_task(str(w.iid), str(w.course_id), kind="on_demand")
+    assert out == {"status": "course_inactive"}
+    with tenant_session(w.iid) as db:
+        runs = db.scalars(select(m.SyncRun).where(m.SyncRun.course_id == w.course_id)).all()
+    assert all(run.kind != "on_demand" for run in runs)
+    jobs = owner_conn.execute(
+        "SELECT count(*) FROM jobs.procrastinate_jobs"
+        " WHERE task_name = 'oc:evaluate_course' AND args->>'course_id' = %s"
+        " AND status = 'todo'",
+        [str(w.course_id)],
+    ).fetchone()
+    assert jobs is not None and jobs[0] == 0
+
+    # once switched on, a student can ask for a refresh again
+    assert w.post("lecturer", f"/api/v1/courses/{w.course_id}/activate").status_code == 200
+    _clear_sync_jobs(owner_conn, w.course_id)
+    assert w.post("s1", f"/api/v1/courses/{w.course_id}/sync").status_code == 202
+
+
 def test_archived_course_cannot_be_switched_on(client: TestClient) -> None:
     w = build_world(client)
     _set_status(w, "archived")

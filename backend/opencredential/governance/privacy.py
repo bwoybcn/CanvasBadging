@@ -172,6 +172,15 @@ def erase(
         d.status = "rejected"
         d.rejection_reason = ERASED_REASON
     counts["awards_cancelled"] = len(pending)
+    # A credential row may already be waiting for its signature (signer outage): abandon it so
+    # neither the issuing job nor reconciliation can sign it after the erasure.
+    counts["unsigned_credentials_cancelled"] = _n(
+        db.execute(
+            update(Credential)
+            .where(Credential.user_id == user_id, Credential.status == "pending_signature")
+            .values(status="failed", last_error="award cancelled: personal data erased")
+        )
+    )
 
     referenced = select(AwardDecision.evaluation_id).where(AwardDecision.evaluation_id.is_not(None))
     counts["evaluations_deleted"] = _n(

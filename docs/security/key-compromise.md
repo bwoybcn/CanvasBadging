@@ -66,11 +66,14 @@ One transaction then does all of the following:
   `verificationMethod` and `assertionMethod`. From then on, a verifier that re-resolves the DID
   rejects **every** credential signed by that key, genuine or forged. Our verifier reports these
   as *invalid* ("verification method not published by the issuer").
-- **(c)** It tells the signer to **destroy** the private key material.
+- **(c)** It tells the signer to **destroy** the private key material. This happens as soon as
+  the transaction commits (never before, so a failed response leaves the signer and the database
+  in step), and a queued `signer_key_lifecycle` job retries it if the signer is unreachable.
 - **(d)** It revokes every credential the key signed in the status list, with reason code
   `key_compromise`, and records a status event and an audit event for each one.
-- **(e)** It re-signs and republishes **all** of the issuer's status lists with the replacement
-  key, so that list credentials signed by the compromised key stop being needed.
+- **(e)** It re-signs and republishes **all** of the issuer's status lists with the issuer's
+  current key (the replacement, or the existing active key when the compromised key had already
+  been rotated out), so that list credentials signed by the compromised key stop being needed.
 
 The response gives you `revoked_key_id`, `replacement_key_id`, `credentials_revoked` and
 `status_lists_republished`. Record these in the incident log.

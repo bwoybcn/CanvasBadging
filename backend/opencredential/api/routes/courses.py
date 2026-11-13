@@ -133,6 +133,12 @@ def request_sync(
 ) -> dict[str, Any]:
     """On-demand refresh from Canvas (rate-limited per course, spec §4.4)."""
     course = _course(db, actor, course_id, staff=False)
+    if course.status != "active":
+        # Inactive courses take no part (spec §4.1): reading Canvas would evaluate and award.
+        raise Conflict(
+            "COURSE_NOT_ACTIVE",
+            "Micro-credentials are switched off for this course, so it is not read from Canvas.",
+        )
     recent = db.scalar(
         select(SyncRun.started_at)
         .where(SyncRun.course_id == course.id, SyncRun.kind == "on_demand")
