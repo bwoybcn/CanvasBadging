@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.oneedtech.inspect.core.Inspector.Behavior;
+import org.oneedtech.inspect.core.probe.Outcome;
 import org.oneedtech.inspect.core.report.Report;
 import org.oneedtech.inspect.test.PrintHelper;
 import org.oneedtech.inspect.util.resource.ResourceType;
@@ -63,7 +64,14 @@ public class OpenCredentialConformanceTest {
     assertFalse(active.isEmpty(), "no active credentials supplied");
     for (Path f : active) {
       Result r = inspect(f);
-      assertTrue(r.report().asBoolean(), f + " should pass the 1EdTech OB 3.0 inspector");
+      // WARNING is accepted only for the demo issuer's homepage, which is not a real site.
+      Outcome outcome = r.report().getOutcome();
+      assertTrue(
+          outcome == Outcome.VALID
+              || (outcome == Outcome.WARNING
+                  && r.printed().split("WARNING:", -1).length == 2
+                  && r.printed().contains("in issuer is not accessible")),
+          f + " should pass the 1EdTech OB 3.0 inspector, got " + outcome);
       assertTrue(r.printed().contains("Credential is not revoked."), f + ": status not checked");
     }
   }

@@ -16,7 +16,7 @@ verifiers** (`.github/workflows/ci.yml`, job `conformance`) on every pull reques
 | Verifier | Maintainer | What it checks | Expectation |
 |---|---|---|---|
 | `@digitalcredentials/verifier-core` 1.0.0-beta.11 (`dcc/verify.mjs`), the engine behind VerifierPlus and Learner Credential Wallet | Digital Credentials Consortium | eddsa-rdfc-2022 proof, `did:key` resolution, validity period, Bitstring Status List, and the credential's own `credentialSchema` (fetched from `purl.imsglobal.org`) | active credentials: signature valid, unexpired, not revoked, schema valid. Revoked copy: signature valid, **revoked** |
-| 1EdTech OB 3.0 inspector (`OB30Inspector` from [digital-credentials-public-validator](https://github.com/1EdTech/digital-credentials-public-validator), pinned commit) via `1edtech/OpenCredentialConformanceTest.java` | 1EdTech | the official validator's full probe set: JSON Schema, contexts, types, issuer, proof, expiry and status | active credentials pass; the revoked copy fails |
+| 1EdTech OB 3.0 inspector (`OB30Inspector` from [digital-credentials-public-validator](https://github.com/1EdTech/digital-credentials-public-validator), pinned commit) via `1edtech/OpenCredentialConformanceTest.java` | 1EdTech | the official validator's full probe set: JSON Schema, contexts, types, issuer, proof, expiry and status | active credentials pass (the only accepted warning: the demo issuer's homepage `demo-university.example` is unreachable); the revoked copy fails with "Credential has been revoked" |
 
 The issued credentials are uploaded as the `conformance-credentials` artefact, so anyone can
 re-check them, for example with the 1EdTech web validator.
