@@ -9,6 +9,7 @@ import { apiFetch, apiSend, type CredentialRecord, REVOCATION_REASONS, type Revo
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage, DownloadButton, fmtDate } from "./AdminPage";
+import { TableScroll } from "../../components/TableScroll";
 
 const STATUS_LABEL = { active: "Active", revoked: "Revoked", expired: "Expired" } as const;
 
@@ -51,6 +52,7 @@ export function Credentials() {
       {q.isError && <ErrorAlert error={q.error} />}
       {q.data && q.data.length === 0 && <Text as="p">No credentials match.</Text>}
       {q.data && q.data.length > 0 && (
+        <TableScroll>
         <Table caption="Issued credentials">
           <Table.Head>
             <Table.Row>
@@ -68,6 +70,7 @@ export function Credentials() {
             ))}
           </Table.Body>
         </Table>
+        </TableScroll>
       )}
     </AdminPage>
   );

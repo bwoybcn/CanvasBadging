@@ -28,10 +28,14 @@ export function roleFlags(me: Me | undefined) {
 }
 
 function NavLink({ to, children }: { to: string; children: ReactNode }) {
+  // Padding keeps each target at least 24 by 24 CSS pixels when the bar wraps on a phone
+  // (WCAG 2.2 SC 2.5.8, found by the W8 axe run on the mobile viewport).
   return (
-    <AppLink to={to} margin="0 medium 0 0">
-      {children}
-    </AppLink>
+    <span style={{ display: "inline-block", padding: "0.25rem 0", minHeight: "24px" }}>
+      <AppLink to={to} margin="0 medium 0 0" current>
+        {children}
+      </AppLink>
+    </span>
   );
 }
 
@@ -56,13 +60,20 @@ export function Nav() {
 /** Standard page frame: navigation, a single h1 and the content. */
 export function Page({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <View as="main" padding="medium large" maxWidth="72rem" margin="0 auto" display="block">
+    // The navigation sits outside <main>, and a skip link (visible when focused) jumps straight
+    // to the content, so keyboard and screen-reader users need not pass the menu on every page.
+    <View as="div" padding="medium" maxWidth="72rem" margin="0 auto" display="block">
+      <a href="#main-content" className="oc-skip-link">
+        Skip to main content
+      </a>
       <Nav />
-      <Flex justifyItems="space-between" alignItems="center" wrap="wrap" margin="0 0 medium">
-        <Heading level="h1">{title}</Heading>
-        {actions}
-      </Flex>
-      {children}
+      <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
+        <Flex justifyItems="space-between" alignItems="center" wrap="wrap" margin="0 0 medium">
+          <Heading level="h1">{title}</Heading>
+          {actions}
+        </Flex>
+        {children}
+      </main>
     </View>
   );
 }

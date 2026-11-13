@@ -8,6 +8,7 @@ import { apiFetch, apiSend, type Reconciliation as Recon } from "../../api";
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
+import { TableScroll } from "../../components/TableScroll";
 
 const PROBLEM: Record<Recon["awards_not_issued"][number]["problem"], string> = {
   never_started: "Issuance never started",
@@ -36,6 +37,7 @@ export function Reconciliation() {
           {q.data.awards_not_issued.length === 0 ? (
             <Text as="p">Nothing is stuck. Every award older than ten minutes has its credential.</Text>
           ) : (
+            <TableScroll>
             <Table caption="Awards not yet issued">
               <Table.Head>
                 <Table.Row>
@@ -52,6 +54,7 @@ export function Reconciliation() {
                 ))}
               </Table.Body>
             </Table>
+            </TableScroll>
           )}
           <Heading level="h2" margin="medium 0 small">
             Failed jobs

@@ -1,0 +1,49 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Skip link: off-screen until it receives keyboard focus (WCAG 2.4.1). */
+.oc-skip-link {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.oc-skip-link:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  display: inline-block;
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fff;
+  color: #0e5a8a;
+  border: 2px solid #0e5a8a;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Honour "reduce motion" (WCAG 2.3.3, spec §19.5): no fades, spinners or smooth scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Reflow at 320 CSS px (WCAG 1.4.10): fixed-width form fields shrink to fit narrow screens. */
+[data-cid~="TextInput"],
+[data-cid~="Select"],
+[data-cid~="SimpleSelect"],
+[data-cid~="NumberInput"],
+[data-cid~="TextArea"] {
+  max-width: min(100%, calc(100vw - 3rem)) !important;
+}
+
+/* Long unbroken strings (DIDs, URLs, credential ids) wrap instead of widening the page. */
+#main-content {
+  overflow-wrap: anywhere;
+}

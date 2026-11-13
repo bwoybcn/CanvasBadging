@@ -8,6 +8,7 @@ import { useParams } from "react-router";
 import { apiFetch, apiSend, problemText, type CourseProgress as Progress, type Rule, type SyncState } from "../api";
 import { useAuth } from "../auth";
 import { ErrorAlert, Loading, Page } from "../components/Page";
+import { TableScroll } from "../components/TableScroll";
 
 export const OUTCOME_LABELS: Record<string, string> = {
   met: "Requirements met",
@@ -172,6 +173,7 @@ export function CourseProgress() {
               pending until the badge is updated.
             </Alert>
           )}
+          <TableScroll>
           <Table caption={`Learner progress in ${p.course.title}`} layout="auto">
             <Table.Head>
               <Table.Row>
@@ -223,6 +225,7 @@ export function CourseProgress() {
               ))}
             </Table.Body>
           </Table>
+          </TableScroll>
           <Heading level="h2" margin="medium 0 small">
             Badge requirements
           </Heading>

@@ -19,6 +19,7 @@ import { useState } from "react";
 import { apiFetch, apiSend, type CourseProgress, type Decision, type DefinitionSummary } from "../api";
 import { useAuth } from "../auth";
 import { ErrorAlert, Loading, Page } from "../components/Page";
+import { TableScroll } from "../components/TableScroll";
 
 export const EVIDENCE_KINDS: Record<string, string> = {
   lecturer_confirmation: "Lecturer confirmation",
@@ -180,6 +181,7 @@ export function Awards() {
       {q.isError && <ErrorAlert error={q.error} />}
       {q.data && q.data.length === 0 && <Text as="p">Nothing is waiting for confirmation.</Text>}
       {q.data && q.data.length > 0 && (
+        <TableScroll>
         <Table caption="Awards waiting for confirmation">
           <Table.Head>
             <Table.Row>
@@ -195,6 +197,7 @@ export function Awards() {
             ))}
           </Table.Body>
         </Table>
+        </TableScroll>
       )}
       <ManualAward />
     </Page>

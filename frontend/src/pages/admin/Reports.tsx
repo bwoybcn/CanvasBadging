@@ -8,6 +8,7 @@ import { apiFetch, type ReportSummary } from "../../api";
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage, DownloadButton } from "./AdminPage";
+import { TableScroll } from "../../components/TableScroll";
 
 export function Reports() {
   const { token } = useAuth();
@@ -65,6 +66,7 @@ function CountTable({ caption, rows }: { caption: string; rows: [string, number,
       {rows.length === 0 ? (
         <Text as="p">Nothing issued in this period.</Text>
       ) : (
+        <TableScroll>
         <Table caption={caption}>
           <Table.Head>
             <Table.Row>
@@ -83,6 +85,7 @@ function CountTable({ caption, rows }: { caption: string; rows: [string, number,
             ))}
           </Table.Body>
         </Table>
+        </TableScroll>
       )}
     </View>
   );

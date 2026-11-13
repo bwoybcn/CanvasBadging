@@ -57,8 +57,8 @@ export function Home() {
         ))}
       </List>
       <Text as="p">
-        Use the links above to see your badges, create and review micro-credentials, or confirm awards. Badge
-        wallets and sharing are added in a later stage of the build.
+        Use the links above to see your badges and credentials, create and review micro-credentials, or confirm
+        awards. Students can download, share and add their credentials to LinkedIn from "My credentials".
       </Text>
       {user.session_method === "dev" && (
         <Button margin="medium 0 0" onClick={() => setToken(null)}>
