@@ -130,7 +130,9 @@ def build_tenant(
                 achievement_type="Badge",
                 demonstration_kind="completing",
                 validity_days=validity,
-                skills=[{"targetName": "Writing", "targetUrl": "https://example.org/skills/writing"}],
+                skills=[
+                    {"targetName": "Writing", "targetUrl": "https://example.org/skills/writing"}
+                ],
                 published_at=now,
                 published_by=admin.id,
             )

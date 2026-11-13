@@ -30,6 +30,7 @@ jobs:
       - run: |
           dest=backend/opencredential/issuance/schemas/ob_v3p0_achievementcredential_schema.json
           test -f "$dest" && exit 0
+          mkdir -p "$(dirname "$dest")"
           curl -fsSL https://purl.imsglobal.org/spec/ob/v3p0/schema/json/ob_v3p0_achievementcredential_schema.json -o "$dest"
           echo "b7358e895f492e74055dc6bfc7ffc420d0e497f90c4579fb83d9519b86d393ea  $dest" | sha256sum -c
           git config user.name "github-actions[bot]"
