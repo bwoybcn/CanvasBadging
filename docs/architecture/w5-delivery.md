@@ -48,6 +48,12 @@ These cannot be proven with fakes and stay open until W3 runs against the local 
 5. API load and pagination for large courses, and Canvas rate limiting under the 30-minute schedule.
 6. Excused, missing and late submissions as Canvas actually reports them.
 
+### Checked on Gary's local Canvas (13 Nov 2026)
+
+- Staff can see a score for an unreleased mark, but `posted_at` is empty. The engine already treats a missing `posted_at` as unreleased (`AWAITING_RELEASE`), whatever the score says.
+- Excused work counts as complete for module completion. Module rules read Canvas's own module progress, so this is inherited. Submission and score rules still treat an excused assignment as pending (`EXCUSED`), as the spec requires.
+- Canvas reports rate limiting as **403** with `X-Rate-Limit-Remaining`, not 429. The W3 adapter must map this to `LmsTransientError` so the sync job backs off and retries rather than recording a permission failure.
+
 ## Known gaps in this workstream
 
 - SVG artwork is not rendered to PNG; credentials embed the SVG. Adding a rasteriser (for example cairosvg) needs a dependency decision.
