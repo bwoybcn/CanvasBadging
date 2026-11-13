@@ -1,0 +1,10 @@
+{
+  "name": "@opencredential/conformance-dcc",
+  "private": true,
+  "description": "Independent check with the Digital Credentials Consortium verifier (used by VerifierPlus and Learner Credential Wallet). CI only.",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "dependencies": {
+    "@digitalcredentials/verifier-core": "1.0.0-beta.11"
+  }
+}
