@@ -272,6 +272,17 @@
             ],
             "title": "Approver Roles"
           },
+          "course_activation_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Activation Required"
+          },
           "definitions_require_approval": {
             "anyOf": [
               {

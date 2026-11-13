@@ -103,9 +103,7 @@ def test_lecturer_activates_course_and_an_initial_sync_is_queued(
     assert [c["status"] for c in me if c["id"] == str(w.course_id)] == ["active"]
 
 
-def test_only_active_courses_join_scheduled_reconciliation(
-    client: TestClient, owner_conn
-) -> None:  # type: ignore[no-untyped-def]
+def test_only_active_courses_join_scheduled_reconciliation(client: TestClient, owner_conn) -> None:  # type: ignore[no-untyped-def]
     w = build_world(client)
     _manual_badge(w, _authorised_issuer(w))
     _set_status(w, "inactive")
@@ -165,3 +163,12 @@ def test_first_launch_follows_the_institution_activation_policy(
         assert created
         assert course.status == expected
         assert (course.activated_at is not None) is (not required)
+
+
+def test_activation_policy_is_set_by_an_institution_administrator(client: TestClient) -> None:
+    w = build_world(client)
+    url = "/api/v1/institutions/current/policy"
+    assert w.get("admin", url).json()["course_activation_required"] is True
+    assert w.patch("lecturer", url, {"course_activation_required": False}).status_code in (403, 404)
+    r = w.patch("admin", url, {"course_activation_required": False})
+    assert r.status_code == 200 and r.json()["course_activation_required"] is False

@@ -19,6 +19,7 @@ interface Policy {
   approver_roles: string[];
   revokers: string[];
   dept_admins_may_delegate: boolean;
+  course_activation_required: boolean;
 }
 
 const APPROVERS: Record<string, string> = {
@@ -129,6 +130,11 @@ function PolicyForm({ initial }: { initial: Policy }) {
           label="Department administrators may grant staff roles inside their own departments"
           checked={p.dept_admins_may_delegate}
           onChange={(e) => set({ dept_admins_may_delegate: e.target.checked })}
+        />
+        <Checkbox
+          label="Courses take part only after a lecturer switches micro-credentials on"
+          checked={p.course_activation_required}
+          onChange={(e) => set({ course_activation_required: e.target.checked })}
         />
         <Checkbox
           label="Manual awards need a second member of staff to confirm"

@@ -94,7 +94,7 @@ upgrade. Record who checked each item and when.
 | 1 | `OC_ENV=production` on api, worker and signer | `POST /dev/login` returns 404; the signer starts (it refuses the development KEK in production) |
 | 2 | Every secret above is unique and was generated for this installation | The services start (they refuse committed values) |
 | 3 | `SIGNER_KEK` is held only by the signer and is backed up offline | Inspect the deployment manifests |
-| 4 | A `did:web` issuer on the institution's own verification domain is authorised, and the demo `did:key` is retired | Administration, Issuers; `https://<domain>/.well-known/did.json` resolves |
+| 4 | A `did:web` issuer on the institution's own verification domain is authorised, and the demo `did:key` is retired | Administration, Issuers; `https://<domain>/issuers/<slug>/did.json` resolves |
 | 5 | TLS everywhere; HSTS present | `curl -sI https://<host>/api/v1/verify` shows `Strict-Transport-Security` |
 | 6 | Signer and database not reachable from outside | A port scan from outside the network |
 | 7 | Proxy rate limiting configured | Send a burst and get 429s |

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Lecturer view of a course: every learner against every live badge, plus Canvas freshness. */
-import { Alert, Button, Flex, Heading, List, Modal, Table, Text, TextInput, View } from "@instructure/ui";
+import { Alert, Button, Flex, Heading, List, Modal, Table, Text, TextArea, TextInput, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router";
@@ -108,11 +108,62 @@ function ApprovalModal({
   );
 }
 
+/** Course staff ask an administrator to revoke a credential (spec §2.2); nothing changes until a revoker approves. */
+function RevocationRequestModal({ credentialId, learner, badge, onClose }: { credentialId: string; learner: string; badge: string; onClose: () => void }) {
+  const { token } = useAuth();
+  const [reason, setReason] = useState("");
+  const send = useMutation({
+    mutationFn: () => apiSend(`/api/v1/credentials/${credentialId}/revocation-requests`, token, "POST", { reason }),
+  });
+  return (
+    <Modal open onDismiss={onClose} label={`Request revocation of ${badge} for ${learner}`} size="medium">
+      <Modal.Body>
+        <Heading level="h2" margin="0 0 small">
+          Request revocation: {badge}, {learner}
+        </Heading>
+        {send.isSuccess ? (
+          <Alert variant="success">
+            Request sent. An administrator will review it. The credential stays valid until they approve.
+          </Alert>
+        ) : (
+          <>
+            <Text as="p">
+              Revocation cannot be undone. Verifiers will show the credential as revoked, including copies the learner has
+              already downloaded. The credential itself is never deleted.
+            </Text>
+            <TextArea
+              label="Why should it be revoked? (at least 5 characters)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            {send.isError && <ErrorAlert error={send.error} />}
+          </>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button onClick={onClose} margin="0 x-small 0 0">
+          Close
+        </Button>
+        {!send.isSuccess && (
+          <Button
+            color="primary"
+            interaction={reason.trim().length >= 5 && !send.isPending ? "enabled" : "disabled"}
+            onClick={() => send.mutate()}
+          >
+            Send request
+          </Button>
+        )}
+      </Modal.Footer>
+    </Modal>
+  );
+}
+
 export function CourseProgress() {
   const { id = "" } = useParams();
   const { token } = useAuth();
   const qc = useQueryClient();
   const [approval, setApproval] = useState<null | { definitionId: string; versionId: string; userId: string; learner: string }>(null);
+  const [revoke, setRevoke] = useState<null | { credentialId: string; learner: string; badge: string }>(null);
   const q = useQuery({
     queryKey: ["progress", id],
     queryFn: () => apiFetch<Progress>(`/api/v1/courses/${id}/progress`, token),
@@ -220,6 +271,17 @@ export function CourseProgress() {
                           Confirm requirement for {l.name ?? "learner"}
                         </Button>
                       )}
+                      {c.decision_status === "issued" && c.credential_id && (
+                        <Button
+                          size="small"
+                          margin="xx-small 0 0"
+                          onClick={() =>
+                            setRevoke({ credentialId: c.credential_id!, learner: l.name ?? "learner", badge: p.badges[i].title })
+                          }
+                        >
+                          Request revocation for {l.name ?? "learner"}
+                        </Button>
+                      )}
                     </Table.Cell>
                     )),
                   ]}
@@ -244,6 +306,7 @@ export function CourseProgress() {
         </>
       )}
       {approval && <ApprovalModal open onClose={() => setApproval(null)} {...approval} />}
+      {revoke && <RevocationRequestModal onClose={() => setRevoke(null)} {...revoke} />}
     </Page>
   );
 }

@@ -37,6 +37,8 @@ class AwardPolicyIn(BaseModel):
     approver_roles: list[Literal["lecturer", "dept_admin", "inst_admin"]] | None = None
     revokers: list[Literal["lecturer", "issuer_manager", "dept_admin", "inst_admin"]] | None = None
     dept_admins_may_delegate: bool | None = None
+    # W8: whether staff must switch each Canvas course on before it takes part (spec §4.1).
+    course_activation_required: bool | None = None
 
 
 POLICY_KEYS = tuple(AwardPolicyIn.model_fields)

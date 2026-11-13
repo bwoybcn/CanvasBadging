@@ -256,3 +256,36 @@ describe("course activation", () => {
     );
   });
 });
+
+describe("revocation request from course progress", () => {
+  it("lets course staff ask for a revocation with a reason, without revoking anything", async () => {
+    const calls = stubApi({
+      "GET /api/v1/learners/me": STAFF_ME,
+      "GET /api/v1/courses/c-1/progress": {
+        course: { id: "c-1", title: "Study Skills 101" },
+        badges: [
+          { definition_id: "d-1", version_id: "v-1", title: "Seminar Skills", award_policy: "automatic", rules: ["Complete module"], source_flags: [] },
+        ],
+        learners: [
+          {
+            user_id: "u-s1",
+            name: "Sam Student",
+            cells: [
+              { version_id: "v-1", outcome: "met", evaluated_at: null, codes: [], progress: null, decision_status: "issued", decision_id: "dec-1", credential_id: "cred-1" },
+            ],
+          },
+        ],
+      },
+      "GET /api/v1/courses/c-1/sync": { last_run: null, last_success_at: null },
+      "POST /api/v1/credentials/cred-1/revocation-requests": { id: "rr-1", status: "pending" },
+    });
+    renderAt("/courses/c-1/progress");
+    await userEvent.click(await screen.findByRole("button", { name: "Request revocation for Sam Student" }));
+    const send = await screen.findByRole("button", { name: "Send request" });
+    await userEvent.type(screen.getByLabelText(/Why should it be revoked/), "Issued to the wrong learner");
+    await userEvent.click(send);
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/revocation-requests"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/revocation-requests"))!.body).toEqual({ reason: "Issued to the wrong learner" });
+    expect(await screen.findByText(/stays valid until they approve/)).toBeTruthy();
+  });
+});

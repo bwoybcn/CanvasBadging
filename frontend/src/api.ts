@@ -347,6 +347,7 @@ export interface CourseProgress {
       progress: { completed: number; total: number } | null;
       decision_status: string | null;
       decision_id: string | null;
+      credential_id?: string | null;
     }[];
   }[];
 }
