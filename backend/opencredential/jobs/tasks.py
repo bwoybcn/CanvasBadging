@@ -373,3 +373,20 @@ def destroy_retired_keys(timestamp: int) -> int:
     finally:
         signer.close()
     return count
+
+
+# ---- retention (W7, spec §12.5) ------------------------------------------------------------
+
+
+@blueprint.periodic(cron="23 2 * * *", periodic_id="apply_retention")
+@blueprint.task(name="apply_retention", queue="maintenance", queueing_lock="apply_retention")
+def apply_retention(timestamp: int) -> dict[str, dict[str, int]]:
+    """Purge what each institution's retention settings say has expired."""
+    from opencredential.governance import retention
+
+    out = {}
+    for iid in _each_institution():
+        with tenant_session(iid) as db:
+            out[str(iid)] = retention.apply(db, iid)
+    log.info("retention.applied", institutions=len(out))
+    return out

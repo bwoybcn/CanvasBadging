@@ -63,9 +63,13 @@ class Actor:
 
 
 def load_actor(db: Session, user_id: uuid.UUID, institution_id: uuid.UUID) -> Actor:
+    from sqlalchemy import func, or_
+
     rows = db.execute(
         select(Membership.role, Membership.scope_type, Membership.scope_id).where(
-            Membership.user_id == user_id, Membership.revoked_at.is_(None)
+            Membership.user_id == user_id,
+            Membership.revoked_at.is_(None),
+            or_(Membership.expires_at.is_(None), Membership.expires_at > func.now()),
         )
     ).all()
     return Actor(user_id, institution_id, [(r, st, sid) for r, st, sid in rows])
@@ -168,8 +172,18 @@ def require_review(
 
 
 def usable_issuers(db: Session, actor: Actor, course: Course | None) -> list[Issuer]:
-    """Issuers this actor may author under for ``course`` (spec §2.2: no impersonation)."""
-    issuers = db.scalars(select(Issuer).where(Issuer.status == "active")).all()
+    """Issuers this actor may author under for ``course`` (spec §2.2: no impersonation).
+
+    Only active issuers in org units that may issue (spec §10.3), and none at all for a course
+    in a department that may not issue.
+    """
+    if course is not None and not org_unit_may_issue(db, course.org_unit_id):
+        return []
+    issuers = [
+        i
+        for i in db.scalars(select(Issuer).where(Issuer.status == "active")).all()
+        if org_unit_may_issue(db, i.org_unit_id)
+    ]
     if actor.is_inst_admin:
         return list(issuers)
     org_chain = _org_chain(db, course.org_unit_id) if course else []
@@ -206,3 +220,135 @@ def require_issuer(
 def require_inst_admin(actor: Actor) -> None:
     if not actor.is_inst_admin:
         raise Forbidden("FORBIDDEN", "Only institution administrators can do that.")
+
+
+# ---- W7: governance ----------------------------------------------------------------------------
+
+#: Roles a policy may name as definition approvers or credential revokers.
+APPROVER_ROLES = ("lecturer", "dept_admin", "inst_admin")
+REVOKER_ROLES = ("lecturer", "issuer_manager", "dept_admin", "inst_admin")
+#: Roles a department administrator may delegate inside their own org units (spec §2.3).
+DEPT_GRANTABLE = ("lecturer", "course_admin", "issuer_manager", "dept_admin")
+#: Roles granted in OpenCredential itself. Students come from Canvas enrolments only.
+GRANTABLE = (*DEPT_GRANTABLE, "inst_admin")
+
+
+def is_admin(actor: Actor) -> bool:
+    """Any administrative role: institution admin, or department admin somewhere."""
+    return actor.is_inst_admin or actor.has("dept_admin", "org_unit")
+
+
+def require_admin(actor: Actor) -> None:
+    if not is_admin(actor):
+        raise Forbidden("FORBIDDEN", "Only administrators can do that.")
+
+
+def org_subtree(db: Session, roots: set[uuid.UUID]) -> set[uuid.UUID]:
+    """``roots`` and every org unit below them."""
+    units = db.execute(select(OrgUnit.id, OrgUnit.parent_id)).all()
+    children: dict[uuid.UUID | None, list[uuid.UUID]] = {}
+    for uid, parent in units:
+        children.setdefault(parent, []).append(uid)
+    out: set[uuid.UUID] = set()
+    stack = list(roots)
+    while stack:
+        current = stack.pop()
+        if current in out:
+            continue
+        out.add(current)
+        stack.extend(children.get(current, []))
+    return out
+
+
+def admin_org_units(db: Session, actor: Actor) -> set[uuid.UUID] | None:
+    """Org units this actor administers (``None`` means the whole institution)."""
+    if actor.is_inst_admin:
+        return None
+    roots = {sid for r, st, sid in actor.memberships if r == "dept_admin" and st == "org_unit"}
+    return org_subtree(db, roots) if roots else set()
+
+
+def admin_course_ids(db: Session, actor: Actor) -> set[uuid.UUID] | None:
+    """Courses inside this actor's administrative scope (``None`` means all)."""
+    units = admin_org_units(db, actor)
+    if units is None:
+        return None
+    if not units:
+        return set()
+    return set(db.scalars(select(Course.id).where(Course.org_unit_id.in_(units))))
+
+
+def can_manage_org_unit(db: Session, actor: Actor, org_unit_id: uuid.UUID | None) -> bool:
+    if actor.is_inst_admin:
+        return True
+    return org_unit_id is not None and is_dept_admin_over(db, actor, org_unit_id)
+
+
+def require_manage_org_unit(db: Session, actor: Actor, org_unit_id: uuid.UUID | None) -> None:
+    if not can_manage_org_unit(db, actor, org_unit_id):
+        raise Forbidden("OUT_OF_SCOPE", "That is outside the part of the institution you manage.")
+
+
+def org_unit_may_issue(db: Session, org_unit_id: uuid.UUID | None) -> bool:
+    """Spec §10.3: a unit can issue only if it and every unit above it may (and are active)."""
+    for uid in _org_chain(db, org_unit_id):
+        unit = db.get(OrgUnit, uid)
+        if unit is None or not unit.may_issue or unit.status != "active":
+            return False
+    return True
+
+
+def require_issuing_allowed(db: Session, issuer: Issuer, course: Course | None) -> None:
+    if not org_unit_may_issue(db, issuer.org_unit_id):
+        raise Forbidden(
+            "ISSUING_NOT_ALLOWED",
+            "This issuer belongs to a department that is not allowed to issue credentials.",
+        )
+    if course is not None and not org_unit_may_issue(db, course.org_unit_id):
+        raise Forbidden(
+            "ISSUING_NOT_ALLOWED",
+            "This course belongs to a department that is not allowed to issue credentials.",
+        )
+
+
+def can_grant(
+    db: Session,
+    actor: Actor,
+    role: str,
+    scope_type: str,
+    scope_org_unit: uuid.UUID | None,
+    policy: dict[str, Any],
+) -> bool:
+    """Who may grant ``role`` at a scope whose org unit is ``scope_org_unit`` (spec §2.3/§2.4)."""
+    if role not in GRANTABLE:
+        return False
+    if actor.is_inst_admin:
+        return True
+    if role not in DEPT_GRANTABLE or not policy.get("dept_admins_may_delegate", True):
+        return False
+    if scope_type == "institution":
+        return False
+    return scope_org_unit is not None and is_dept_admin_over(db, actor, scope_org_unit)
+
+
+def can_revoke(
+    db: Session,
+    actor: Actor,
+    issuer: Issuer,
+    course: Course | None,
+    policy: dict[str, Any],
+) -> bool:
+    """Spec §10.3 "who may revoke credentials": roles in ``policy["revokers"]``, each within the
+    scope it holds. Institution administrators can always revoke."""
+    if actor.is_inst_admin:
+        return True
+    roles = set(policy.get("revokers") or ["inst_admin"])
+    if "dept_admin" in roles:
+        units = [issuer.org_unit_id, course.org_unit_id if course else None]
+        if any(u and is_dept_admin_over(db, actor, u) for u in units):
+            return True
+    if "issuer_manager" in roles and actor.has("issuer_manager", "issuer", issuer.id):
+        return True
+    return bool(
+        "lecturer" in roles and course is not None and actor.course_roles(course.id) & COURSE_STAFF
+    )

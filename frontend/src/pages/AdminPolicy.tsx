@@ -6,7 +6,8 @@ import { useState } from "react";
 
 import { apiFetch, apiSend } from "../api";
 import { useAuth } from "../auth";
-import { ErrorAlert, Loading, Page } from "../components/Page";
+import { ErrorAlert, Loading } from "../components/Page";
+import { AdminPage } from "./admin/AdminPage";
 
 interface Policy {
   score_rules_default_policy: "automatic" | "lecturer_confirmed";
@@ -15,6 +16,50 @@ interface Policy {
   self_approval_allowed: boolean;
   manual_awards_require_second_approval: boolean;
   max_snapshot_age_minutes: number;
+  approver_roles: string[];
+  revokers: string[];
+  dept_admins_may_delegate: boolean;
+}
+
+const APPROVERS: Record<string, string> = {
+  dept_admin: "Department administrators (for their departments)",
+  lecturer: "Course staff (for their own courses)",
+};
+const REVOKERS: Record<string, string> = {
+  dept_admin: "Department administrators (for their departments)",
+  issuer_manager: "Issuer managers (for their issuer)",
+  lecturer: "Course staff (for their own courses)",
+};
+
+function RoleChecks({
+  legend,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string;
+  options: Record<string, string>;
+  value: string[];
+  onChange: (v: string[]) => void;
+}) {
+  return (
+    <View as="fieldset" margin="small 0" padding="0" borderWidth="0">
+      <View as="legend" margin="0 0 x-small">
+        {legend}
+      </View>
+      <Checkbox label="Institution administrators (always)" checked disabled />
+      {Object.entries(options).map(([role, label]) => (
+        <Checkbox
+          key={role}
+          label={label}
+          checked={value.includes(role)}
+          onChange={(e) =>
+            onChange(e.target.checked ? [...value, role] : value.filter((r) => r !== role))
+          }
+        />
+      ))}
+    </View>
+  );
 }
 
 export function AdminPolicy() {
@@ -23,9 +68,13 @@ export function AdminPolicy() {
     queryKey: ["policy"],
     queryFn: () => apiFetch<Policy>("/api/v1/institutions/current/policy", token),
   });
-  if (q.isError) return <ErrorAlert error={q.error} />;
-  if (q.isPending) return <Loading what="policy" />;
-  return <PolicyForm initial={q.data} />;
+  return (
+    <AdminPage title="Approval and awarding policy" instOnly>
+      {q.isError && <ErrorAlert error={q.error} />}
+      {q.isPending && <Loading what="policy" />}
+      {q.data && <PolicyForm initial={q.data} />}
+    </AdminPage>
+  );
 }
 
 function PolicyForm({ initial }: { initial: Policy }) {
@@ -38,7 +87,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
   });
   const set = (patch: Partial<Policy>) => setP({ ...p, ...patch });
   return (
-    <Page title="Awarding policy">
+    <>
       <View as="div" display="block" maxWidth="48rem">
         <RadioInputGroup
           name="score-default"
@@ -64,6 +113,23 @@ function PolicyForm({ initial }: { initial: Policy }) {
           checked={p.self_approval_allowed}
           onChange={(e) => set({ self_approval_allowed: e.target.checked })}
         />
+        <RoleChecks
+          legend="Who can approve badge definitions"
+          options={APPROVERS}
+          value={p.approver_roles}
+          onChange={(v) => set({ approver_roles: v })}
+        />
+        <RoleChecks
+          legend="Who can revoke credentials"
+          options={REVOKERS}
+          value={p.revokers}
+          onChange={(v) => set({ revokers: v })}
+        />
+        <Checkbox
+          label="Department administrators may grant staff roles inside their own departments"
+          checked={p.dept_admins_may_delegate}
+          onChange={(e) => set({ dept_admins_may_delegate: e.target.checked })}
+        />
         <Checkbox
           label="Manual awards need a second member of staff to confirm"
           checked={p.manual_awards_require_second_approval}
@@ -87,6 +153,6 @@ function PolicyForm({ initial }: { initial: Policy }) {
           Save policy
         </Button>
       </View>
-    </Page>
+    </>
   );
 }

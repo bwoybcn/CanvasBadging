@@ -23,6 +23,7 @@ export function roleFlags(me: Me | undefined) {
     isStaff: [...roles].some((r) => STAFF.has(r)),
     isReviewer: [...roles].some((r) => REVIEWERS.has(r)),
     isInstAdmin: roles.has("inst_admin"),
+    isAdmin: roles.has("inst_admin") || roles.has("dept_admin"),
   };
 }
 
@@ -45,7 +46,7 @@ export function Nav() {
         {f.isStaff && <NavLink to="/badges">Badges</NavLink>}
         {f.isStaff && <NavLink to="/awards">Awards to confirm</NavLink>}
         {f.isReviewer && <NavLink to="/reviews">Review queue</NavLink>}
-        {f.isInstAdmin && <NavLink to="/admin/policy">Awarding policy</NavLink>}
+        {f.isAdmin && <NavLink to="/admin">Administration</NavLink>}
       </Flex>
     </View>
   );
