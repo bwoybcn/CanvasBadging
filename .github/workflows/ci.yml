@@ -128,7 +128,7 @@ jobs:
           OC_CONFORMANCE_ACTIVE_DIR="$OUT/active" OC_CONFORMANCE_REVOKED_DIR="$OUT/revoked" \
             mvn -B -q -pl inspector-vc -am test -Dtest=OpenCredentialConformanceTest \
               -Dsurefire.failIfNoSpecifiedTests=false
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: conformance-credentials
@@ -199,7 +199,7 @@ jobs:
             (cd "$GITHUB_WORKSPACE/backend" && nohup uv run oc worker >> "$RUNNER_TEMP/worker.log" 2>&1 &);
             sleep 3
         run: scripts/backup-restore-drill.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-results
