@@ -32,6 +32,7 @@ DEFAULT_POLICY: dict[str, Any] = {
     "course_activation_required": True,
     "max_snapshot_age_minutes": 120,
     "include_recipient_name_in_credential": False,
+    "dept_admins_may_delegate": True,
 }
 
 DEFAULT_RETENTION: dict[str, Any] = {
@@ -39,6 +40,7 @@ DEFAULT_RETENTION: dict[str, Any] = {
     "snapshot_days_after_course_end": 365,
     "audit_event_years": 7,
     "failed_job_days": 90,
+    "evaluation_days": 730,
 }
 
 

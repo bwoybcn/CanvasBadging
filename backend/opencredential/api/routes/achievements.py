@@ -110,6 +110,7 @@ class CreateIn(BaseModel):
     course_id: uuid.UUID | None = None
     fields: authoring.DraftFields = Field(default_factory=authoring.DraftFields)
     rules: RuleSet | None = None
+    template_id: uuid.UUID | None = None
 
 
 class ReviewIn(BaseModel):
@@ -261,6 +262,7 @@ def create_achievement(
         course_id=body.course_id,
         fields=body.fields,
         rules=body.rules,
+        template_id=body.template_id,
         request_id=rid,
     )
     return _out(db, actor, d)

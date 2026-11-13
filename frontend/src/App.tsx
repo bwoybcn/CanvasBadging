@@ -5,6 +5,16 @@ import { type ReactNode, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AuthProvider, useAuth } from "./auth";
+import { AdminHome } from "./pages/admin/AdminHome";
+import { Audit } from "./pages/admin/Audit";
+import { Credentials } from "./pages/admin/Credentials";
+import { InstitutionSettings } from "./pages/admin/Institution";
+import { Issuers } from "./pages/admin/Issuers";
+import { People } from "./pages/admin/People";
+import { Privacy } from "./pages/admin/Privacy";
+import { Reconciliation } from "./pages/admin/Reconciliation";
+import { Reports } from "./pages/admin/Reports";
+import { Templates } from "./pages/admin/Templates";
 import { AdminPolicy } from "./pages/AdminPolicy";
 import { Awards } from "./pages/Awards";
 import { BadgeDetail } from "./pages/BadgeDetail";
@@ -41,7 +51,17 @@ export function AppRoutes() {
           ["/me/credentials", <MyCredentials />],
           ["/me/credentials/:id", <CredentialDetail />],
           ["/me/keeping", <Keeping />],
+          ["/admin", <AdminHome />],
+          ["/admin/institution", <InstitutionSettings />],
           ["/admin/policy", <AdminPolicy />],
+          ["/admin/issuers", <Issuers />],
+          ["/admin/people", <People />],
+          ["/admin/templates", <Templates />],
+          ["/admin/credentials", <Credentials />],
+          ["/admin/reports", <Reports />],
+          ["/admin/audit", <Audit />],
+          ["/admin/privacy", <Privacy />],
+          ["/admin/reconciliation", <Reconciliation />],
         ] as const
       ).map(([path, element]) => (
         <Route key={path} path={path} element={<RequireSession>{element}</RequireSession>} />

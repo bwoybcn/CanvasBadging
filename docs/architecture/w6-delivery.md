@@ -36,9 +36,9 @@ Privacy rules: `test_sharing_is_off_by_default_opaque_and_owner_only`,
   lookup `app.institution_for_share` only resolves active grants.
 - **Open Graph never carries the learner's name**, even when the learner shows it on the page.
   SVG artwork is not offered as `og:image` (most preview crawlers ignore it).
-- **Other people's credentials return 404**, not 403, on the new endpoints (scenario 10 "without
-  disclosure"). The W4 export endpoint still answers 403 to another student; aligning it is left
-  to W7 with the staff view.
+- **Other people's credentials return 404**, not 403 (scenario 10 "without disclosure"). W7
+  aligned the W4 export endpoint the same way.
+- Migration `0006` (after W7's `0005`).
 - **Badge images** referenced from credentials are now served at `/assets/public/<sha256>.<ext>`,
   only for assets of published versions (`app.institution_for_public_asset`).
 - **LinkedIn**: `organizationId` when the institution sets `policy.linkedin_organization_id`,

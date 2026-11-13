@@ -1,6 +1,61 @@
 {
   "components": {
     "schemas": {
+      "ArtworkConvention": {
+        "additionalProperties": false,
+        "properties": {
+          "guidance": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guidance"
+          },
+          "primary_colour": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9a-fA-F]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Colour"
+          },
+          "secondary_colour": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9a-fA-F]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondary Colour"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template"
+          }
+        },
+        "title": "ArtworkConvention",
+        "type": "object"
+      },
       "AssetOut": {
         "properties": {
           "alt_text": {
@@ -181,8 +236,42 @@
         "title": "AssignmentSubmitted",
         "type": "object"
       },
+      "AuthoriseIn": {
+        "properties": {
+          "authority_basis": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Authority Basis",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authority_basis"
+        ],
+        "title": "AuthoriseIn",
+        "type": "object"
+      },
       "AwardPolicyIn": {
         "properties": {
+          "approver_roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "lecturer",
+                    "dept_admin",
+                    "inst_admin"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approver Roles"
+          },
           "definitions_require_approval": {
             "anyOf": [
               {
@@ -193,6 +282,17 @@
               }
             ],
             "title": "Definitions Require Approval"
+          },
+          "dept_admins_may_delegate": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dept Admins May Delegate"
           },
           "manual_awards_require_second_approval": {
             "anyOf": [
@@ -215,6 +315,26 @@
               }
             ],
             "title": "Max Snapshot Age Minutes"
+          },
+          "revokers": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "lecturer",
+                    "issuer_manager",
+                    "dept_admin",
+                    "inst_admin"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revokers"
           },
           "score_rules_default_policy": {
             "anyOf": [
@@ -255,6 +375,34 @@
           }
         },
         "title": "AwardPolicyIn",
+        "type": "object"
+      },
+      "Branding": {
+        "properties": {
+          "primary_colour": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Colour"
+          },
+          "secondary_colour": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondary Colour"
+          }
+        },
+        "title": "Branding",
         "type": "object"
       },
       "CheckOut": {
@@ -418,6 +566,27 @@
         "title": "CourseRef",
         "type": "object"
       },
+      "CourseUnitIn": {
+        "properties": {
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          }
+        },
+        "required": [
+          "org_unit_id"
+        ],
+        "title": "CourseUnitIn",
+        "type": "object"
+      },
       "CreateIn": {
         "properties": {
           "course_id": {
@@ -449,6 +618,18 @@
                 "type": "null"
               }
             ]
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
           }
         },
         "required": [
@@ -691,6 +872,36 @@
           "share"
         ],
         "title": "CredentialSummary",
+        "type": "object"
+      },
+      "DecideRequestIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reason_code": {
+            "default": "other",
+            "enum": [
+              "issued_in_error",
+              "academic_misconduct",
+              "requirements_not_met",
+              "learner_request",
+              "other"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          }
+        },
+        "title": "DecideRequestIn",
         "type": "object"
       },
       "DecisionOut": {
@@ -1050,6 +1261,29 @@
         "title": "DefinitionSummary",
         "type": "object"
       },
+      "DelegationIn": {
+        "properties": {
+          "scope_id": {
+            "format": "uuid",
+            "title": "Scope Id",
+            "type": "string"
+          },
+          "scope_type": {
+            "enum": [
+              "org_unit",
+              "course"
+            ],
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope_type",
+          "scope_id"
+        ],
+        "title": "DelegationIn",
+        "type": "object"
+      },
       "DevLoginRequest": {
         "properties": {
           "institution": {
@@ -1303,6 +1537,19 @@
         "title": "DraftFields",
         "type": "object"
       },
+      "EraseIn": {
+        "properties": {
+          "confirm": {
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "EraseIn",
+        "type": "object"
+      },
       "EvaluateIn": {
         "properties": {
           "definition_id": {
@@ -1425,6 +1672,67 @@
         "title": "Evidence",
         "type": "object"
       },
+      "GrantIn": {
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "role": {
+            "enum": [
+              "lecturer",
+              "course_admin",
+              "issuer_manager",
+              "dept_admin",
+              "inst_admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "scope_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Id"
+          },
+          "scope_type": {
+            "enum": [
+              "institution",
+              "org_unit",
+              "issuer",
+              "course"
+            ],
+            "title": "Scope Type",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "role",
+          "scope_type"
+        ],
+        "title": "GrantIn",
+        "type": "object"
+      },
       "Group": {
         "additionalProperties": false,
         "description": "Rule F (nested): a combination of leaf rules with its own mode.",
@@ -1536,6 +1844,121 @@
         "title": "ImageOut",
         "type": "object"
       },
+      "InstitutionIn": {
+        "properties": {
+          "branding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Branding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 30,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categories"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "linkedin_org_id": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Org Id"
+          },
+          "linkedin_org_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Linkedin Org Name"
+          },
+          "logo_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Asset Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "verification_host": {
+            "anyOf": [
+              {
+                "maxLength": 253,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Host"
+          },
+          "website_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website Url"
+          }
+        },
+        "title": "InstitutionIn",
+        "type": "object"
+      },
       "InstitutionOut": {
         "properties": {
           "id": {
@@ -1591,6 +2014,134 @@
           "severity"
         ],
         "title": "Issue",
+        "type": "object"
+      },
+      "IssuerIn": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "level": {
+            "description": "One of university, faculty, department, programme",
+            "title": "Level",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          },
+          "slug": {
+            "maxLength": 63,
+            "title": "Slug",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "level"
+        ],
+        "title": "IssuerIn",
+        "type": "object"
+      },
+      "IssuerPatch": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 320,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "IssuerPatch",
         "type": "object"
       },
       "KeyOut": {
@@ -1894,6 +2445,181 @@
         "title": "ModulesCompleted",
         "type": "object"
       },
+      "OrgUnitIn": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "faculty",
+              "department",
+              "programme",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          }
+        },
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "OrgUnitIn",
+        "type": "object"
+      },
+      "OrgUnitPatch": {
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "faculty",
+                  "department",
+                  "programme",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "may_issue": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "May Issue"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "OrgUnitPatch",
+        "type": "object"
+      },
+      "ReasonIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 5,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReasonIn",
+        "type": "object"
+      },
+      "RetentionIn": {
+        "properties": {
+          "audit_event_years": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Event Years"
+          },
+          "evaluation_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Days"
+          },
+          "failed_job_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed Job Days"
+          },
+          "snapshot_days_after_course_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Days After Course End"
+          }
+        },
+        "title": "RetentionIn",
+        "type": "object"
+      },
       "ReviewIn": {
         "properties": {
           "checklist": {
@@ -1989,6 +2715,21 @@
           "created_at"
         ],
         "title": "ReviewOut",
+        "type": "object"
+      },
+      "RevocationRequestIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 5,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RevocationRequestIn",
         "type": "object"
       },
       "RevokeIn": {
@@ -2345,41 +3086,238 @@
         "title": "SubmitOut",
         "type": "object"
       },
-      "TemplateIn": {
+      "TemplateDefaults": {
+        "additionalProperties": false,
+        "description": "Draft fields a template pre-fills, plus artwork conventions (not a draft field).",
         "properties": {
-          "alt_text": {
-            "maxLength": 250,
-            "title": "Alt Text",
-            "type": "string"
+          "achievement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achievement Type"
           },
-          "label": {
-            "maxLength": 22,
-            "title": "Label",
-            "type": "string"
+          "artwork": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtworkConvention"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
-          "primary_colour": {
-            "pattern": "^#[0-9a-fA-F]{6}$",
-            "title": "Primary Colour",
-            "type": "string"
+          "asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
           },
-          "secondary_colour": {
-            "pattern": "^#[0-9a-fA-F]{6}$",
-            "title": "Secondary Colour",
-            "type": "string"
+          "award_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "automatic | lecturer_confirmed | manual | null (default)",
+            "title": "Award Policy"
           },
-          "template": {
-            "title": "Template",
-            "type": "string"
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "criteria_narrative": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Criteria Narrative"
+          },
+          "demonstration_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demonstration Kind"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "evidence_description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Description"
+          },
+          "learning_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learning Outcomes"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "skills": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Skill"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skills"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
           }
         },
-        "required": [
-          "template",
-          "primary_colour",
-          "secondary_colour",
-          "label",
-          "alt_text"
-        ],
-        "title": "TemplateIn",
+        "title": "TemplateDefaults",
+        "type": "object"
+      },
+      "TemplatePatch": {
+        "properties": {
+          "defaults": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateDefaults"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "archived"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "TemplatePatch",
         "type": "object"
       },
       "UploadIn": {
@@ -2751,6 +3689,43 @@
         "title": "RejectIn",
         "type": "object"
       },
+      "opencredential__api__routes__assets__TemplateIn": {
+        "properties": {
+          "alt_text": {
+            "maxLength": 250,
+            "title": "Alt Text",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 22,
+            "title": "Label",
+            "type": "string"
+          },
+          "primary_colour": {
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Primary Colour",
+            "type": "string"
+          },
+          "secondary_colour": {
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Secondary Colour",
+            "type": "string"
+          },
+          "template": {
+            "title": "Template",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template",
+          "primary_colour",
+          "secondary_colour",
+          "label",
+          "alt_text"
+        ],
+        "title": "TemplateIn",
+        "type": "object"
+      },
       "opencredential__api__routes__awards__RejectIn": {
         "properties": {
           "reason": {
@@ -2764,6 +3739,47 @@
           "reason"
         ],
         "title": "RejectIn",
+        "type": "object"
+      },
+      "opencredential__api__routes__governance__TemplateIn": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/TemplateDefaults"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 120,
+            "title": "Name",
+            "type": "string"
+          },
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TemplateIn",
         "type": "object"
       }
     }
@@ -3597,6 +4613,556 @@
         ]
       }
     },
+    "/api/v1/admin/audit": {
+      "get": {
+        "operationId": "audit_events_api_v1_admin_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Audit Events Api V1 Admin Audit Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Events",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/audit.csv": {
+      "get": {
+        "operationId": "audit_csv_api_v1_admin_audit_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit Csv",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/audit/categories": {
+      "get": {
+        "operationId": "audit_categories_api_v1_admin_audit_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Audit Categories Api V1 Admin Audit Categories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Audit Categories",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/courses": {
+      "get": {
+        "operationId": "list_courses_api_v1_admin_courses_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Courses Api V1 Admin Courses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Courses",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/courses/{course_id}/org-unit": {
+      "put": {
+        "operationId": "assign_course_api_v1_admin_courses__course_id__org_unit_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CourseUnitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Assign Course Api V1 Admin Courses  Course Id  Org Unit Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign Course",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/credentials": {
+      "get": {
+        "operationId": "list_credentials_api_v1_admin_credentials_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Course Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "definition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Definition Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "revoked"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "issued_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "issued_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "learner",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Learner"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Credentials Api V1 Admin Credentials Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Credentials",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
     "/api/v1/admin/data-freshness": {
       "get": {
         "description": "Courses with live badges whose Canvas data is older than the policy allows (stale data\ndetection, spec \u00a717.1). Rules on stale data evaluate to ``unknown``, so nothing is issued.",
@@ -3621,6 +5187,329 @@
         "summary": "Data Freshness",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/issuer-delegations/{delegation_id}": {
+      "delete": {
+        "operationId": "undelegate_issuer_api_v1_admin_issuer_delegations__delegation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delegation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delegation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undelegate Issuer",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/issuers": {
+      "get": {
+        "operationId": "list_issuers_api_v1_admin_issuers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Issuers Api V1 Admin Issuers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Issuers",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "post": {
+        "operationId": "create_issuer_api_v1_admin_issuers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Issuer Api V1 Admin Issuers Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Issuer",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/issuers/{issuer_id}": {
+      "patch": {
+        "operationId": "update_issuer_api_v1_admin_issuers__issuer_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuerPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Issuer Api V1 Admin Issuers  Issuer Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Issuer",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/issuers/{issuer_id}/authorise": {
+      "post": {
+        "operationId": "authorise_issuer_api_v1_admin_issuers__issuer_id__authorise_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthoriseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Authorise Issuer Api V1 Admin Issuers  Issuer Id  Authorise Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Authorise Issuer",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/issuers/{issuer_id}/delegations": {
+      "post": {
+        "operationId": "delegate_issuer_api_v1_admin_issuers__issuer_id__delegations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DelegationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delegate Issuer Api V1 Admin Issuers  Issuer Id  Delegations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delegate Issuer",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/issuers/{issuer_id}/suspend": {
+      "post": {
+        "operationId": "suspend_issuer_api_v1_admin_issuers__issuer_id__suspend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Suspend Issuer Api V1 Admin Issuers  Issuer Id  Suspend Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Suspend Issuer",
+        "tags": [
+          "institutional administration"
         ]
       }
     },
@@ -3737,6 +5626,1083 @@
         ]
       }
     },
+    "/api/v1/admin/memberships": {
+      "get": {
+        "operationId": "list_memberships_api_v1_admin_memberships_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Memberships Api V1 Admin Memberships Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Memberships",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "post": {
+        "operationId": "grant_membership_api_v1_admin_memberships_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Grant Membership Api V1 Admin Memberships Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Grant Membership",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/memberships/{membership_id}": {
+      "delete": {
+        "operationId": "revoke_membership_api_v1_admin_memberships__membership_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Membership",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/org-units": {
+      "get": {
+        "operationId": "list_org_units_api_v1_admin_org_units_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Org Units Api V1 Admin Org Units Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Org Units",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "post": {
+        "operationId": "create_org_unit_api_v1_admin_org_units_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgUnitIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Org Unit Api V1 Admin Org Units Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Org Unit",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/org-units/{unit_id}": {
+      "patch": {
+        "operationId": "update_org_unit_api_v1_admin_org_units__unit_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgUnitPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Org Unit Api V1 Admin Org Units  Unit Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Org Unit",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/people": {
+      "get": {
+        "operationId": "search_people_api_v1_admin_people_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 100,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Search People Api V1 Admin People Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search People",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/people/{user_id}/data-export": {
+      "get": {
+        "operationId": "person_data_export_api_v1_admin_people__user_id__data_export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Person Data Export",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/people/{user_id}/erase": {
+      "post": {
+        "operationId": "erase_person_api_v1_admin_people__user_id__erase_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EraseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Erase Person Api V1 Admin People  User Id  Erase Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erase Person",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/reconciliation": {
+      "get": {
+        "operationId": "reconciliation_overview_api_v1_admin_reconciliation_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reconciliation Overview Api V1 Admin Reconciliation Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reconciliation Overview",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/reconciliation/awards/{decision_id}/cancel": {
+      "post": {
+        "operationId": "cancel_award_api_v1_admin_reconciliation_awards__decision_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cancel Award Api V1 Admin Reconciliation Awards  Decision Id  Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Award",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/reconciliation/awards/{decision_id}/requeue": {
+      "post": {
+        "operationId": "requeue_award_api_v1_admin_reconciliation_awards__decision_id__requeue_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Requeue Award Api V1 Admin Reconciliation Awards  Decision Id  Requeue Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Requeue Award",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/issuance.csv": {
+      "get": {
+        "operationId": "issuance_csv_api_v1_admin_reports_issuance_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Course Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "definition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Definition Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "revoked"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "issued_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "issued_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issuance Csv",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/summary": {
+      "get": {
+        "operationId": "report_summary_api_v1_admin_reports_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "issued_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "issued_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Report Summary Api V1 Admin Reports Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Summary",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/summary.csv": {
+      "get": {
+        "operationId": "report_summary_csv_api_v1_admin_reports_summary_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "issued_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "issued_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Issued To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report Summary Csv",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/retention/run": {
+      "post": {
+        "operationId": "run_retention_api_v1_admin_retention_run_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Retention Api V1 Admin Retention Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Run Retention",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/revocation-requests": {
+      "get": {
+        "operationId": "list_revocation_requests_api_v1_admin_revocation_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "approved",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "open",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Revocation Requests Api V1 Admin Revocation Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Revocation Requests",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/revocation-requests/{request_id}/approve": {
+      "post": {
+        "operationId": "approve_revocation_request_api_v1_admin_revocation_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Revocation Request Api V1 Admin Revocation Requests  Request Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Revocation Request",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/revocation-requests/{request_id}/decline": {
+      "post": {
+        "operationId": "decline_revocation_request_api_v1_admin_revocation_requests__request_id__decline_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decline Revocation Request Api V1 Admin Revocation Requests  Request Id  Decline Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decline Revocation Request",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/templates": {
+      "get": {
+        "operationId": "list_templates_api_v1_admin_templates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Archived",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Templates Api V1 Admin Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Templates",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "post": {
+        "operationId": "create_template_api_v1_admin_templates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/opencredential__api__routes__governance__TemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Template Api V1 Admin Templates Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Template",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/templates/{template_id}": {
+      "patch": {
+        "operationId": "update_template_api_v1_admin_templates__template_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Template Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplatePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Template Api V1 Admin Templates  Template Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Template",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
     "/api/v1/artwork-templates": {
       "get": {
         "operationId": "list_templates_api_v1_artwork_templates_get",
@@ -3813,7 +6779,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TemplateIn"
+                "$ref": "#/components/schemas/opencredential__api__routes__assets__TemplateIn"
               }
             }
           },
@@ -3979,6 +6945,23 @@
                 }
               ],
               "title": "Definition Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(automatic|confirmed|manual)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
             }
           },
           {
@@ -4618,8 +7601,64 @@
         ]
       }
     },
+    "/api/v1/credentials/{credential_id}/revocation-requests": {
+      "post": {
+        "operationId": "request_revocation_api_v1_credentials__credential_id__revocation_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevocationRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request Revocation Api V1 Credentials  Credential Id  Revocation Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Revocation",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
     "/api/v1/credentials/{credential_id}/revoke": {
       "post": {
+        "description": "Authorised revocation with a reason (spec \u00a710.3: roles in the institution policy).",
         "operationId": "revoke_api_v1_credentials__credential_id__revoke_post",
         "parameters": [
           {
@@ -4977,6 +8016,70 @@
         ]
       }
     },
+    "/api/v1/institutions/current": {
+      "get": {
+        "operationId": "get_institution_api_v1_institutions_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Institution Api V1 Institutions Current Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Institution",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "patch": {
+        "operationId": "update_institution_api_v1_institutions_current_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstitutionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Institution Api V1 Institutions Current Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Institution",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
     "/api/v1/institutions/current/policy": {
       "get": {
         "operationId": "get_policy_api_v1_institutions_current_policy_get",
@@ -5038,6 +8141,70 @@
         "summary": "Update Policy",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/api/v1/institutions/current/retention": {
+      "get": {
+        "operationId": "get_retention_api_v1_institutions_current_retention_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Retention Api V1 Institutions Current Retention Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Retention",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "patch": {
+        "operationId": "update_retention_api_v1_institutions_current_retention_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Retention Api V1 Institutions Current Retention Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Retention",
+        "tags": [
+          "institutional administration"
         ]
       }
     },
@@ -5268,6 +8435,72 @@
         "tags": [
           "student collection",
           "learners"
+        ]
+      }
+    },
+    "/api/v1/learners/me/data-export": {
+      "get": {
+        "operationId": "my_data_export_api_v1_learners_me_data_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {}
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Data Export",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "description": "Templates an author can start a badge from in this course.",
+        "operationId": "templates_for_course_api_v1_templates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Templates For Course Api V1 Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Templates For Course",
+        "tags": [
+          "institutional administration"
         ]
       }
     },
