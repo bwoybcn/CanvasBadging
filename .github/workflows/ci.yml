@@ -191,7 +191,7 @@ jobs:
         env:
           OC_ADMIN_DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
           OC_STORAGE_DIR: ${{ github.workspace }}/backend/var/assets
-          OC_DRILL_STOP: pkill -f "oc api"; pkill -f "oc worker"; fuser -k 8790/tcp; sleep 2
+          OC_DRILL_STOP: pkill -f "[o]c api"; pkill -f "[o]c worker"; fuser -k 8790/tcp; sleep 2
           OC_DRILL_START: >-
             (cd "$GITHUB_WORKSPACE/signer" && OC_ENV=development nohup node dist/server.js >> "$RUNNER_TEMP/signer.log" 2>&1 &);
             sleep 2;
