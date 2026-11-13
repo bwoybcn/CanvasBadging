@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -13,6 +14,7 @@ from opencredential.api.errors import ApiError
 from opencredential.authz import sessions
 from opencredential.db.session import tenant_session
 from opencredential.settings import Settings, get_settings
+from opencredential.signer_client import SignerClient
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -38,3 +40,16 @@ def tenant_db(claims: ClaimsDep) -> Iterator[Session]:
 
 
 TenantDb = Annotated[Session, Depends(tenant_db)]
+
+
+@lru_cache
+def _signer(url: str, secret: str) -> SignerClient:
+    return SignerClient(get_settings())
+
+
+def get_signer(settings: SettingsDep) -> SignerClient:
+    """One pooled signer client per configuration (overridable in tests)."""
+    return _signer(settings.signer_url, settings.signer_shared_secret.get_secret_value())
+
+
+SignerDep = Annotated[SignerClient, Depends(get_signer)]

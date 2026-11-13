@@ -10,8 +10,20 @@ export interface StoredKey extends Envelope {
   isDev: boolean;
 }
 
+export interface KeyRecord extends Envelope {
+  issuerKeyId: string;
+  isDev: boolean;
+  retiredAt: Date | null;
+  destroyedAt: Date | null;
+}
+
 export interface KeyStore {
   insert(key: StoredKey): Promise<"created" | "exists">;
+  get(issuerKeyId: string): Promise<KeyRecord | null>;
+  /** Stop signing with a key (routine rotation). Its public half stays published by the api. */
+  retire(issuerKeyId: string): Promise<boolean>;
+  /** Irreversibly erase private material (compromise, or 30 days after retirement). */
+  destroy(issuerKeyId: string): Promise<boolean>;
   devKeysPresent(): Promise<boolean>;
   ping(): Promise<void>;
   close(): Promise<void>;
@@ -33,6 +45,43 @@ export class PgKeyStore implements KeyStore {
       [key.issuerKeyId, key.ciphertext, key.dekWrapped, key.kekRef, key.isDev],
     );
     return res.rowCount === 1 ? "created" : "exists";
+  }
+
+  async get(issuerKeyId: string): Promise<KeyRecord | null> {
+    const res = await this.pool.query(
+      `SELECT issuer_key_id, ciphertext, dek_wrapped, is_dev, retired_at, destroyed_at
+         FROM keys.private_keys WHERE issuer_key_id = $1`,
+      [issuerKeyId],
+    );
+    const row = res.rows[0];
+    if (!row) return null;
+    return {
+      issuerKeyId: row.issuer_key_id,
+      ciphertext: row.ciphertext,
+      dekWrapped: row.dek_wrapped,
+      isDev: row.is_dev,
+      retiredAt: row.retired_at,
+      destroyedAt: row.destroyed_at,
+    };
+  }
+
+  async retire(issuerKeyId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `UPDATE keys.private_keys SET retired_at = coalesce(retired_at, now()) WHERE issuer_key_id = $1`,
+      [issuerKeyId],
+    );
+    return res.rowCount === 1;
+  }
+
+  async destroy(issuerKeyId: string): Promise<boolean> {
+    const res = await this.pool.query(
+      `UPDATE keys.private_keys
+          SET ciphertext = '\\x'::bytea, dek_wrapped = '\\x'::bytea,
+              retired_at = coalesce(retired_at, now()), destroyed_at = coalesce(destroyed_at, now())
+        WHERE issuer_key_id = $1`,
+      [issuerKeyId],
+    );
+    return res.rowCount === 1;
   }
 
   async devKeysPresent(): Promise<boolean> {

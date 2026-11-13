@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Operator CLI: ``oc migrate | seed | worker | api | openapi``."""
+"""Operator CLI: ``oc migrate | seed | issue-demo | verify | worker | api | openapi``."""
 
 from __future__ import annotations
 
@@ -30,6 +30,36 @@ def seed(reset: bool = typer.Option(False, help="Rebuild the database first (dev
         typer.echo(f"seeded demo institution {result.institution_id}: {result.counts}")
     else:
         typer.echo(f"demo institution already present ({result.institution_id}); nothing to do")
+
+
+@app.command("issue-demo")
+def issue_demo(
+    out: Path = typer.Option(None, help="Also write each signed credential to this directory"),
+) -> None:
+    """Dev only: award and issue real signed credentials to the demo learners who qualify."""
+    from opencredential.issuance.demo import issue_demo_credentials
+
+    result = issue_demo_credentials(out_dir=out)
+    typer.echo(json.dumps(result, indent=2, default=str))
+
+
+@app.command("verify")
+def verify(path: Path) -> None:
+    """Verify a credential file with this service's verifier (needs the signer and database)."""
+    from opencredential.settings import get_settings
+    from opencredential.signer_client import SignerClient
+    from opencredential.verification.service import Verifier
+    from opencredential.verification.sources import DefaultSources, own_origins
+
+    settings = get_settings()
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    signer = SignerClient(settings)
+    try:
+        result = Verifier(signer, DefaultSources(own_origins(settings.public_base_url))).verify(doc)
+    finally:
+        signer.close()
+    typer.echo(json.dumps(result.to_dict(), indent=2))
+    raise typer.Exit(0 if result.result == "verified" else 1)
 
 
 @app.command()

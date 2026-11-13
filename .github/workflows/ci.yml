@@ -15,6 +15,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ob3-schema-snapshot:
+    # TEMPORARY (W4): the sandbox that wrote this PR cannot reach purl.imsglobal.org, so CI prints
+    # the official schema once for pinning into the repo. Removed in the same PR.
+    name: Snapshot official OB 3.0 JSON Schema
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for f in schema/json/ob_v3p0_achievementcredential_schema.json context-3.0.3.json; do
+            curl -fsSL "https://purl.imsglobal.org/spec/ob/v3p0/$f" -o out.json
+            echo "== $f sha256=$(sha256sum out.json | cut -d' ' -f1) bytes=$(wc -c < out.json)"
+            gzip -9n -c out.json | base64 -w0; echo
+          done
+
   backend:
     name: Backend (lint, types, Pytest)
     runs-on: ubuntu-latest

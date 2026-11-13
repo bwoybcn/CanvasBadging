@@ -2,16 +2,18 @@
 /**
  * Signer HTTP API (internal network only).
  *
- * Phase 1 (W2) implements key generation and storage. Signing and verification with
- * eddsa-rdfc-2022 arrive in W4; until then those routes answer 501 rather than pretending.
+ * Key generation and lifecycle (W2/W4), Data Integrity signing with eddsa-rdfc-2022 and proof
+ * verification (W4). Private keys are decrypted only for the duration of one signing call.
  */
 import { timingSafeEqual } from "node:crypto";
 
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 
 import type { SignerConfig } from "./config.js";
-import { encrypt } from "./envelope.js";
+import { decrypt, encrypt } from "./envelope.js";
 import { generateDidKey } from "./keys.js";
+import type { DidDocuments } from "./loader.js";
+import { publicFromSecret, signCredential, SigningRefused, verifyProof } from "./proofs.js";
 import type { KeyStore } from "./store.js";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,7 +29,7 @@ export function buildApp(config: SignerConfig, store: KeyStore): FastifyInstance
   const app = Fastify({
     logger: {
       level: config.env === "test" ? "silent" : "info",
-      redact: ["req.headers.authorization", "secretKeyMultibase"],
+      redact: ["req.headers.authorization", "secretKeyMultibase", "*.secretKeyMultibase", "secret"],
     },
   });
 
@@ -79,13 +81,74 @@ export function buildApp(config: SignerConfig, store: KeyStore): FastifyInstance
     });
   });
 
-  const notYet = async (_req: FastifyRequest, reply: { code: (n: number) => { send: (b: unknown) => unknown } }) =>
-    reply.code(501).send({
-      code: "NOT_IMPLEMENTED",
-      title: "Signing and verification are implemented in workstream W4 (eddsa-rdfc-2022)",
-    });
-  app.post("/v1/sign", notYet);
-  app.post("/v1/verify", notYet);
+  // ---- key lifecycle -------------------------------------------------------------------
+  app.post<{ Params: { id: string } }>("/v1/keys/:id/retire", async (req, reply) => {
+    if (!UUID_RE.test(req.params.id)) return reply.code(404).send({ code: "NOT_FOUND", title: "No such key" });
+    if (!(await store.retire(req.params.id))) return reply.code(404).send({ code: "NOT_FOUND", title: "No such key" });
+    req.log.info({ issuer_key_id: req.params.id }, "key retired");
+    return { issuer_key_id: req.params.id, signing: false };
+  });
+
+  app.post<{ Params: { id: string } }>("/v1/keys/:id/destroy", async (req, reply) => {
+    if (!UUID_RE.test(req.params.id)) return reply.code(404).send({ code: "NOT_FOUND", title: "No such key" });
+    if (!(await store.destroy(req.params.id))) return reply.code(404).send({ code: "NOT_FOUND", title: "No such key" });
+    req.log.warn({ issuer_key_id: req.params.id }, "private key material destroyed");
+    return { issuer_key_id: req.params.id, destroyed: true };
+  });
+
+  // ---- signing ---------------------------------------------------------------------------
+  app.post<{
+    Body: { issuer_key_id?: string; verification_method_id?: string; document?: Record<string, unknown>; created?: string };
+  }>("/v1/sign", { bodyLimit: 512 * 1024 }, async (req, reply) => {
+    const { issuer_key_id: keyId, verification_method_id: vmId, document } = req.body ?? {};
+    if (!keyId || !UUID_RE.test(keyId) || typeof vmId !== "string" || !document || typeof document !== "object") {
+      return reply.code(422).send({
+        code: "VALIDATION_FAILED",
+        title: "issuer_key_id (UUID), verification_method_id and document are required",
+      });
+    }
+    const key = await store.get(keyId);
+    if (!key) return reply.code(404).send({ code: "KEY_NOT_FOUND", title: "No such signing key" });
+    if (key.destroyedAt || key.retiredAt) {
+      return reply.code(409).send({ code: "KEY_NOT_ACTIVE", title: "This key is retired and can no longer sign" });
+    }
+    if (key.isDev && config.env === "production") {
+      return reply.code(403).send({ code: "DEV_KEY_FORBIDDEN", title: "Development keys cannot sign in production" });
+    }
+    // JS strings cannot be wiped; the secret lives only in this request's scope.
+    const secret = decrypt(config.kek, key, keyId);
+    try {
+      const publicKey = publicFromSecret(secret);
+      if (vmId.startsWith("did:key:") && vmId !== `did:key:${publicKey}#${publicKey}`) {
+        return reply.code(422).send({ code: "BAD_VERIFICATION_METHOD", title: "did:key method does not match this key" });
+      }
+      const created = req.body.created ? new Date(req.body.created) : undefined;
+      if (created && Number.isNaN(created.getTime())) {
+        return reply.code(422).send({ code: "VALIDATION_FAILED", title: "created must be an ISO 8601 date-time" });
+      }
+      const signed = await signCredential({ document, verificationMethodId: vmId, secretKeyMultibase: secret, created });
+      req.log.info({ issuer_key_id: keyId, credential_id: document.id }, "signed");
+      return { signed, public_key_multibase: publicKey };
+    } catch (err) {
+      if (err instanceof SigningRefused) return reply.code(422).send({ code: err.code, title: err.message });
+      // JSON-LD safe mode, undefined terms or bad dates: the document is not a valid credential.
+      req.log.warn({ issuer_key_id: keyId, err: (err as Error).message }, "document refused");
+      return reply.code(422).send({ code: "DOCUMENT_INVALID", title: "The document could not be signed", detail: (err as Error).message });
+    }
+  });
+
+  // ---- verification (proof only; dates and status are the caller's job) -----------------
+  app.post<{ Body: { credential?: Record<string, unknown>; did_documents?: DidDocuments } }>(
+    "/v1/verify",
+    { bodyLimit: 512 * 1024 },
+    async (req, reply) => {
+      const credential = req.body?.credential;
+      if (!credential || typeof credential !== "object" || Array.isArray(credential)) {
+        return reply.code(422).send({ code: "VALIDATION_FAILED", title: "credential must be a JSON object" });
+      }
+      return verifyProof(credential, req.body?.did_documents ?? {});
+    },
+  );
 
   return app;
 }

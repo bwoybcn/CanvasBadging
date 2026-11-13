@@ -5,21 +5,8 @@ import { buildApp } from "../src/app.js";
 import { DEV_KEK_B64, DEV_SHARED_SECRET, loadConfig } from "../src/config.js";
 import { decrypt, encrypt } from "../src/envelope.js";
 import { generateDidKey } from "../src/keys.js";
-import type { KeyStore, StoredKey } from "../src/store.js";
+import { MemoryStore } from "./helpers.js";
 
-class MemoryStore implements KeyStore {
-  rows = new Map<string, StoredKey>();
-  async insert(key: StoredKey) {
-    if (this.rows.has(key.issuerKeyId)) return "exists" as const;
-    this.rows.set(key.issuerKeyId, key);
-    return "created" as const;
-  }
-  async devKeysPresent() {
-    return [...this.rows.values()].some((r) => r.isDev);
-  }
-  async ping() {}
-  async close() {}
-}
 
 const config = loadConfig({ OC_ENV: "test" });
 const auth = { authorization: `Bearer ${DEV_SHARED_SECRET}` };
@@ -89,9 +76,9 @@ describe("HTTP API", () => {
     expect(again.statusCode).toBe(409);
   });
 
-  it("does not pretend to sign before W4", async () => {
+  it("validates sign requests", async () => {
     const app = buildApp(config, new MemoryStore());
     const res = await app.inject({ method: "POST", url: "/v1/sign", headers: auth, payload: {} });
-    expect(res.statusCode).toBe(501);
+    expect(res.statusCode).toBe(422);
   });
 });

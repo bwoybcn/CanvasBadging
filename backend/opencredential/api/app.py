@@ -15,9 +15,10 @@ from sqlalchemy import text
 from opencredential import __version__
 from opencredential.api import errors, health
 from opencredential.api.middleware import RequestIdMiddleware
-from opencredential.api.routes import dev, learners
+from opencredential.api.routes import credentials, dev, learners
 from opencredential.db.session import app_engine
 from opencredential.logging import configure_logging, get_logger
+from opencredential.public import routes as public_routes
 from opencredential.settings import Settings, get_settings
 
 log = get_logger("app")
@@ -58,6 +59,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     errors.install(app)
     app.include_router(health.router)
     app.include_router(learners.router)
+    app.include_router(credentials.router)
+    app.include_router(public_routes.router)
     if settings.dev_login_enabled:
         app.include_router(dev.router)
 
