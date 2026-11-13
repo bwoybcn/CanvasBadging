@@ -33,7 +33,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
@@ -82,7 +82,7 @@ jobs:
       POSTGRES_USER: postgres
       OUT: ${{ github.workspace }}/conformance-out
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
@@ -157,7 +157,7 @@ jobs:
       POSTGRES_USER: postgres
       SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
@@ -217,7 +217,7 @@ jobs:
       run:
         working-directory: signer
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -235,7 +235,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -250,7 +250,7 @@ jobs:
     name: Dependency audit and licences
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
@@ -278,7 +278,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, signer, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build and start the stack
         run: docker compose up -d --build
       - name: Smoke test
