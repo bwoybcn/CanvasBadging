@@ -82,8 +82,13 @@ def setup(database: None) -> Iterator[dict[str, Any]]:
         )
         db.add(course)
         db.flush()
-        ids = {"iid": inst.id, "integ": integ.id, "admin": admin.id, "course": course.id,
-               "student": student.id}
+        ids = {
+            "iid": inst.id,
+            "integ": integ.id,
+            "admin": admin.id,
+            "course": course.id,
+            "student": student.id,
+        }
     services.clear_token_cache()
     yield ids
 
@@ -224,8 +229,9 @@ def _nrps(members: list[dict[str, Any]], *, fail_page_2: bool = False) -> httpx.
     return httpx.MockTransport(handler)
 
 
-def _member(sub: str, name: str, roles: list[str], canvas_id: str | None, status: str = "Active"
-            ) -> dict[str, Any]:
+def _member(
+    sub: str, name: str, roles: list[str], canvas_id: str | None, status: str = "Active"
+) -> dict[str, Any]:
     msg = [{CUSTOM: {"canvas_user_id": canvas_id or "$Canvas.user.id"}}]
     return {"user_id": sub, "name": name, "roles": roles, "status": status, "message": msg}
 
@@ -254,8 +260,11 @@ def test_roster_sync_provisions_and_revokes(setup: dict[str, Any]) -> None:
                 out.setdefault(u.display_name or "", set()).add(ms.role)
             return out
 
-    assert roles() == {"Tess Teacher": {"lecturer"}, "Sam Student": {"student"},
-                       "Sasha Student": {"student"}}
+    assert roles() == {
+        "Tess Teacher": {"lecturer"},
+        "Sam Student": {"student"},
+        "Sasha Student": {"student"},
+    }
     with owner_session() as db:
         ids = {
             (e.kind, e.value)

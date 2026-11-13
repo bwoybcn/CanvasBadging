@@ -1988,6 +1988,95 @@
         "title": "InstitutionOut",
         "type": "object"
       },
+      "IntegrationOut": {
+        "properties": {
+          "api_authorised_canvas_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Authorised Canvas User Id"
+          },
+          "api_client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Client Id"
+          },
+          "api_connected": {
+            "title": "Api Connected",
+            "type": "boolean"
+          },
+          "api_scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Api Scopes",
+            "type": "array"
+          },
+          "api_token_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Token Expires At"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lti_client_id": {
+            "title": "Lti Client Id",
+            "type": "string"
+          },
+          "lti_issuer": {
+            "title": "Lti Issuer",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "base_url",
+          "lti_issuer",
+          "lti_client_id",
+          "api_client_id",
+          "status",
+          "api_connected",
+          "api_token_expires_at",
+          "api_authorised_canvas_user_id",
+          "api_scopes"
+        ],
+        "title": "IntegrationOut",
+        "type": "object"
+      },
       "Issue": {
         "properties": {
           "code": {
@@ -2217,6 +2306,61 @@
         "title": "KeyOut",
         "type": "object"
       },
+      "LaunchCourseOut": {
+        "description": "The Canvas course this session was launched from (LTI sessions only).",
+        "properties": {
+          "canvas_course_id": {
+            "title": "Canvas Course Id",
+            "type": "string"
+          },
+          "course_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "course_code",
+          "canvas_course_id",
+          "status",
+          "roles",
+          "view"
+        ],
+        "title": "LaunchCourseOut",
+        "type": "object"
+      },
       "ManualApproval": {
         "additionalProperties": false,
         "description": "Rule E: an authorised lecturer or administrator confirms completion for the learner.",
@@ -2302,6 +2446,17 @@
             ],
             "title": "Display Name"
           },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2309,6 +2464,16 @@
           },
           "institution": {
             "$ref": "#/components/schemas/InstitutionOut"
+          },
+          "launch_course": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LaunchCourseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "memberships": {
             "items": {
@@ -2443,6 +2608,19 @@
           "module_ids"
         ],
         "title": "ModulesCompleted",
+        "type": "object"
+      },
+      "OAuthStartOut": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "OAuthStartOut",
         "type": "object"
       },
       "OrgUnitIn": {
@@ -7196,6 +7374,75 @@
         "summary": "Reject Award",
         "tags": [
           "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/canvas/integrations": {
+      "get": {
+        "operationId": "list_integrations_api_v1_canvas_integrations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/IntegrationOut"
+                  },
+                  "title": "Response List Integrations Api V1 Canvas Integrations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Integrations",
+        "tags": [
+          "canvas"
+        ]
+      }
+    },
+    "/api/v1/canvas/integrations/{integration_id}/oauth/start": {
+      "post": {
+        "description": "Begin authorising the integration account. Open the URL in a new top-level window.",
+        "operationId": "start_oauth_api_v1_canvas_integrations__integration_id__oauth_start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "integration_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Integration Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthStartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Oauth",
+        "tags": [
+          "canvas"
         ]
       }
     },
