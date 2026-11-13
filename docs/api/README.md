@@ -2,7 +2,7 @@
 
 OpenCredential's user interface is built entirely on its REST API, so anything the UI does, a
 script or another system can do too. This guide explains how to call it. The complete reference
-is the OpenAPI document [openapi.json](openapi.json): 98 paths, generated from the code. CI
+is the OpenAPI document [openapi.json](openapi.json): 100 paths, generated from the code. CI
 fails if the committed copy differs from the code (`test_openapi_snapshot_is_current`).
 
 To browse it, open `https://<host>/docs` (interactive), or load `openapi.json`

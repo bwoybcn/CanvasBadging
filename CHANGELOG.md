@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Release hardening (W8, spec Phase 8): course activation ("Switch on micro-credentials for this
+  course", with an initial Canvas read and an institution policy for first launch); course award
+  history, CSV export and in-app revocation requests for lecturers; honest refresh messages that
+  show the last successful Canvas read; security response headers; the issuing job publishes a
+  new status list itself, so fresh credentials verify at once; security, cross-tenant and
+  malicious-input test suites; Playwright E1–E12 and WCAG 2.2 AA checks in CI; a destructive
+  backup and restore drill in CI; threat model, security guide, production, lecturer, API,
+  demonstration and DPIA guides; conformance, accessibility, security, dependency, end-to-end,
+  traceability-evidence and Definition of Done reports.
 - Student collection and portability (W6, spec Phase 6): "My credentials" across courses,
   credential detail with live verification, signed download, student-controlled public links
   (off by default, 128-bit random ids, preview of exactly what becomes public, withdraw without
