@@ -34,7 +34,7 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - run: uv sync --frozen
@@ -83,7 +83,7 @@ jobs:
       OUT: ${{ github.workspace }}/conformance-out
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - uses: actions/setup-node@v4
@@ -158,7 +158,7 @@ jobs:
       SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - uses: actions/setup-node@v4
@@ -251,7 +251,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - uses: actions/setup-node@v4
