@@ -6,6 +6,7 @@ import { useNavigate } from "react-router";
 
 import { ApiError, apiFetch, type DevUser } from "../api";
 import { useAuth } from "../auth";
+import { TableScroll } from "../components/TableScroll";
 
 export const DEMO_INSTITUTION = "demo-university";
 
@@ -56,6 +57,7 @@ export function DevLogin() {
         </Alert>
       )}
       {users.data && (
+        <TableScroll>
         <Table caption="Demo users">
           <Table.Head>
             <Table.Row>
@@ -83,6 +85,7 @@ export function DevLogin() {
             ))}
           </Table.Body>
         </Table>
+        </TableScroll>
       )}
       {login.isError && <Alert variant="error" margin="medium 0 0">Sign-in failed.</Alert>}
     </View>

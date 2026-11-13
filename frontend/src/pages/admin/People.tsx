@@ -19,6 +19,7 @@ import {
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
+import { TableScroll } from "../../components/TableScroll";
 
 export function People() {
   return (
@@ -59,6 +60,7 @@ function OrgUnits() {
       </Heading>
       {q.isPending && <Loading what="departments" />}
       {q.isError && <ErrorAlert error={q.error} />}
+      <TableScroll>
       <Table caption="Faculties and departments">
         <Table.Head>
           <Table.Row>
@@ -87,6 +89,7 @@ function OrgUnits() {
           ))}
         </Table.Body>
       </Table>
+      </TableScroll>
       {patch.isError && <ErrorAlert error={patch.error} />}
       <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0 0">
         <TextInput renderLabel="New unit name" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} width="16rem" />
@@ -212,6 +215,7 @@ function Roles() {
         Staff roles
       </Heading>
       {roles.isError && <ErrorAlert error={roles.error} />}
+      <TableScroll>
       <Table caption="Staff roles">
         <Table.Head>
           <Table.Row>
@@ -241,6 +245,7 @@ function Roles() {
           ))}
         </Table.Body>
       </Table>
+      </TableScroll>
       {revoke.isError && <ErrorAlert error={revoke.error} />}
       <Heading level="h3" margin="medium 0 small">
         Grant a role

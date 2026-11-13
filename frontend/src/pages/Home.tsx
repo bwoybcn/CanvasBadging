@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Alert, Button, Heading, List, Spinner, Text, View } from "@instructure/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiFetch, type Me } from "../api";
+import { apiFetch, apiSend, problemText, type Me } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
 import { Nav } from "../components/Page";
@@ -57,8 +57,8 @@ export function Home() {
         ))}
       </List>
       <Text as="p">
-        Use the links above to see your badges, create and review micro-credentials, or confirm awards. Badge
-        wallets and sharing are added in a later stage of the build.
+        Use the links above to see your badges and credentials, create and review micro-credentials, or confirm
+        awards. Students can download, share and add their credentials to LinkedIn from "My credentials".
       </Text>
       {user.session_method === "dev" && (
         <Button margin="medium 0 0" onClick={() => setToken(null)}>
@@ -90,13 +90,14 @@ function CourseContext({ course }: { course: NonNullable<Me["launch_course"]> })
         {course.course_code ? `${course.course_code} · ` : ""}Canvas course {course.canvas_course_id} · Your role:{" "}
         <strong>{roles}</strong>
       </Text>
-      {course.status !== "active" && (
-        <Alert variant="info" margin="small 0">
-          {course.view === "lecturer"
-            ? "Micro-credentials are not switched on for this course yet. Activate the course to start syncing Canvas progress."
-            : "Your lecturer has not switched on micro-credentials for this course yet."}
-        </Alert>
-      )}
+      {course.status !== "active" &&
+        (course.view === "lecturer" ? (
+          <ActivateCourse courseId={course.id} />
+        ) : (
+          <Alert variant="info" margin="small 0">
+            Your lecturer has not switched on micro-credentials for this course yet.
+          </Alert>
+        ))}
       {course.view === "lecturer" ? (
         <Text as="p">
           <AppLink to={`/courses/${course.id}/progress`}>Course progress</AppLink>
@@ -112,3 +113,29 @@ function CourseContext({ course }: { course: NonNullable<Me["launch_course"]> })
   );
 }
 
+/** Switch micro-credentials on for the launched course: it then reads Canvas progress on a schedule. */
+function ActivateCourse({ courseId }: { courseId: string }) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const activate = useMutation({
+    mutationFn: () => apiSend<{ status: string }>(`/api/v1/courses/${courseId}/activate`, token, "POST"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+  });
+  return (
+    <Alert variant="info" margin="small 0">
+      <Text as="p">
+        Micro-credentials are not switched on for this course yet. Switch them on to read students&apos; progress from
+        Canvas now and then every 30 minutes. You can switch them off again at any time; issued credentials are not
+        affected.
+      </Text>
+      <Button color="primary" onClick={() => activate.mutate()} interaction={activate.isPending ? "disabled" : "enabled"}>
+        Switch on micro-credentials for this course
+      </Button>
+      {activate.isError && (
+        <Text as="p" color="danger">
+          {problemText(activate.error)}
+        </Text>
+      )}
+    </Alert>
+  );
+}

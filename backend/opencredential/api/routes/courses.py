@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -16,7 +16,7 @@ from opencredential.api.deps import ActorDep, RequestIdDep, SettingsDep, TenantD
 from opencredential.authz import policy as authz
 from opencredential.db.models import Course, LmsAssignment, LmsModule, SyncRun
 from opencredential.eligibility import progress
-from opencredential.errors import NotFound, RateLimited
+from opencredential.errors import Conflict, Forbidden, NotFound, RateLimited
 from opencredential.jobs import enqueue
 from opencredential.sync import sync_state
 
@@ -164,6 +164,145 @@ def request_sync(
         request_id=rid,
     )
     return {"queued": job is not None, "job_id": job}
+
+
+class CourseActivationOut(BaseModel):
+    id: uuid.UUID
+    status: str
+    activated_at: datetime | None
+    sync_queued: bool
+
+
+def _activation_course(db: TenantDb, actor: authz.Actor, course_id: uuid.UUID) -> Course:
+    course = _course(db, actor, course_id)  # course staff or an administrator over it; else 404
+    if not (
+        actor.course_roles(course.id) & {"lecturer", "course_admin"}
+        or actor.is_inst_admin
+        or authz.is_dept_admin_over(db, actor, course.org_unit_id)
+    ):
+        raise Forbidden("FORBIDDEN", "Only a lecturer or an administrator can change this.")
+    return course
+
+
+@router.post("/{course_id}/activate", response_model=CourseActivationOut)
+def activate_course(
+    course_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> CourseActivationOut:
+    """Switch micro-credentials on for a course (spec §4.1): it joins scheduled Canvas
+    reconciliation and an initial sync is queued at once. Idempotent."""
+    course = _activation_course(db, actor, course_id)
+    if course.status == "archived":
+        raise Conflict("COURSE_ARCHIVED", "This course is archived and cannot be switched on.")
+    job = None
+    if course.status != "active":
+        course.status = "active"
+        course.activated_at = datetime.now(UTC)
+        course.activated_by = actor.user_id
+        audit.record(
+            db,
+            action="course.activate",
+            resource_type="course",
+            resource_id=course.id,
+            institution_id=actor.institution_id,
+            actor_user_id=actor.user_id,
+            request_id=rid,
+        )
+        job = enqueue.defer(
+            db,
+            enqueue.SYNC_COURSE,
+            queue="sync",
+            institution_id=actor.institution_id,
+            args={"course_id": str(course.id), "kind": "initial"},
+            subject_type="course",
+            subject_id=course.id,
+            queueing_lock=f"sync:{course.id}",
+        )
+    db.flush()
+    return CourseActivationOut(
+        id=course.id,
+        status=course.status,
+        activated_at=course.activated_at,
+        sync_queued=job is not None,
+    )
+
+
+@router.post("/{course_id}/deactivate", response_model=CourseActivationOut)
+def deactivate_course(
+    course_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> CourseActivationOut:
+    """Stop scheduled Canvas reconciliation for a course. Issued credentials are untouched."""
+    course = _activation_course(db, actor, course_id)
+    if course.status == "active":
+        course.status = "inactive"
+        audit.record(
+            db,
+            action="course.deactivate",
+            resource_type="course",
+            resource_id=course.id,
+            institution_id=actor.institution_id,
+            actor_user_id=actor.user_id,
+            request_id=rid,
+        )
+    db.flush()
+    return CourseActivationOut(
+        id=course.id, status=course.status, activated_at=course.activated_at, sync_queued=False
+    )
+
+
+def _course_records(
+    db: TenantDb, actor: authz.Actor, course_id: uuid.UUID, status: str | None
+) -> list[dict[str, Any]]:
+    from opencredential.governance import records
+
+    course = _course(db, actor, course_id)  # course staff or an administrator over it; else 404
+    return records.records(db, actor, course_staff_of=course.id, status=status, limit=1_000_000)
+
+
+@router.get("/{course_id}/credentials")
+def course_credentials(
+    course_id: uuid.UUID,
+    db: TenantDb,
+    actor: ActorDep,
+    status: Literal["active", "revoked"] | None = None,
+) -> list[dict[str, Any]]:
+    """Award history for course staff (spec §2.2): every credential issued in this course."""
+    return _course_records(db, actor, course_id, status)
+
+
+@router.get(
+    "/{course_id}/credentials.csv",
+    response_class=Response,
+    responses={200: {"content": {"text/csv": {}}}},
+)
+def course_credentials_csv(
+    course_id: uuid.UUID,
+    db: TenantDb,
+    actor: ActorDep,
+    rid: RequestIdDep,
+    status: Literal["active", "revoked"] | None = None,
+) -> Response:
+    """Course-level issuance records as CSV for course staff (spec §2.2). No email addresses."""
+    from opencredential.governance import records
+
+    rows = _course_records(db, actor, course_id, status)
+    audit.record(
+        db,
+        action="course.report_export",
+        resource_type="course",
+        resource_id=course_id,
+        institution_id=actor.institution_id,
+        actor_user_id=actor.user_id,
+        request_id=rid,
+        data={"counts": {"rows": len(rows)}},
+    )
+    return Response(
+        records.to_csv(rows, records.RECORD_COLUMNS),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="course-credentials.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get("/{course_id}/progress")

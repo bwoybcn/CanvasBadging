@@ -58,7 +58,7 @@ def _scope_filter(db: Session, actor: authz.Actor) -> Any:
     return or_(Course.org_unit_id.in_(units), Issuer.org_unit_id.in_(units))
 
 
-def _base(db: Session, actor: authz.Actor) -> Any:
+def _base(db: Session, actor: authz.Actor, course_staff_of: uuid.UUID | None = None) -> Any:
     q = (
         select(
             Credential,
@@ -79,6 +79,9 @@ def _base(db: Session, actor: authz.Actor) -> Any:
         .outerjoin(CredentialStatus, CredentialStatus.credential_id == Credential.id)
         .where(Credential.status == "issued")
     )
+    if course_staff_of is not None:
+        # Course staff see their own course's records; the caller checked they are staff.
+        return q.where(AchievementDefinition.course_id == course_staff_of)
     cond = _scope_filter(db, actor)
     return q if cond is None else q.where(cond)
 
@@ -107,8 +110,9 @@ def records(
     learner: str | None = None,
     limit: int = 200,
     offset: int = 0,
+    course_staff_of: uuid.UUID | None = None,
 ) -> list[dict[str, Any]]:
-    q = _base(db, actor)
+    q = _base(db, actor, course_staff_of)
     if course_id:
         q = q.where(AchievementDefinition.course_id == course_id)
     if definition_id:

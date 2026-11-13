@@ -121,3 +121,19 @@ Awards older than ten minutes with no credential (never started, stuck before si
 failed issuance or status-list jobs, and overdue revocation lists. **Try again** re-queues
 issuance (safe to repeat: issuance is idempotent on the award); **Cancel award** stops one that
 should never be issued, with a reason. Issued awards cannot be cancelled; revoke instead.
+
+## 12. Courses taking part
+
+With the policy **Courses take part only after a lecturer switches micro-credentials on** (Administration, Policy; on by default), a course launched from
+Canvas for the first time takes no part until a lecturer, course admin or administrator chooses
+**Switch on micro-credentials for this course** on the launch page
+(`POST /api/v1/courses/<id>/activate`). Switching on reads Canvas at once and then every 30
+minutes. `POST /api/v1/courses/<id>/deactivate` stops the scheduled reads; badges and issued
+credentials are not touched. Both actions are in the audit log under *Policy and
+configuration*. With the policy off, every course joins at its first launch.
+
+## 13. Operations
+
+Backups, restoration and incident recovery are for whoever runs the servers:
+[../operations/backup-restore.md](../operations/backup-restore.md). The pre-production security
+review is in [../security/security-guide.md](../security/security-guide.md).

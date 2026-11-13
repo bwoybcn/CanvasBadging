@@ -156,6 +156,35 @@ Teachers, TAs, Designers and course admins, and the student view for students.
 Roles are re-read from the signed launch every time and from NRPS on every sync; Canvas
 removals revoke them (ADR-0013).
 
+### Switch micro-credentials on for the course
+
+By default (institution policy `course_activation_required`, Administration → Policy) a course
+takes part only once a lecturer switches it on. The first lecturer launch shows **Switch on
+micro-credentials for this course**. Switching on reads Canvas straight away and then every 30
+minutes. A lecturer, course admin or administrator can switch it off again with
+`POST /api/v1/courses/<id>/deactivate`. Issued credentials are not affected. If the policy is
+off, every course joins at its first launch.
+
+## Changing the tool's address
+
+Canvas stores the launch URL in two places: the developer key's configuration and the
+**installed tool** (the deployment). Changing the developer key (for example, moving from
+`http://localhost:8000` to `https://localhost:8443`, or to the production domain) does **not**
+update the installed tool, and the Canvas UI does not show the stale URL. Launches then keep
+going to the old address. After changing the key, also update the installed tool:
+
+```bash
+curl -X PUT "$CANVAS/api/v1/accounts/1/external_tools/<tool id>" \
+  -H "Authorization: Bearer $CANVAS_ADMIN_TOKEN" \
+  -d "url=https://<new host>/lti/launch" \
+  -d "domain=<new host>" \
+  -d "course_navigation[url]=https://<new host>/lti/launch"
+```
+
+Then update the API developer key's redirect URI to
+`https://<new host>/api/v1/canvas/oauth/callback`, and set `OC_PUBLIC_BASE_URL` to the new
+address. Verified on the local Canvas on 13 November 2026 ([e2e report](../reports/e2e.md)).
+
 ## Local development notes
 
 - `compose.yaml` sets `OC_CANVAS_URL_REWRITE=http://localhost:3000=http://host.docker.internal:3000`
@@ -163,7 +192,9 @@ removals revoke them (ADR-0013).
 - `http://localhost:8000` works for launches from an `http` Canvas: both are the same *site*,
   so the binding cookie is sent. Behind `https://localhost:8443` (Caddy) the tool is a
   different site from `http://localhost:3000`, so the cookie would be blocked in the iframe and
-  the platform-storage path below is used (not exercised yet; trust Caddy's local CA first).
+  the platform-storage path below is used. Both paths were exercised over HTTPS on 13 November
+  2026 ([e2e report](../reports/e2e.md)); trust Caddy's local CA, or ignore certificate errors in
+  a test browser.
 - **NRPS fails on a local Canvas whose domain has a port** (`localhost:3000`): Canvas returns 500
   from Names and Roles (`URI::InvalidComponentError` in
   `NamesAndRolesController#find_memberships_page`). Sync then logs `sync.roster_failed` and keeps

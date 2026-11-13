@@ -107,7 +107,7 @@ dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}
 .muted{color:#4a5563;font-size:.95rem}a{color:#0b4f8a}
 details summary{cursor:pointer;font-weight:600}
 code{font-size:.9em;overflow-wrap:anywhere}
-button,input[type=file]{font:inherit}
+button,input[type=file]{font:inherit}input[type=file]{max-width:100%}
 button{background:#0b4f8a;color:#fff;border:0;border-radius:.3rem;padding:.5rem 1rem;cursor:pointer}
 :focus-visible{outline:3px solid #f2a900;outline-offset:2px}
 """

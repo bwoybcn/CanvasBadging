@@ -227,3 +227,86 @@ describe("awards and progress", () => {
     expect(within(card).getByText(/1 of 2 confirmed/)).toBeInTheDocument();
   });
 });
+
+describe("course activation", () => {
+  it("lets a lecturer switch micro-credentials on from the launch page", async () => {
+    let status = "inactive";
+    const launchCourse = () => ({
+      id: "c-1",
+      title: "Study Skills 101",
+      course_code: null,
+      canvas_course_id: "4",
+      status,
+      roles: ["lecturer"],
+      view: "lecturer",
+    });
+    const calls = stubApi({
+      "GET /api/v1/learners/me": () => ({ ...STAFF_ME, launch_course: launchCourse() }),
+      "POST /api/v1/courses/c-1/activate": () => {
+        status = "active";
+        return { id: "c-1", status, activated_at: "2026-11-13T16:00:00Z", sync_queued: true };
+      },
+    });
+    renderAt("/");
+    const button = await screen.findByRole("button", { name: "Switch on micro-credentials for this course" });
+    await userEvent.click(button);
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/activate"))).toBe(true));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Switch on micro-credentials for this course" })).toBeNull(),
+    );
+  });
+});
+
+describe("course progress: history and revocation requests", () => {
+  it("shows the course award history and lets staff ask for a revocation, without revoking anything", async () => {
+    const calls = stubApi({
+      "GET /api/v1/learners/me": STAFF_ME,
+      "GET /api/v1/courses/c-1/progress": {
+        course: { id: "c-1", title: "Study Skills 101" },
+        badges: [
+          { definition_id: "d-1", version_id: "v-1", title: "Seminar Skills", award_policy: "automatic", rules: ["Complete module"], source_flags: [] },
+        ],
+        learners: [
+          {
+            user_id: "u-s1",
+            name: "Sam Student",
+            cells: [
+              { version_id: "v-1", outcome: "met", evaluated_at: null, codes: [], progress: null, decision_status: "issued", decision_id: "dec-1", credential_id: "cred-1" },
+            ],
+          },
+        ],
+      },
+      "GET /api/v1/courses/c-1/sync": { last_run: null, last_success_at: null },
+      "GET /api/v1/courses/c-1/credentials": [
+        {
+          credential_id: "cred-1",
+          definition_id: "d-1",
+          course_id: "c-1",
+          issued_at: "2026-11-13T10:00:00Z",
+          badge_title: "Seminar Skills",
+          version_no: 1,
+          course_title: "Study Skills 101",
+          course_code: null,
+          issuer_name: "Skills Centre",
+          learner_name: "Sam Student",
+          award_kind: "automatic",
+          status: "active",
+          revoked_at: null,
+          revocation_reason: null,
+        },
+      ],
+      "POST /api/v1/credentials/cred-1/revocation-requests": { id: "rr-1", status: "pending" },
+    });
+    renderAt("/courses/c-1/progress");
+    const history = await screen.findByRole("table", { name: /Credentials issued in Study Skills 101/ });
+    expect(within(history).getByText("Seminar Skills (version 1)")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Download as CSV" })).toBeTruthy();
+    await userEvent.click(await screen.findByRole("button", { name: "Request revocation for Sam Student" }));
+    const send = await screen.findByRole("button", { name: "Send request" });
+    await userEvent.type(screen.getByLabelText(/Why should it be revoked/), "Issued to the wrong learner");
+    await userEvent.click(send);
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/revocation-requests"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/revocation-requests"))!.body).toEqual({ reason: "Issued to the wrong learner" });
+    expect(await screen.findByText(/stays valid until they approve/)).toBeTruthy();
+  });
+});

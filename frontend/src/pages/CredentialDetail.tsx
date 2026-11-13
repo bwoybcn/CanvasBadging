@@ -187,8 +187,10 @@ function LinkedInPanel({ li }: { li: LinkedIn }) {
         {li.fields.map((f) => (
           <div key={f.key} style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center", margin: "0 0 0.5rem" }}>
             <dt style={{ fontWeight: 600, minWidth: "10rem" }}>{f.label}</dt>
-            <dd style={{ margin: 0, overflowWrap: "anywhere", flex: "1 1 12rem" }}>{f.value ?? "Available once you turn on the public link"}</dd>
-            {f.value && <CopyValue label={f.label} value={f.value} />}
+            <dd style={{ margin: 0, overflowWrap: "anywhere", flex: "1 1 12rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+              <span>{f.value ?? "Available once you turn on the public link"}</span>
+              {f.value && <CopyValue label={f.label} value={f.value} />}
+            </dd>
           </div>
         ))}
       </dl>

@@ -8,6 +8,7 @@ import { apiFetch, type AuditItem } from "../../api";
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage, DownloadButton, fmtDate } from "./AdminPage";
+import { TableScroll } from "../../components/TableScroll";
 
 interface AuditPage {
   items: AuditItem[];
@@ -59,6 +60,7 @@ export function Audit() {
       {q.isPending && <Loading what="audit log" />}
       {q.isError && <ErrorAlert error={q.error} />}
       {items.length > 0 && (
+        <TableScroll>
         <Table caption="Audit events, newest first">
           <Table.Head>
             <Table.Row>
@@ -90,6 +92,7 @@ export function Audit() {
             ))}
           </Table.Body>
         </Table>
+        </TableScroll>
       )}
       {q.hasNextPage && (
         <Button margin="small 0" onClick={() => q.fetchNextPage()} interaction={q.isFetchingNextPage ? "disabled" : "enabled"}>

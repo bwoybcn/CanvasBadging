@@ -14,7 +14,15 @@ from opencredential.jobs.app import build_app
 
 @lru_cache
 def _app() -> procrastinate.App:
-    return build_app().open()
+    app = build_app()
+    # Inside ``oc worker`` the app is already open on an async pool, and procrastinate's
+    # connector refuses a second, synchronous ``open()`` (NotImplementedError). Sync tasks run
+    # in a worker thread, where the async connector's sync methods work, so use it as it is.
+    # Before this, every issuance job run by the worker failed after signing, when it tried to
+    # queue the first publication of its status list (found by the W8 end-to-end run, E6).
+    if getattr(app.connector, "_async_pool", None) is not None:
+        return app
+    return app.open()
 
 
 def defer(

@@ -7,9 +7,11 @@ import { apiFetch, POLICY_LABELS, STATE_LABELS, type DefinitionSummary } from ".
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
 import { ErrorAlert, Loading, Page } from "../components/Page";
+import { TableScroll } from "../components/TableScroll";
 
 function BadgeTable({ items, caption }: { items: DefinitionSummary[]; caption: string }) {
   return (
+    <TableScroll>
     <Table caption={caption} margin="0 0 medium">
       <Table.Head>
         <Table.Row>
@@ -36,6 +38,7 @@ function BadgeTable({ items, caption }: { items: DefinitionSummary[]; caption: s
         ))}
       </Table.Body>
     </Table>
+    </TableScroll>
   );
 }
 

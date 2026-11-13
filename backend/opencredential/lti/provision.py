@@ -146,12 +146,20 @@ def upsert_course(
         )
     created = False
     if course is None:
+        # The institution decides whether staff must switch a course on (the default) or
+        # every launched course takes part at once (policy ``course_activation_required``).
+        from opencredential.authz.policy import institution_policy
+
+        needs_activation = bool(
+            institution_policy(db, institution_id).get("course_activation_required", True)
+        )
         course = Course(
             institution_id=institution_id,
             canvas_integration_id=integration_id,
             canvas_course_id=canvas_course_id,
             title=launch.context_title or launch.context_label or "Untitled course",
-            status="inactive",
+            status="inactive" if needs_activation else "active",
+            activated_at=None if needs_activation else datetime.now(UTC),
         )
         db.add(course)
         created = True

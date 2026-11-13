@@ -1,0 +1,14 @@
+{
+  "name": "opencredential-e2e",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --trace off",
+    "test:a11y": "playwright test --trace off a11y"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.63.0"
+  }
+}

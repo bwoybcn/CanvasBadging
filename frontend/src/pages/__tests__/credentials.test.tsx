@@ -88,7 +88,12 @@ describe("student collection", () => {
     expect(within(other).getByText("Revoked")).toBeInTheDocument();
     expect(within(other).getByText("Shared publicly")).toBeInTheDocument();
     // AppLink renders InstUI Link with a click handler, which InstUI exposes as role "button".
-    expect(await screen.findByRole("button", { name: "My credentials" })).toHaveAttribute("href", "/me/credentials");
+    // A navigation item is a link, never a "button" (W6 screen-reader finding), and marks the
+    // page you are on.
+    const nav = await screen.findByRole("link", { name: "My credentials" });
+    expect(nav).toHaveAttribute("href", "/me/credentials");
+    expect(nav).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("button", { name: "My credentials" })).toBeNull();
   });
 });
 

@@ -1,21 +1,37 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link } from "@instructure/ui";
 import type { ReactNode } from "react";
-import { useHref, useNavigate } from "react-router";
+import { Link as RouterLink, useMatch, useResolvedPath } from "react-router";
 
-/** An InstUI link that navigates inside the single-page app. */
-export function AppLink({ to, children, margin }: { to: string; children: ReactNode; margin?: string }) {
-  const href = useHref(to);
-  const navigate = useNavigate();
+/**
+ * An InstUI-styled link that navigates inside the single-page app.
+ *
+ * Rendered through react-router's <Link> so it stays a plain <a href> with no click handler of
+ * InstUI's own: InstUI gives a link that has an onClick role="button", which made screen readers
+ * announce every navigation item as a button (W6 finding, fixed in W8). Modifier-clicks open a
+ * new tab as usual. ``current`` marks the link for the page you are on with aria-current="page".
+ */
+export function AppLink({
+  to,
+  children,
+  margin,
+  current = false,
+}: {
+  to: string;
+  children: ReactNode;
+  margin?: string;
+  current?: boolean;
+}) {
+  const resolved = useResolvedPath(to);
+  const match = useMatch({ path: resolved.pathname, end: to === "/" });
+  const isCurrent = current && match !== null;
   return (
     <Link
-      href={href}
+      as={RouterLink as never}
+      {...({ to } as object)}
       margin={margin as never}
-      onClick={(e) => {
-        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-        e.preventDefault();
-        navigate(to);
-      }}
+      aria-current={isCurrent ? "page" : undefined}
+      themeOverride={isCurrent ? { fontWeight: 700 } : undefined}
     >
       {children}
     </Link>

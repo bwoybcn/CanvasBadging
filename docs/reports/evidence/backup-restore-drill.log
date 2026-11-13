@@ -1,0 +1,19 @@
+== 1. state before
+active credential before: verified
+44 credentials, 4 revoked, 1 status lists, 574 audit events, 15 users, 1 private keys, 36 tables with row-level security, 172 runtime grants
+== 2. backup
+total 364
+-rw------- 1 root root    558 Nov 13 16:13 assets.tar.gz
+-rw------- 1 root root    220 Nov 13 16:13 manifest.txt
+-rw------- 1 root root 363456 Nov 13 16:13 opencredential.dump
+== 3. disaster: stop services, drop the database
+8790/tcp:            13372
+== 4. restore
+restored alembic_revision|0007 from /tmp/tmp.l8E63wCDtD/backup
+next: run 'oc migrate' (applies any migrations newer than the backup), then start signer, api, worker
+{"status":"ok","checks":{"database":"ok","migrations":"ok","signer":"ok"}}
+== 5. checks
+44 credentials, 4 revoked, 1 status lists, 574 audit events, 15 users, 1 private keys, 36 tables with row-level security, 172 runtime grants
+credential downloaded before the loss: verified
+same file after revoking it on the restored service: revoked
+DRILL OK

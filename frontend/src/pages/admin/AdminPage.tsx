@@ -40,7 +40,7 @@ export function AdminPage({ title, children, instOnly = false }: { title: string
             ))}
           </List>
         </View>
-        <View as="section" display="block" minWidth="20rem" width="calc(100% - 17rem)">
+        <View as="section" display="block" minWidth="min(20rem, 100%)" width="calc(100% - 17rem)">
           {allowed ? (
             children
           ) : (
