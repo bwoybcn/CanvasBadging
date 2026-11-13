@@ -89,6 +89,11 @@ class Course(TenantMixin, Base):
     canvas_integration_id: Mapped[uuid.UUID] = mapped_column(Uuid)
     canvas_course_id: Mapped[str] = mapped_column(Text)
     lti_context_id: Mapped[str | None] = mapped_column(Text)
+    #: NRPS ``context_memberships_url`` from the latest launch (roster sync, ADR-0009).
+    lti_nrps_url: Mapped[str | None] = mapped_column(Text)
+    #: Resource link of the Course Navigation placement; NRPS ``rlid`` returns per-member
+    #: custom fields (the Canvas user id) for it.
+    lti_resource_link_id: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str] = mapped_column(Text)
     course_code: Mapped[str | None] = mapped_column(Text)
     org_unit_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)

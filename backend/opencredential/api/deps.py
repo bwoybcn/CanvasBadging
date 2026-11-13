@@ -39,7 +39,10 @@ def tenant_db(claims: ClaimsDep) -> Iterator[Session]:
         yield session
 
 
-TenantDb = Annotated[Session, Depends(tenant_db)]
+#: ``scope="function"`` commits *before* the response is sent. With the default (request scope)
+#: the commit ran after the client already had its 200, so an immediate follow-up request (for
+#: example opening a share link just created) could miss the write.
+TenantDb = Annotated[Session, Depends(tenant_db, scope="function")]
 
 
 def current_actor(claims: ClaimsDep, db: TenantDb) -> policy.Actor:

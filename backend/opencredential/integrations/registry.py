@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Choose the :class:`LmsAdapter` for an integration.
 
-The Canvas REST adapter is built in W3 and registers itself with :func:`register`. Until then,
-real integrations report ``ADAPTER_UNAVAILABLE`` (so rules stay ``unknown``), and the seeded
-development course is served by the in-memory demo adapter. Tests override with
-:func:`override`.
+Active integrations use the Canvas REST adapter (W3). Integrations that are not active yet
+report ``ADAPTER_UNAVAILABLE`` (so rules stay ``unknown``), and the seeded development course is
+served by the in-memory demo adapter. Tests override with :func:`override` or
+:func:`register`.
 """
 
 from __future__ import annotations
@@ -25,6 +25,13 @@ _override: LmsAdapter | None = None
 
 class AdapterUnavailable(LmsError):
     code = "ADAPTER_UNAVAILABLE"
+
+
+def _canvas_factory(integration: CanvasIntegration) -> LmsAdapter:
+    """The Canvas REST adapter (W3) for an active integration."""
+    from opencredential.integrations.canvas.adapter import build
+
+    return build(get_settings(), integration)
 
 
 def register(factory: Factory) -> None:
@@ -50,8 +57,8 @@ def get_adapter(integration: CanvasIntegration, course_ref: str) -> LmsAdapter:
         from opencredential.seed import load_passport
 
         return passport_adapter(load_passport(), course_ref)
-    if _factory is not None and integration.status == "active":
-        return _factory(integration)
+    if integration.status == "active":
+        return (_factory or _canvas_factory)(integration)
     raise AdapterUnavailable(
         "No Canvas connection is configured for this integration yet. An administrator needs "
         "to finish the Canvas setup."

@@ -81,6 +81,25 @@ def purge_lti_state(timestamp: int) -> int:
 # ---- Canvas sync and eligibility -----------------------------------------------------------------
 
 
+def _refresh_roster(db: Any, integration: Any, course: Course) -> None:
+    """Update course members from LTI NRPS before reading progress (W3).
+
+    Skipped for courses never launched from Canvas (no NRPS URL, e.g. the seeded demo course).
+    A roster failure keeps the previous roster: progress for those learners is still read, and
+    nobody is removed on the strength of a partial answer.
+    """
+    if not course.lti_nrps_url:
+        return
+    from opencredential.lti.roster import sync_roster
+
+    try:
+        with db.begin_nested():
+            res = sync_roster(db, get_settings(), integration, course)
+        log.info("sync.roster", course_id=str(course.id), members=res.members)
+    except LmsError as exc:
+        log.warning("sync.roster_failed", course_id=str(course.id), code=exc.code)
+
+
 @blueprint.task(name="sync_course", queue="sync", retry=RETRY_TRANSIENT)
 def sync_course_task(
     institution_id: str, course_id: str, kind: str = "scheduled", **_meta: Any
@@ -93,7 +112,9 @@ def sync_course_task(
             course = db.get(Course, cid)
             if course is None:
                 return {"status": "course_missing"}
-            adapter = get_adapter(integration_for(db, course), course.canvas_course_id)
+            integration = integration_for(db, course)
+            adapter = get_adapter(integration, course.canvas_course_id)
+            _refresh_roster(db, integration, course)
             result = sync_course(db, course, adapter, kind=kind, now=started)
             enqueue.defer(
                 db,

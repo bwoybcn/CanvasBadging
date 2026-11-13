@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
-import { AuthProvider, useAuth } from "./auth";
+import { AuthProvider, readLaunchSession, useAuth } from "./auth";
 import { AdminHome } from "./pages/admin/AdminHome";
 import { Audit } from "./pages/admin/Audit";
 import { Credentials } from "./pages/admin/Credentials";
@@ -37,6 +37,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/dev-login" element={<DevLogin />} />
+      <Route path="/launch" element={<Navigate to="/" replace />} />
       {(
         [
           ["/", <Home />],
@@ -83,8 +84,9 @@ export function Providers({ children, token = null }: { children: ReactNode; tok
 }
 
 export default function App() {
+  const [token] = useState(() => readLaunchSession());
   return (
-    <Providers>
+    <Providers token={token}>
       <BrowserRouter basename="/app">
         <AppRoutes />
       </BrowserRouter>

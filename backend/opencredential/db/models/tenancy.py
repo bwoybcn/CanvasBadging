@@ -127,7 +127,13 @@ class CanvasToken(TenantMixin, Base):
 
 
 class LtiLaunchState(Base):
-    """OIDC state/nonce rows, purged after 10 minutes. Pre-tenant (resolved at launch)."""
+    """OIDC state/nonce rows, purged after 10 minutes. Pre-tenant (resolved at launch).
+
+    Browser binding (spec §4.2, third-party cookies): at login we give the browser a random
+    ``browser secret`` through a cookie *and*, when Canvas offers it, through platform storage
+    (``lti_storage_target``). Only its SHA-256 is stored. A launch whose cookie is missing is
+    parked under a one-time ``launch_ticket`` until the page proves it holds the secret.
+    """
 
     __tablename__ = "lti_launch_state"
 
@@ -135,6 +141,12 @@ class LtiLaunchState(Base):
     nonce: Mapped[str] = mapped_column(Text)
     canvas_integration_id: Mapped[uuid.UUID] = mapped_column(Uuid)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    client_id: Mapped[str | None] = mapped_column(Text)
+    browser_secret_hash: Mapped[str | None] = mapped_column(Text)
+    storage_target: Mapped[str | None] = mapped_column(Text)
+    launch_ticket_hash: Mapped[str | None] = mapped_column(Text, unique=True)
+    launch_claims: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class LtiNonceUsed(Base):

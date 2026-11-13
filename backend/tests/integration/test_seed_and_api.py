@@ -156,13 +156,23 @@ def test_readyz(client: TestClient) -> None:
 
 
 def test_production_refuses_active_dev_key(seeded: seed.SeedResult) -> None:
-    prod = Settings(env="production", secret_key="s" * 48, signer_shared_secret="s" * 48)
+    prod = Settings(
+        env="production",
+        secret_key="s" * 48,
+        signer_shared_secret="s" * 48,
+        token_encryption_key="s" * 48,
+    )
     with pytest.raises(StartupRefused):
         check_production_safety(prod)
 
 
 def test_seed_refuses_production() -> None:
-    prod = Settings(env="production", secret_key="s" * 48, signer_shared_secret="s" * 48)
+    prod = Settings(
+        env="production",
+        secret_key="s" * 48,
+        signer_shared_secret="s" * 48,
+        token_encryption_key="s" * 48,
+    )
     with pytest.raises(seed.SeedRefused):
         seed.run(settings=prod)
 

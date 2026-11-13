@@ -41,10 +41,21 @@ Gary's answers of 13 Nov 2026 are recorded as decided. Everything else has a wor
 | Q22 | LinkedIn organisation | `organizationId` from UoL's LinkedIn page if configured, else `organizationName` | UoL comms |
 | Q23 | 1EdTech validator access | Use the public validator if reachable without membership. Otherwise the JSON Schema plus independent verifiers only, and the conformance report says so | Gary (UoL may be a 1EdTech member) |
 
+## Verified by W3 on the local Canvas (13 Nov 2026)
+
+Details and evidence in [docs/integrations/canvas.md](../integrations/canvas.md#verified-canvas-behaviour-local-install-13-nov-2026).
+
+- **Platform storage:** supported. Login initiation carries `lti_storage_target=post_message_forwarding` (not in the mobile webview). The launch uses it when the binding cookie is blocked.
+- **Throttling:** `X-Rate-Limit-Remaining` and `X-Request-Cost` on every response. An exhausted bucket returns **403** `Rate Limit Exceeded` (429 only when the operator enables it), so the adapter treats both as transient.
+- **Scope strings:** all ADR-0009 scopes exist except the profile one, which is `url:GET|/api/v1/users/:user_id/profile` (ADR-0009 updated).
+- **`iss`:** `https://canvas.instructure.com` on the local install.
+- **Q3:** the local Canvas launches the tool at `http://localhost:8000` (verified end to end with Edge as teacher, TA and student). That is the same *site* as `http://localhost:3000`, so the binding cookie works; the cookie-blocked path (Canvas platform storage) was verified on the same install by deleting the cookie mid-launch. `https://localhost:8443` through Caddy is configured but was not exercised.
+- **Q6 evidence:** Canvas reports excused work as `graded`, `excused: true`, `score: null`, and an excused assignment satisfies a module `must_submit` requirement.
+- **Hidden marks and modules:** an unposted grade does **not** satisfy a module `min_score` requirement (module stays `started` until the grade is posted), while `must_submit` is satisfied by submitting. So module completion never leaks a hidden score, but a `must_submit` module can complete before marks are released.
+- **NRPS on the local install:** Canvas answers 500 for Names and Roles because its domain includes a port (`localhost:3000`) and `NamesAndRolesController#find_memberships_page` assigns it to `URI#host`. A Canvas bug, not ours: sync logs `sync.roster_failed`, keeps the previous roster, and launch-time provisioning still works. Hosted Canvas has no port in its domain.
+- **Released marks:** a staff token sees unposted scores with `posted_at: null`, so `posted_at` is the only release signal (ADR-0010 confirmed).
+
 ## Unverified assumptions (owners must check before relying on them)
 
-- Canvas support for LTI client-side postMessage storage (`lti_storage_target`) on the local install (W3).
-- Canvas REST throttling headers and exact scope strings for the API key (W3).
-- The `iss` value the local Canvas sends in launches (W3).
 - Exact `IdentityObject.identityHash` format and `credentialSchema` type string, checked against the pinned JSON Schema and the validator (W4).
 - Learner Credential Wallet import of our credentials and `did:web` resolution (W6).
