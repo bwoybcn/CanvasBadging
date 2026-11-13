@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, types, Pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      OC_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      OC_TEST_REQUIRE_SIGNER: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - name: Ruff
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Mypy
+        run: uv run mypy
+      - name: Module boundaries (import-linter)
+        run: uv run lint-imports
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: signer/package-lock.json
+      - name: Start signer against the test database
+        working-directory: signer
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          OC_ENV=test SIGNER_DATABASE_URL=postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential_test \
+            nohup node dist/server.js > "$RUNNER_TEMP/signer.log" 2>&1 &
+          for i in $(seq 1 30); do curl -fsS localhost:8790/healthz && break; sleep 1; done
+      - name: Pytest (unit + integration against PostgreSQL 16 and the signer)
+        run: uv run pytest -ra
+      - name: Signer log
+        if: failure()
+        run: cat "$RUNNER_TEMP/signer.log"
+
+  signer:
+    name: Signer (lint, Vitest, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: signer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: signer/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  frontend:
+    name: Frontend (lint, Vitest, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  audit:
+    name: Dependency audit and licences
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: pip-audit (runtime dependencies)
+        working-directory: backend
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt > "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit --strict --disable-pip -r "$RUNNER_TEMP/requirements.txt"
+      - name: npm audit (production dependencies)
+        run: |
+          (cd signer && npm ci --no-audit --no-fund && npm audit --omit=dev --audit-level=high)
+          (cd frontend && npm ci --no-audit --no-fund && npm audit --omit=dev --audit-level=high)
+      - name: Licence allowlist (ADR-0018)
+        run: |
+          (cd backend && uv sync --frozen --no-dev && uvx pip-licenses --python .venv/bin/python --format=json > "$RUNNER_TEMP/py-licences.json")
+          python3 scripts/check_licences.py python "$RUNNER_TEMP/py-licences.json"
+          python3 scripts/check_licences.py npm signer
+          python3 scripts/check_licences.py npm frontend
+
+  compose:
+    name: Docker Compose smoke test (Phase 1 exit condition)
+    runs-on: ubuntu-latest
+    needs: [backend, signer, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start the stack
+        run: docker compose up -d --build
+      - name: Smoke test
+        run: scripts/smoke.sh
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+      - name: Stop
+        if: always()
+        run: docker compose down -v

@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Development HTTPS front door (self-signed via Caddy's internal CA) so the local Canvas can
+# launch the tool at https://localhost:8443. Not a production configuration.
+{
+	local_certs
+	skip_install_trust
+}
+
+https://localhost:8443 {
+	reverse_proxy api:8000
+}
