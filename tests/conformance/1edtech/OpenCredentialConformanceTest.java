@@ -9,7 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.io.CharSource;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,15 +34,27 @@ public class OpenCredentialConformanceTest {
     }
   }
 
-  private static Report inspect(Path file) throws Exception {
+  private record Result(Report report, String printed) {}
+
+  private static Result inspect(Path file) throws Exception {
     OB30Inspector inspector =
         new OB30Inspector.Builder().set(Behavior.TEST_INCLUDE_SUCCESS, true).build();
     String json = Files.readString(file, StandardCharsets.UTF_8);
     Report report =
         inspector.run(new StringResource(CharSource.wrap(json), file.toString(), ResourceType.JSON));
+    // Capture the human-readable report so we can check *why* it passed or failed.
+    PrintStream out = System.out;
+    ByteArrayOutputStream buf = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(buf, true, StandardCharsets.UTF_8));
+    try {
+      PrintHelper.print(report, true);
+    } finally {
+      System.setOut(out);
+    }
+    String printed = buf.toString(StandardCharsets.UTF_8);
     System.out.println("=== " + file.getFileName() + " ===");
-    PrintHelper.print(report, true);
-    return report;
+    System.out.println(printed);
+    return new Result(report, printed);
   }
 
   @Test
@@ -48,14 +62,21 @@ public class OpenCredentialConformanceTest {
     List<Path> active = files("OC_CONFORMANCE_ACTIVE_DIR");
     assertFalse(active.isEmpty(), "no active credentials supplied");
     for (Path f : active) {
-      assertTrue(inspect(f).asBoolean(), f + " should pass the 1EdTech OB 3.0 inspector");
+      Result r = inspect(f);
+      assertTrue(r.report().asBoolean(), f + " should pass the 1EdTech OB 3.0 inspector");
+      assertTrue(r.printed().contains("Credential is not revoked."), f + ": status not checked");
     }
   }
 
   @Test
   void revokedCredentialsAreRejected() throws Exception {
-    for (Path f : files("OC_CONFORMANCE_REVOKED_DIR")) {
-      assertFalse(inspect(f).asBoolean(), f + " is revoked and should not pass");
+    List<Path> revoked = files("OC_CONFORMANCE_REVOKED_DIR");
+    assertFalse(revoked.isEmpty(), "no revoked credentials supplied");
+    for (Path f : revoked) {
+      Result r = inspect(f);
+      assertFalse(r.report().asBoolean(), f + " is revoked and should not pass");
+      assertTrue(
+          r.printed().contains("Credential has been revoked"), f + ": failed for another reason");
     }
   }
 }

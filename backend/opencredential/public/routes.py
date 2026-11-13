@@ -82,7 +82,11 @@ def status_list(slug: str, list_id: uuid.UUID, request: Request) -> Response:
         ) from exc
     if doc is None:
         raise ApiError(404, "NOT_FOUND", "No such status list")
-    return Response(json.dumps(doc), media_type=LD_JSON, headers={"Cache-Control": "max-age=300"})
+    # Plain JSON: every verifier we test with parses it, while some (the 1EdTech inspector)
+    # refuse a status list credential served as application/ld+json.
+    return Response(
+        json.dumps(doc), media_type="application/json", headers={"Cache-Control": "max-age=300"}
+    )
 
 
 @router.get("/achievements/{version_id}", summary="Published achievement definition")
