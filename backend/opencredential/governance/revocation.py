@@ -50,7 +50,7 @@ class RevokeResult:
 def issued_credential(db: Session, credential_id: uuid.UUID) -> Credential:
     cred = db.get(Credential, credential_id)
     if cred is None or cred.status != "issued":
-        raise NotFound("NOT_FOUND", "No such credential.")
+        raise NotFound("NOT_FOUND", "No such credential")
     return cred
 
 
@@ -153,7 +153,7 @@ def request_revocation(
 ) -> RevocationRequest:
     cred = issued_credential(db, credential_id)
     if not can_request(db, actor, cred):
-        raise NotFound("NOT_FOUND", "No such credential.")  # no disclosure to outsiders
+        raise NotFound("NOT_FOUND", "No such credential")  # no disclosure to outsiders
     reason = (reason or "").strip()
     if len(reason) < 5:
         raise Invalid("REASON_REQUIRED", "Explain why this credential should be revoked.")

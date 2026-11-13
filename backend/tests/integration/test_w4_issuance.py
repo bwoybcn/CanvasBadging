@@ -482,7 +482,7 @@ def test_http_export_verify_and_revoke(tenant: Tenant, signer: SignerClient) -> 
         other = _token(tenant, tenant.student_ids[1])
         assert (
             client.get(f"/api/v1/credentials/{r.credential_id}/export", headers=other).status_code
-            == 403
+            == 404  # scenario 10: someone else's credential looks missing
         )
 
         res = client.post("/api/v1/verify", json=downloaded).json()

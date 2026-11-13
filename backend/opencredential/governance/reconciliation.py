@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from opencredential import audit
 from opencredential.authz import policy as authz
@@ -37,8 +37,9 @@ def overview(db: Session, actor: authz.Actor, now: datetime | None = None) -> di
     authz.require_inst_admin(actor)
     now = now or datetime.now(UTC)
     cutoff = now - STUCK_AFTER
-    issued = select(Credential.id).where(
-        Credential.award_decision_id == AwardDecision.id, Credential.status == "issued"
+    done = aliased(Credential)
+    issued = select(done.id).where(
+        done.award_decision_id == AwardDecision.id, done.status == "issued"
     )
     decisions = db.execute(
         select(AwardDecision, Credential, AchievementVersion, User)

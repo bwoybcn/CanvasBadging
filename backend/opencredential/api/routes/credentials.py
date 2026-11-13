@@ -21,7 +21,7 @@ from opencredential.api.deps import (
     TenantDb,
 )
 from opencredential.api.errors import ApiError
-from opencredential.authz.checks import require_key_manager, require_revoker
+from opencredential.authz.checks import may_revoke, require_key_manager
 from opencredential.db.models import (
     AchievementVersion,
     Credential,
@@ -88,8 +88,9 @@ def export(credential_id: uuid.UUID, claims: ClaimsDep, db: TenantDb) -> Respons
     cred = db.get(Credential, credential_id)
     if cred is None or cred.status != "issued" or cred.signed_json is None:
         raise ApiError(404, "NOT_FOUND", "No such credential")
-    if cred.user_id != claims.user_id:
-        require_revoker(db, claims.user_id, cred)  # staff with authority over the credential
+    if cred.user_id != claims.user_id and not may_revoke(db, claims.user_id, cred):
+        # Scenario 10: someone else's credential looks exactly like a missing one.
+        raise ApiError(404, "NOT_FOUND", "No such credential")
     version = db.get(AchievementVersion, cred.version_id)
     stem = "".join(ch if ch.isalnum() else "-" for ch in (version.title if version else "badge"))
     date = cred.issued_at.date().isoformat() if cred.issued_at else "credential"
