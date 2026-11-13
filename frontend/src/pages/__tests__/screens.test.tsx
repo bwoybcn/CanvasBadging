@@ -227,3 +227,32 @@ describe("awards and progress", () => {
     expect(within(card).getByText(/1 of 2 confirmed/)).toBeInTheDocument();
   });
 });
+
+describe("course activation", () => {
+  it("lets a lecturer switch micro-credentials on from the launch page", async () => {
+    let status = "inactive";
+    const launchCourse = () => ({
+      id: "c-1",
+      title: "Study Skills 101",
+      course_code: null,
+      canvas_course_id: "4",
+      status,
+      roles: ["lecturer"],
+      view: "lecturer",
+    });
+    const calls = stubApi({
+      "GET /api/v1/learners/me": () => ({ ...STAFF_ME, launch_course: launchCourse() }),
+      "POST /api/v1/courses/c-1/activate": () => {
+        status = "active";
+        return { id: "c-1", status, activated_at: "2026-11-13T16:00:00Z", sync_queued: true };
+      },
+    });
+    renderAt("/");
+    const button = await screen.findByRole("button", { name: "Switch on micro-credentials for this course" });
+    await userEvent.click(button);
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/activate"))).toBe(true));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Switch on micro-credentials for this course" })).toBeNull(),
+    );
+  });
+});

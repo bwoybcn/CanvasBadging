@@ -136,8 +136,9 @@ export function CourseProgress() {
     <Page title={`Progress: ${p.course.title}`}>
       <View as="section" aria-label="Canvas data" display="block" margin="0 0 medium">
         <Text as="p">
-          Canvas data last refreshed:{" "}
+          Canvas data last read successfully:{" "}
           {sync.data?.last_success_at ? new Date(sync.data.last_success_at).toLocaleString() : "never"}
+          {last && ` (last attempt ${new Date(last.started_at).toLocaleString()}${last.finished_at ? "" : ", still running"})`}
         </Text>
         {last && last.status === "failed" && (
           <Alert variant="warning" margin="small 0">
@@ -160,6 +161,7 @@ export function CourseProgress() {
         {refresh.isError && (
           <Alert variant="warning" margin="small 0">
             {problemText(refresh.error)}
+            {last && ` Nothing new was read from Canvas. The figures below come from the read started at ${new Date(last.started_at).toLocaleString()}.`}
           </Alert>
         )}
       </View>

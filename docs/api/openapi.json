@@ -503,6 +503,43 @@
         "title": "ConfirmIn",
         "type": "object"
       },
+      "CourseActivationOut": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "sync_queued": {
+            "title": "Sync Queued",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "activated_at",
+          "sync_queued"
+        ],
+        "title": "CourseActivationOut",
+        "type": "object"
+      },
       "CourseOut": {
         "properties": {
           "course_code": {
@@ -7494,6 +7531,50 @@
         ]
       }
     },
+    "/api/v1/courses/{course_id}/activate": {
+      "post": {
+        "description": "Switch micro-credentials on for a course (spec \u00a74.1): it joins scheduled Canvas\nreconciliation and an initial sync is queued at once. Idempotent.",
+        "operationId": "activate_course_api_v1_courses__course_id__activate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseActivationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Activate Course",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
     "/api/v1/courses/{course_id}/canvas/assignments": {
       "get": {
         "operationId": "course_assignments_api_v1_courses__course_id__canvas_assignments_get",
@@ -7579,6 +7660,50 @@
           }
         },
         "summary": "Course Modules",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/deactivate": {
+      "post": {
+        "description": "Stop scheduled Canvas reconciliation for a course. Issued credentials are untouched.",
+        "operationId": "deactivate_course_api_v1_courses__course_id__deactivate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseActivationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deactivate Course",
         "tags": [
           "courses"
         ]
