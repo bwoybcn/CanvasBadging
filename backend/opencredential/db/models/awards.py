@@ -245,6 +245,13 @@ class ShareGrant(TenantMixin, Base):
         "share_grants",
         tenant_fk("credential_id", "credentials"),
         tenant_fk("created_by", "users"),
+        # At most one live public link per credential; withdrawn grants are kept (revoked_at).
+        Index(
+            "uq_share_grants_active",
+            "credential_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+        ),
     )
 
     credential_id: Mapped[uuid.UUID] = mapped_column(Uuid)

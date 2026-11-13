@@ -399,6 +399,25 @@
         "title": "CourseOut",
         "type": "object"
       },
+      "CourseRef": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "CourseRef",
+        "type": "object"
+      },
       "CreateIn": {
         "properties": {
           "course_id": {
@@ -438,8 +457,169 @@
         "title": "CreateIn",
         "type": "object"
       },
+      "CredentialDetail": {
+        "properties": {
+          "achievement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achievement Type"
+          },
+          "course": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourseRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credential_id": {
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "criteria": {
+            "title": "Criteria",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ImageOut"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "issuer": {
+            "additionalProperties": true,
+            "title": "Issuer",
+            "type": "object"
+          },
+          "issuer_name": {
+            "title": "Issuer Name",
+            "type": "string"
+          },
+          "learning_outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Learning Outcomes",
+            "type": "array"
+          },
+          "linkedin": {
+            "additionalProperties": true,
+            "title": "Linkedin",
+            "type": "object"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "share": {
+            "$ref": "#/components/schemas/ShareState"
+          },
+          "skills": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "revoked",
+              "suspended",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          },
+          "verification": {
+            "additionalProperties": true,
+            "title": "Verification",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "credential_id",
+          "name",
+          "issuer_name",
+          "issued_at",
+          "valid_until",
+          "status",
+          "course",
+          "image",
+          "share",
+          "description",
+          "criteria",
+          "achievement_type",
+          "learning_outcomes",
+          "skills",
+          "evidence",
+          "issuer",
+          "verification",
+          "linkedin"
+        ],
+        "title": "CredentialDetail",
+        "type": "object"
+      },
       "CredentialSummary": {
         "properties": {
+          "course": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CourseRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "credential_id": {
             "title": "Credential Id",
             "type": "string"
@@ -448,6 +628,9 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "image": {
+            "$ref": "#/components/schemas/ImageOut"
           },
           "issued_at": {
             "anyOf": [
@@ -469,10 +652,14 @@
             "title": "Name",
             "type": "string"
           },
+          "share": {
+            "$ref": "#/components/schemas/ShareState"
+          },
           "status": {
             "enum": [
               "active",
               "revoked",
+              "suspended",
               "expired"
             ],
             "title": "Status",
@@ -498,7 +685,10 @@
           "issuer_name",
           "issued_at",
           "valid_until",
-          "status"
+          "status",
+          "course",
+          "image",
+          "share"
         ],
         "title": "CredentialSummary",
         "type": "object"
@@ -1321,6 +1511,31 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ImageOut": {
+        "properties": {
+          "alt_text": {
+            "title": "Alt Text",
+            "type": "string"
+          },
+          "data_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Url"
+          }
+        },
+        "required": [
+          "data_url",
+          "alt_text"
+        ],
+        "title": "ImageOut",
+        "type": "object"
+      },
       "InstitutionOut": {
         "properties": {
           "id": {
@@ -1927,6 +2142,133 @@
           "rules"
         ],
         "title": "RuleSet",
+        "type": "object"
+      },
+      "ShareIn": {
+        "properties": {
+          "show_evidence": {
+            "default": false,
+            "title": "Show Evidence",
+            "type": "boolean"
+          },
+          "show_name": {
+            "default": false,
+            "title": "Show Name",
+            "type": "boolean"
+          }
+        },
+        "title": "ShareIn",
+        "type": "object"
+      },
+      "ShareOut": {
+        "properties": {
+          "linkedin": {
+            "additionalProperties": true,
+            "title": "Linkedin",
+            "type": "object"
+          },
+          "preview": {
+            "$ref": "#/components/schemas/SharePreview"
+          },
+          "share": {
+            "$ref": "#/components/schemas/ShareState"
+          }
+        },
+        "required": [
+          "share",
+          "linkedin",
+          "preview"
+        ],
+        "title": "ShareOut",
+        "type": "object"
+      },
+      "SharePreview": {
+        "properties": {
+          "never_shared": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Never Shared",
+            "type": "array"
+          },
+          "public": {
+            "additionalProperties": true,
+            "title": "Public",
+            "type": "object"
+          },
+          "search_engines": {
+            "title": "Search Engines",
+            "type": "string"
+          },
+          "visible": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Visible",
+            "type": "array"
+          },
+          "withdrawing": {
+            "title": "Withdrawing",
+            "type": "string"
+          }
+        },
+        "required": [
+          "public",
+          "visible",
+          "never_shared",
+          "search_engines",
+          "withdrawing"
+        ],
+        "title": "SharePreview",
+        "type": "object"
+      },
+      "ShareState": {
+        "properties": {
+          "shared": {
+            "title": "Shared",
+            "type": "boolean"
+          },
+          "shared_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Since"
+          },
+          "show_evidence": {
+            "default": false,
+            "title": "Show Evidence",
+            "type": "boolean"
+          },
+          "show_name": {
+            "default": false,
+            "title": "Show Name",
+            "type": "boolean"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "shared"
+        ],
+        "title": "ShareState",
         "type": "object"
       },
       "Skill": {
@@ -4194,6 +4536,49 @@
         ]
       }
     },
+    "/api/v1/credentials/{credential_id}": {
+      "get": {
+        "operationId": "detail_api_v1_credentials__credential_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Credential detail for its holder (spec \u00a78.3)",
+        "tags": [
+          "student collection"
+        ]
+      }
+    },
     "/api/v1/credentials/{credential_id}/export": {
       "get": {
         "operationId": "export_api_v1_credentials__credential_id__export_get",
@@ -4283,6 +4668,194 @@
         "summary": "Revoke",
         "tags": [
           "credentials"
+        ]
+      }
+    },
+    "/api/v1/credentials/{credential_id}/share": {
+      "delete": {
+        "operationId": "delete_share_api_v1_credentials__credential_id__share_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stop sharing. The link stops working; the credential is not revoked",
+        "tags": [
+          "student collection"
+        ]
+      },
+      "get": {
+        "operationId": "get_share_api_v1_credentials__credential_id__share_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Share",
+        "tags": [
+          "student collection"
+        ]
+      },
+      "put": {
+        "operationId": "put_share_api_v1_credentials__credential_id__share_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Turn on public sharing, or change what the public link shows",
+        "tags": [
+          "student collection"
+        ]
+      }
+    },
+    "/api/v1/credentials/{credential_id}/share/preview": {
+      "post": {
+        "operationId": "share_preview_api_v1_credentials__credential_id__share_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exactly what a public link would show, before turning it on",
+        "tags": [
+          "student collection"
         ]
       }
     },
@@ -4691,9 +5264,10 @@
             "description": "Successful Response"
           }
         },
-        "summary": "My Credentials",
+        "summary": "My credential collection across all courses",
         "tags": [
-          "credentials"
+          "student collection",
+          "learners"
         ]
       }
     },
@@ -4940,6 +5514,153 @@
           }
         },
         "summary": "Signed BitstringStatusListCredential",
+        "tags": [
+          "public verification"
+        ]
+      }
+    },
+    "/verify": {
+      "get": {
+        "operationId": "check_page_verify_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Check a credential file",
+        "tags": [
+          "public verification"
+        ]
+      }
+    },
+    "/verify/{share_id}": {
+      "get": {
+        "operationId": "share_page_verify__share_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Public verification page for a credential the holder chose to share",
+        "tags": [
+          "public verification"
+        ]
+      }
+    },
+    "/verify/{share_id}/credential.json": {
+      "get": {
+        "operationId": "share_credential_verify__share_id__credential_json_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/ld+json": {}
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The signed Open Badges 3.0 credential behind a share link",
+        "tags": [
+          "public verification"
+        ]
+      }
+    },
+    "/verify/{share_id}/verification.json": {
+      "get": {
+        "operationId": "share_verification_verify__share_id__verification_json_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Machine-readable verification result for a share link",
         "tags": [
           "public verification"
         ]

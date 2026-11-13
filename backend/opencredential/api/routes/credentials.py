@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Credential download, revocation and issuer key management (W4 slice of the v1 API)."""
+"""Credential download, revocation and issuer key management (W4 slice of the v1 API).
+
+The student collection, detail and sharing endpoints live in ``collection.py`` (W6).
+"""
 
 from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Request, Response
@@ -18,7 +21,6 @@ from opencredential.authz.checks import require_key_manager, require_revoker
 from opencredential.db.models import (
     AchievementVersion,
     Credential,
-    CredentialStatus,
     Issuer,
     IssuerKey,
 )
@@ -28,48 +30,6 @@ from opencredential.status import service as status_service
 from opencredential.status.compromise import respond_to_compromise
 
 router = APIRouter(prefix="/api/v1", tags=["credentials"])
-
-
-class CredentialSummary(BaseModel):
-    id: uuid.UUID
-    credential_id: str
-    name: str
-    issuer_name: str
-    issued_at: datetime | None
-    valid_until: datetime | None
-    status: Literal["active", "revoked", "expired"]
-
-
-def _state(cred: Credential, status: CredentialStatus | None) -> str:
-    if status is not None and status.state == "revoked":
-        return "revoked"
-    if cred.valid_until is not None and cred.valid_until < datetime.now(UTC):
-        return "expired"
-    return "active"
-
-
-@router.get("/learners/me/credentials", response_model=list[CredentialSummary])
-def my_credentials(claims: ClaimsDep, db: TenantDb) -> list[CredentialSummary]:
-    rows = db.execute(
-        select(Credential, CredentialStatus, AchievementVersion, Issuer)
-        .join(AchievementVersion, AchievementVersion.id == Credential.version_id)
-        .join(Issuer, Issuer.id == Credential.issuer_id)
-        .outerjoin(CredentialStatus, CredentialStatus.credential_id == Credential.id)
-        .where(Credential.user_id == claims.user_id, Credential.status == "issued")
-        .order_by(Credential.issued_at.desc())
-    ).all()
-    return [
-        CredentialSummary(
-            id=c.id,
-            credential_id=c.credential_uri,
-            name=v.title,
-            issuer_name=i.name,
-            issued_at=c.issued_at,
-            valid_until=c.valid_until,
-            status=_state(c, s),  # type: ignore[arg-type]
-        )
-        for c, s, v, i in rows
-    ]
 
 
 @router.get(

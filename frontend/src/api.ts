@@ -356,3 +356,124 @@ export function problemText(error: unknown): string {
   if (error instanceof ApiError) return error.problem.detail || error.problem.title;
   return "Something went wrong. Please try again.";
 }
+
+/* ---- W6: collection, sharing and LinkedIn ------------------------------------------------- */
+
+export type CredentialState = "active" | "revoked" | "suspended" | "expired";
+
+export interface ShareState {
+  shared: boolean;
+  url: string | null;
+  show_name: boolean;
+  show_evidence: boolean;
+  shared_since: string | null;
+}
+
+export interface CredentialSummary {
+  id: string;
+  credential_id: string;
+  name: string;
+  issuer_name: string;
+  issued_at: string | null;
+  valid_until: string | null;
+  status: CredentialState;
+  course: { id: string; title: string } | null;
+  image: { data_url: string | null; alt_text: string };
+  share: ShareState;
+}
+
+export interface VerificationCheck {
+  name: string;
+  status: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface Verification {
+  result: "verified" | "revoked" | "expired" | "invalid" | "unable_to_verify";
+  label: string;
+  checks: VerificationCheck[];
+  explanation: string;
+  checked_at: string;
+}
+
+export interface LinkedInField {
+  key: string;
+  label: string;
+  value: string | null;
+}
+
+export interface LinkedIn {
+  fields: LinkedInField[];
+  add_to_profile_url: string | null;
+  needs_share: boolean;
+  note: string;
+}
+
+export interface Evidence {
+  narrative: string;
+  url: string | null;
+  genre: string | null;
+}
+
+export interface CredentialDetail extends CredentialSummary {
+  description: string;
+  criteria: string;
+  achievement_type: string | null;
+  learning_outcomes: string[];
+  skills: { name: string | null; url: string | null }[];
+  evidence: Evidence[];
+  issuer: { name: string; id: string; url: string | null; institution: string };
+  verification: Verification;
+  linkedin: LinkedIn;
+}
+
+export interface SharePreview {
+  public: {
+    credential_name: string;
+    recipient_name: string | null;
+    evidence: Evidence[];
+    [key: string]: unknown;
+  };
+  visible: { label: string; value: string }[];
+  never_shared: string[];
+  search_engines: string;
+  withdrawing: string;
+}
+
+export interface ShareOut {
+  share: ShareState;
+  linkedin: LinkedIn;
+  preview: SharePreview;
+}
+
+export const CREDENTIAL_STATE: Record<CredentialState, { label: string; color: "success" | "danger" | "warning" }> = {
+  active: { label: "Valid", color: "success" },
+  revoked: { label: "Revoked", color: "danger" },
+  suspended: { label: "Suspended", color: "warning" },
+  expired: { label: "Expired", color: "warning" },
+};
+
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** Downloads with the in-memory bearer token (no cookies, ADR-0015), keeping the server's filename. */
+export async function downloadFile(path: string, token: string | null, fallbackName: string): Promise<void> {
+  const res = await fetch(path, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError({ status: res.status, code: "DOWNLOAD_FAILED", title: "The download failed. Please try again." });
+  const match = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = match?.[1] ?? fallbackName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

@@ -11,8 +11,11 @@ import { BadgeDetail } from "./pages/BadgeDetail";
 import { BadgeList, ReviewQueue } from "./pages/BadgeList";
 import { CourseProgress } from "./pages/CourseProgress";
 import { CreateBadge } from "./pages/CreateBadge";
+import { CredentialDetail } from "./pages/CredentialDetail";
 import { DevLogin } from "./pages/DevLogin";
 import { Home } from "./pages/Home";
+import { Keeping } from "./pages/Keeping";
+import { MyCredentials } from "./pages/MyCredentials";
 import { MyProgress } from "./pages/MyProgress";
 
 function RequireSession({ children }: { children: ReactNode }) {
@@ -35,6 +38,9 @@ export function AppRoutes() {
           ["/awards", <Awards />],
           ["/courses/:id/progress", <CourseProgress />],
           ["/me/progress", <MyProgress />],
+          ["/me/credentials", <MyCredentials />],
+          ["/me/credentials/:id", <CredentialDetail />],
+          ["/me/keeping", <Keeping />],
           ["/admin/policy", <AdminPolicy />],
         ] as const
       ).map(([path, element]) => (
