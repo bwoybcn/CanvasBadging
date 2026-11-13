@@ -160,3 +160,24 @@ background_jobs         view over procrastinate tables + app columns (kind, subj
 - **Unshare** deletes nothing: sets `share_grants.revoked_at`.
 - **Revoke** changes status only.
 - Retention jobs purge: launch state (10 min), snapshots for inactive courses (policy, default 1 year after course end), audit events (policy, default 7 years), failed jobs (90 days).
+
+## Implementation notes (W2)
+
+The Alembic migrations in `backend/migrations/` implement this model. Small additions made
+while building it:
+
+- `institutions.is_demo`: development login only works for demo tenants.
+- `credentials.superseded_by_id`: the reissue pointer. The "not superseded" condition of the
+  live-credential partial unique index uses it, and it is the only column the immutability
+  trigger lets change after issue.
+- `dev_seed` values on `users.email_verified_by`, `memberships.source`, `sync_runs.kind` and
+  `eligibility_evaluations.triggered_by`, so seeded rows are always distinguishable.
+- `award_rules.type` includes `group` for the single permitted nesting level.
+- `keys.private_keys` also has `algorithm`, `is_dev` and `destroyed_at` (signer start-up guard
+  and the 30-day destruction of retired keys).
+- `lti_launch_state` keeps a UUID primary key with `state` unique.
+- `background_jobs` is a view over `jobs.procrastinate_jobs`, filtered to the current tenant
+  via `args.institution_id`.
+- RLS: `institutions` is readable by everyone (needed to resolve a tenant) and updatable only
+  for the current tenant. `audit_events` allows NULL-tenant system rows to be inserted. The LTI
+  state and nonce tables are pre-tenant and have no RLS.
