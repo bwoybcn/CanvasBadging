@@ -2,7 +2,7 @@
 
 Spec Phase 7 (§20), §2.3–2.4, §10, §12.5. Exit condition: *an institution can govern its
 credential scheme without manually editing application data*. Built on W4 (issuance,
-revocation) and W5 (authoring, rules, awards).
+revocation) and W5 (authoring, rules, awards), both now on `main`.
 
 ## What was added
 
@@ -36,8 +36,6 @@ revocation) and W5 (authoring, rules, awards).
   missing credential (scenario 10: denied without disclosure). It was 403.
 * Revocation authority follows the institution policy across org-unit hierarchies (W4's check
   matched only the issuer's own org unit).
-* `issuance.decisions.decide` returns the existing live decision for a learner and version
-  rather than tripping W5's `uq_award_decisions_live` index.
 * `jobs.defer` reopens the shared procrastinate app if a worker run closed it.
 
 ## Evidence (RTM)
