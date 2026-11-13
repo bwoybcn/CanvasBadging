@@ -17,12 +17,21 @@ export default defineConfig({
     trace: "off",
     screenshot: "only-on-failure",
   },
+  // The scenarios run first: they create the credentials (issued, shared, revoked) that the
+  // accessibility pass then looks at, so a freshly seeded database works.
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
+    { name: "scenarios", use: { ...devices["Desktop Chrome"] }, testMatch: /scenarios\.spec\.ts/ },
+    {
+      name: "desktop",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /a11y\.spec\.ts/,
+      dependencies: ["scenarios"],
+    },
     {
       name: "mobile",
       use: { ...devices["Pixel 7"] },
       testMatch: /a11y\.spec\.ts/,
+      dependencies: ["scenarios"],
     },
   ],
 });

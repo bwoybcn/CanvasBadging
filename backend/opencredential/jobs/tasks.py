@@ -293,13 +293,29 @@ def issue_credential(
 
 
 def _publish_if_unpublished(institution_id: uuid.UUID, status_list_id: uuid.UUID) -> None:
+    """Publish a brand-new status list straight away.
+
+    Until its list is published, a credential verifies as "Unable to verify", so a student who
+    downloads it at once would see that. The first publication therefore happens here, in the
+    issuing job; only if it fails is it left to the queued (delayed, retried) job.
+    """
     from opencredential.db.models import StatusList
+    from opencredential.status.service import publish
 
     with tenant_session(institution_id) as db:
         sl = db.get(StatusList, status_list_id)
         needed = sl is not None and sl.published_credential is None
-    if needed:
+    if not needed:
+        return
+    signer = _signer()
+    try:
+        with tenant_session(institution_id) as db:
+            publish(db, status_list_id, signer, get_settings())
+    except Exception:  # any failure falls back to the queued, retried job
+        log.warning("status_list_first_publish_deferred", status_list_id=str(status_list_id))
         defer_publish(institution_id, status_list_id)
+    finally:
+        signer.close()
 
 
 def defer_publish(institution_id: uuid.UUID, status_list_id: uuid.UUID) -> None:
