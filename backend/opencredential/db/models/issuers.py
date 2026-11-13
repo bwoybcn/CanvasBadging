@@ -17,6 +17,8 @@ from opencredential.db.models._types import (
     uuid,
 )
 
+ISSUER_LEVELS = ("university", "faculty", "department", "programme")
+
 
 class Issuer(TenantMixin, Base):
     __tablename__ = "issuers"
@@ -40,6 +42,11 @@ class Issuer(TenantMixin, Base):
     status: Mapped[str] = mapped_column(
         choice("draft", "active", "suspended", name="status"), default="draft"
     )
+    #: Spec §10.2: university-, faculty- or department-level issuer.
+    level: Mapped[str] = mapped_column(choice(*ISSUER_LEVELS, name="level"), default="university")
+    #: The explicit delegation of authority recorded when an administrator authorised this
+    #: issuer (for example "Senate resolution 2026/14"). Creating an issuer never implies it.
+    authority_basis: Mapped[str | None] = mapped_column(Text)
 
 
 class IssuerKey(TenantMixin, Base):

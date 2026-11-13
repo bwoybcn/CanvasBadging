@@ -10,6 +10,7 @@ from sqlalchemy import Index, UniqueConstraint, text
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
+    Boolean,
     DateTime,
     Mapped,
     Text,
@@ -66,6 +67,12 @@ class OrgUnit(TenantMixin, Base):
     name: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(
         choice("faculty", "department", "programme", "other", name="kind")
+    )
+    #: Spec §10.3 "which departments can issue credentials". Inherited: a unit can issue only if
+    #: it and every ancestor may.
+    may_issue: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[str] = mapped_column(
+        choice("active", "archived", name="status"), default="active"
     )
 
 

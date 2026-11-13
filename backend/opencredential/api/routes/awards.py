@@ -237,6 +237,7 @@ def list_awards(
     status: str | None = "awaiting_confirmation",
     course_id: uuid.UUID | None = None,
     definition_id: uuid.UUID | None = None,
+    kind: str | None = Query(None, pattern="^(automatic|confirmed|manual)$"),
     limit: int = Query(100, ge=1, le=500),
 ) -> list[DecisionOut]:
     q = (
@@ -250,6 +251,8 @@ def list_awards(
         q = q.where(AchievementDefinition.course_id == course_id)
     if definition_id:
         q = q.where(AchievementDefinition.id == definition_id)
+    if kind:
+        q = q.where(AwardDecision.kind == kind)
     out = []
     for decision, definition in db.execute(q.order_by(AwardDecision.decided_at).limit(limit * 2)):
         course = authz.definition_course(db, definition)

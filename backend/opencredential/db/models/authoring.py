@@ -69,6 +69,11 @@ class BadgeTemplate(TenantMixin, Base):
     org_unit_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     name: Mapped[str] = mapped_column(Text)
     defaults: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    description: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    status: Mapped[str] = mapped_column(
+        choice("active", "archived", name="status"), default="active"
+    )
 
 
 class AchievementDefinition(TenantMixin, Base):

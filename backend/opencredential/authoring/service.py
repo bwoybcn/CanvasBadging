@@ -218,6 +218,7 @@ def create(
     course_id: uuid.UUID | None,
     fields: DraftFields,
     rules: RuleSet | None = None,
+    template_id: uuid.UUID | None = None,
     request_id: str | None = None,
 ) -> AchievementDefinition:
     course = db.get(Course, course_id) if course_id else None
@@ -232,9 +233,14 @@ def create(
             "Only administrators can create badges that are not tied to a course.",
         )
     issuer = authz.require_issuer(db, actor, issuer_id, course)
+    if template_id is not None:
+        from opencredential.governance import templates
+
+        fields = templates.apply(db, actor, template_id, course, fields)
     definition = AchievementDefinition(
         institution_id=actor.institution_id,
         issuer_id=issuer.id,
+        template_id=template_id,
         course_id=course.id if course else None,
         owner_user_id=actor.user_id,
         state="draft",
@@ -269,7 +275,11 @@ def create(
         institution_id=actor.institution_id,
         actor_user_id=actor.user_id,
         request_id=request_id,
-        data={"course_id": str(course.id) if course else None, "issuer_id": str(issuer.id)},
+        data={
+            "course_id": str(course.id) if course else None,
+            "issuer_id": str(issuer.id),
+            "template_id": str(template_id) if template_id else None,
+        },
     )
     return definition
 
@@ -746,6 +756,7 @@ def publish(
     issuer = db.get(Issuer, definition.issuer_id)
     if issuer is None or issuer.status != "active":
         raise Conflict("ISSUER_INACTIVE", "The issuer for this badge is not active.")
+    authz.require_issuing_allowed(db, issuer, authz.definition_course(db, definition))
     issues = readiness(db, definition, version)
     blocking = [i for i in issues if i["severity"] == "error"]
     if any(i["code"] == "CREDIT_TERMS" for i in issues):

@@ -23,6 +23,7 @@ from opencredential.api.routes import (
     courses,
     credentials,
     dev,
+    governance,
     learners,
 )
 from opencredential.db.session import app_engine
@@ -68,7 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     errors.install(app)
     app.include_router(health.router)
     app.include_router(learners.router)
-    for module in (achievements, assets, courses, awards, admin):
+    for module in (achievements, assets, courses, awards, admin, governance):
         app.include_router(module.router)
     app.include_router(credentials.router)
     app.include_router(public_routes.router)

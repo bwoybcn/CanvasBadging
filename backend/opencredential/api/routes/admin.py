@@ -32,6 +32,11 @@ class AwardPolicyIn(BaseModel):
     self_approval_allowed: bool | None = None
     manual_awards_require_second_approval: bool | None = None
     max_snapshot_age_minutes: int | None = None
+    # W7: who approves definitions, who may revoke, and whether department administrators
+    # may delegate roles inside their own units (spec §10.3).
+    approver_roles: list[Literal["lecturer", "dept_admin", "inst_admin"]] | None = None
+    revokers: list[Literal["lecturer", "issuer_manager", "dept_admin", "inst_admin"]] | None = None
+    dept_admins_may_delegate: bool | None = None
 
 
 POLICY_KEYS = tuple(AwardPolicyIn.model_fields)
@@ -50,14 +55,9 @@ def update_policy(
     authz.require_inst_admin(actor)
     inst = db.get(Institution, actor.institution_id)
     assert inst is not None
-    changes = body.model_dump(exclude_none=True)
-    if (
-        "max_snapshot_age_minutes" in changes
-        and not 15 <= changes["max_snapshot_age_minutes"] <= 1440
-    ):
-        from opencredential.errors import Invalid
+    from opencredential.governance.institution import validate_policy_changes
 
-        raise Invalid("POLICY_INVALID", "Maximum data age must be between 15 and 1440 minutes.")
+    changes = validate_policy_changes(body.model_dump(exclude_none=True))
     inst.policy = {**(inst.policy or {}), **changes}
     audit.record(
         db,

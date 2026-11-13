@@ -8,11 +8,18 @@ import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from opencredential.api.deps import ClaimsDep, SettingsDep, SignerDep, TenantDb
+from opencredential.api.deps import (
+    ActorDep,
+    ClaimsDep,
+    RequestIdDep,
+    SettingsDep,
+    SignerDep,
+    TenantDb,
+)
 from opencredential.api.errors import ApiError
 from opencredential.authz.checks import require_key_manager, require_revoker
 from opencredential.db.models import (
@@ -22,9 +29,8 @@ from opencredential.db.models import (
     Issuer,
     IssuerKey,
 )
+from opencredential.governance import revocation
 from opencredential.institutions import keys as key_service
-from opencredential.signer_client import SignerError
-from opencredential.status import service as status_service
 from opencredential.status.compromise import respond_to_compromise
 
 router = APIRouter(prefix="/api/v1", tags=["credentials"])
@@ -83,9 +89,7 @@ def export(credential_id: uuid.UUID, claims: ClaimsDep, db: TenantDb) -> Respons
     if cred is None or cred.status != "issued" or cred.signed_json is None:
         raise ApiError(404, "NOT_FOUND", "No such credential")
     if cred.user_id != claims.user_id:
-        issuer = db.get(Issuer, cred.issuer_id)
-        assert issuer is not None
-        require_revoker(db, claims.user_id, issuer)  # staff with authority over the issuer
+        require_revoker(db, claims.user_id, cred)  # staff with authority over the credential
     version = db.get(AchievementVersion, cred.version_id)
     stem = "".join(ch if ch.isalnum() else "-" for ch in (version.title if version else "badge"))
     date = cred.issued_at.date().isoformat() if cred.issued_at else "credential"
@@ -121,41 +125,28 @@ class RevokeOut(BaseModel):
 def revoke(
     credential_id: uuid.UUID,
     body: RevokeIn,
-    request: Request,
-    claims: ClaimsDep,
     db: TenantDb,
+    actor: ActorDep,
+    rid: RequestIdDep,
     signer: SignerDep,
     settings: SettingsDep,
 ) -> RevokeOut:
-    cred = db.get(Credential, credential_id)
-    if cred is None or cred.status != "issued":
-        raise ApiError(404, "NOT_FOUND", "No such credential")
-    issuer = db.get(Issuer, cred.issuer_id)
-    assert issuer is not None
-    require_revoker(db, claims.user_id, issuer)
-    result = status_service.revoke(
+    """Authorised revocation with a reason (spec §10.3: roles in the institution policy)."""
+    result = revocation.revoke(
         db,
-        cred.id,
+        actor,
+        credential_id,
         reason_code=body.reason_code,
         reason_text=body.reason_text,
-        actor_user_id=claims.user_id,
-        request_id=getattr(request.state, "request_id", None),
+        signer=signer,
+        settings=settings,
+        request_id=rid,
     )
-    published = False
-    if result.status_list_id is not None:
-        try:
-            with db.begin_nested():
-                status_service.publish(db, result.status_list_id, signer, settings)
-            published = True
-        except (SignerError, status_service.StatusError):
-            from opencredential.jobs.tasks import defer_publish
-
-            defer_publish(cred.institution_id, result.status_list_id)
     return RevokeOut(
-        credential_id=cred.id,
+        credential_id=result.credential_id,
         state="revoked",
         changed=result.changed,
-        status_list_published=published,
+        status_list_published=result.status_list_published,
     )
 
 
