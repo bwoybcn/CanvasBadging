@@ -356,3 +356,200 @@ export function problemText(error: unknown): string {
   if (error instanceof ApiError) return error.problem.detail || error.problem.title;
   return "Something went wrong. Please try again.";
 }
+
+/* ---- W7: institutional governance ----------------------------------------------------------- */
+
+/** Download an authenticated file (CSV, JSON) without putting the token in a URL. */
+export async function downloadFile(path: string, token: string | null, filename: string): Promise<void> {
+  const headers = new Headers();
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  const res = await fetch(path, { headers });
+  if (!res.ok) {
+    let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
+    try {
+      problem = await res.json();
+    } catch {
+      /* not JSON */
+    }
+    throw new ApiError(problem);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export interface OrgUnit {
+  id: string;
+  name: string;
+  kind: "faculty" | "department" | "programme" | "other";
+  parent_id: string | null;
+  may_issue: boolean;
+  effective_may_issue: boolean;
+  status: "active" | "archived";
+  manageable: boolean;
+}
+
+export interface AdminIssuer {
+  id: string;
+  name: string;
+  slug: string;
+  level: "university" | "faculty" | "department" | "programme";
+  org_unit_id: string | null;
+  org_unit_name: string | null;
+  url: string | null;
+  email: string | null;
+  description: string | null;
+  did: string | null;
+  status: "draft" | "active" | "suspended";
+  authority_basis: string | null;
+  authorised_at: string | null;
+  may_issue: boolean;
+  active_key: { id: string; activated_at: string | null; is_dev: boolean } | null;
+  delegations: { id: string; scope_type: "org_unit" | "course"; scope_id: string; scope_name: string | null }[];
+}
+
+export interface AdminCourse {
+  id: string;
+  title: string;
+  course_code: string | null;
+  status: string;
+  org_unit_id: string | null;
+  org_unit_name: string | null;
+}
+
+export interface StaffRole {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  role: string;
+  scope_type: string;
+  scope_id: string;
+  scope_name: string | null;
+  source: string;
+  expires_at: string | null;
+}
+
+export interface Person {
+  id: string;
+  display_name: string | null;
+}
+
+export interface BadgeTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  org_unit_id: string | null;
+  org_unit_name: string | null;
+  status: "active" | "archived";
+  defaults: Json;
+}
+
+export interface CredentialRecord {
+  credential_id: string;
+  definition_id: string;
+  course_id: string | null;
+  issued_at: string | null;
+  badge_title: string;
+  version_no: number;
+  course_title: string | null;
+  course_code: string | null;
+  issuer_name: string;
+  learner_name: string | null;
+  award_kind: string;
+  status: "active" | "revoked" | "expired";
+  revoked_at: string | null;
+  revocation_reason: string | null;
+}
+
+export interface ReportSummary {
+  issued: number;
+  revoked: number;
+  active: number;
+  pending_awards: { awaiting_confirmation: number; awaiting_issuance: number };
+  failed_issuance: { credentials_not_issued: number; failed_jobs: number };
+  by_course: { course_id: string | null; course_title: string; issued: number; revoked: number }[];
+  by_badge: { definition_id: string; badge_title: string; course_title: string | null; issued: number; revoked: number }[];
+  by_month: { month: string; issued: number }[];
+}
+
+export interface AuditItem {
+  id: string;
+  at: string;
+  category: string;
+  action: string;
+  actor_kind: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  resource_type: string;
+  resource_id: string | null;
+  request_id: string | null;
+  data: Json;
+}
+
+export interface RevocationRequestRow {
+  id: string;
+  credential_id: string;
+  badge_title: string | null;
+  course_title: string | null;
+  learner_name: string | null;
+  requested_by: string | null;
+  reason: string;
+  status: string;
+  requested_at: string;
+  can_decide: boolean;
+}
+
+export interface Reconciliation {
+  awards_not_issued: {
+    decision_id: string;
+    badge_title: string;
+    learner_name: string | null;
+    decided_at: string;
+    kind: string;
+    credential_status: string | null;
+    attempts: number;
+    last_error: string | null;
+    problem: "never_started" | "signing_failed" | "stuck_before_signing";
+  }[];
+  failed_jobs: { id: number; task: string; attempts: number; scheduled_at: string | null; subject_type: string | null; subject_id: string | null }[];
+  status_lists_overdue: { id: string; issuer_id: string; published_at: string | null; next_publish_due: string | null }[];
+}
+
+export const REVOCATION_REASONS: Record<string, string> = {
+  issued_in_error: "Issued in error",
+  academic_misconduct: "Academic misconduct",
+  requirements_not_met: "Requirements not actually met",
+  learner_request: "The learner asked for it",
+  other: "Other",
+};
+
+export const ROLE_LABELS: Record<string, string> = {
+  inst_admin: "Institution administrator",
+  dept_admin: "Department administrator",
+  issuer_manager: "Issuer manager",
+  lecturer: "Lecturer",
+  course_admin: "Course administrator",
+  student: "Student",
+};
+
+/** DELETE that expects 204 No Content. */
+export async function apiDelete(path: string, token: string | null): Promise<void> {
+  const headers = new Headers({ accept: "application/json" });
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  const res = await fetch(path, { method: "DELETE", headers });
+  if (!res.ok) {
+    let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
+    try {
+      problem = await res.json();
+    } catch {
+      /* not JSON */
+    }
+    throw new ApiError(problem);
+  }
+}

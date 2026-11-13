@@ -1,0 +1,290 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/** Faculties and departments, which may issue, course placement and delegated staff roles
+ * (spec §2.3, §2.4, §10.3). */
+import { Button, Checkbox, Flex, Heading, SimpleSelect, Table, Text, TextInput, View } from "@instructure/ui";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+
+import {
+  apiDelete,
+  apiFetch,
+  apiSend,
+  type AdminCourse,
+  type AdminIssuer,
+  type OrgUnit,
+  type Person,
+  ROLE_LABELS,
+  type StaffRole,
+} from "../../api";
+import { useAuth } from "../../auth";
+import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
+import { AdminPage, fmtDate } from "./AdminPage";
+
+export function People() {
+  return (
+    <AdminPage title="Departments and roles">
+      <OrgUnits />
+      <Courses />
+      <Roles />
+    </AdminPage>
+  );
+}
+
+function OrgUnits() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const f = roleFlags(useMe().data);
+  const q = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
+  const [v, setV] = useState({ name: "", kind: "department", parent_id: "" });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["org-units"] });
+  const create = useMutation({
+    mutationFn: () =>
+      apiSend<OrgUnit>("/api/v1/admin/org-units", token, "POST", { ...v, parent_id: v.parent_id || null }),
+    onSuccess: () => {
+      setV({ ...v, name: "" });
+      refresh();
+    },
+  });
+  const patch = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Partial<OrgUnit> }) =>
+      apiSend<OrgUnit>(`/api/v1/admin/org-units/${id}`, token, "PATCH", body),
+    onSuccess: refresh,
+  });
+  const units = q.data ?? [];
+  const name = (id: string | null) => units.find((u) => u.id === id)?.name ?? "";
+  return (
+    <View as="section" display="block" margin="0 0 large">
+      <Heading level="h2" margin="0 0 small">
+        Faculties and departments
+      </Heading>
+      {q.isPending && <Loading what="departments" />}
+      {q.isError && <ErrorAlert error={q.error} />}
+      <Table caption="Faculties and departments">
+        <Table.Head>
+          <Table.Row>
+            <Table.ColHeader id="u-name">Name</Table.ColHeader>
+            <Table.ColHeader id="u-parent">Part of</Table.ColHeader>
+            <Table.ColHeader id="u-issue">May issue credentials</Table.ColHeader>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
+          {units.map((u) => (
+            <Table.Row key={u.id}>
+              <Table.RowHeader>
+                {u.name} ({u.kind}){u.status === "archived" ? " (archived)" : ""}
+              </Table.RowHeader>
+              <Table.Cell>{name(u.parent_id)}</Table.Cell>
+              <Table.Cell>
+                <Checkbox
+                  label={`${u.name} may issue credentials`}
+                  checked={u.may_issue}
+                  disabled={!f.isInstAdmin}
+                  onChange={(e) => patch.mutate({ id: u.id, body: { may_issue: e.target.checked } })}
+                />
+                {u.may_issue && !u.effective_may_issue && <Text size="small">Blocked by a unit above it.</Text>}
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
+      {patch.isError && <ErrorAlert error={patch.error} />}
+      <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0 0">
+        <TextInput renderLabel="New unit name" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} width="16rem" />
+        <SimpleSelect renderLabel="Kind" value={v.kind} onChange={(_e, { value }) => setV({ ...v, kind: String(value) })} width="10rem">
+          {["faculty", "department", "programme", "other"].map((k) => (
+            <SimpleSelect.Option key={k} id={`kind-${k}`} value={k}>
+              {k}
+            </SimpleSelect.Option>
+          ))}
+        </SimpleSelect>
+        <SimpleSelect
+          renderLabel="Part of"
+          value={v.parent_id}
+          onChange={(_e, { value }) => setV({ ...v, parent_id: String(value) })}
+          width="16rem"
+        >
+          <SimpleSelect.Option id="parent-none" value="">
+            Top level
+          </SimpleSelect.Option>
+          {units
+            .filter((u) => u.manageable)
+            .map((u) => (
+              <SimpleSelect.Option key={u.id} id={`parent-${u.id}`} value={u.id}>
+                {u.name}
+              </SimpleSelect.Option>
+            ))}
+        </SimpleSelect>
+        <Button onClick={() => create.mutate()} interaction={v.name.trim().length >= 2 ? "enabled" : "disabled"}>
+          Add unit
+        </Button>
+      </Flex>
+      {create.isError && <ErrorAlert error={create.error} />}
+    </View>
+  );
+}
+
+function Courses() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const courses = useQuery({ queryKey: ["admin-courses"], queryFn: () => apiFetch<AdminCourse[]>("/api/v1/admin/courses", token) });
+  const units = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
+  const move = useMutation({
+    mutationFn: ({ id, org_unit_id }: { id: string; org_unit_id: string | null }) =>
+      apiSend(`/api/v1/admin/courses/${id}/org-unit`, token, "PUT", { org_unit_id }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-courses"] }),
+  });
+  return (
+    <View as="section" display="block" margin="0 0 large">
+      <Heading level="h2" margin="0 0 small">
+        Courses
+      </Heading>
+      {courses.isError && <ErrorAlert error={courses.error} />}
+      {move.isError && <ErrorAlert error={move.error} />}
+      {(courses.data ?? []).map((c) => (
+        <SimpleSelect
+          key={c.id}
+          renderLabel={`${c.title}${c.course_code ? ` (${c.course_code})` : ""} belongs to`}
+          value={c.org_unit_id ?? ""}
+          onChange={(_e, { value }) => move.mutate({ id: c.id, org_unit_id: String(value) || null })}
+          width="24rem"
+        >
+          <SimpleSelect.Option id={`${c.id}-none`} value="">
+            No department
+          </SimpleSelect.Option>
+          {(units.data ?? []).map((u) => (
+            <SimpleSelect.Option key={u.id} id={`${c.id}-${u.id}`} value={u.id}>
+              {u.name}
+            </SimpleSelect.Option>
+          ))}
+        </SimpleSelect>
+      ))}
+    </View>
+  );
+}
+
+const SCOPE_FOR: Record<string, string> = {
+  inst_admin: "institution",
+  dept_admin: "org_unit",
+  issuer_manager: "issuer",
+  lecturer: "course",
+  course_admin: "course",
+};
+
+function Roles() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const f = roleFlags(useMe().data);
+  const roles = useQuery({ queryKey: ["memberships"], queryFn: () => apiFetch<StaffRole[]>("/api/v1/admin/memberships", token) });
+  const units = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
+  const courses = useQuery({ queryKey: ["admin-courses"], queryFn: () => apiFetch<AdminCourse[]>("/api/v1/admin/courses", token) });
+  const issuers = useQuery({ queryKey: ["admin-issuers"], queryFn: () => apiFetch<AdminIssuer[]>("/api/v1/admin/issuers", token) });
+  const [search, setSearch] = useState("");
+  const people = useQuery({
+    queryKey: ["people", search],
+    queryFn: () => apiFetch<Person[]>(`/api/v1/admin/people?q=${encodeURIComponent(search)}`, token),
+    enabled: search.trim().length >= 2,
+  });
+  const [g, setG] = useState({ user_id: "", role: "lecturer", scope_id: "" });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["memberships"] });
+  const grant = useMutation({
+    mutationFn: () =>
+      apiSend<StaffRole>("/api/v1/admin/memberships", token, "POST", {
+        user_id: g.user_id,
+        role: g.role,
+        scope_type: SCOPE_FOR[g.role],
+        scope_id: SCOPE_FOR[g.role] === "institution" ? null : g.scope_id,
+      }),
+    onSuccess: refresh,
+  });
+  const revoke = useMutation({ mutationFn: (id: string) => apiDelete(`/api/v1/admin/memberships/${id}`, token), onSuccess: refresh });
+  const scopeOptions =
+    SCOPE_FOR[g.role] === "org_unit"
+      ? (units.data ?? []).filter((u) => u.manageable).map((u) => ({ id: u.id, label: u.name }))
+      : SCOPE_FOR[g.role] === "course"
+        ? (courses.data ?? []).map((c) => ({ id: c.id, label: c.title }))
+        : SCOPE_FOR[g.role] === "issuer"
+          ? (issuers.data ?? []).map((i) => ({ id: i.id, label: i.name }))
+          : [];
+  const grantable = f.isInstAdmin ? Object.keys(SCOPE_FOR) : Object.keys(SCOPE_FOR).filter((r) => r !== "inst_admin");
+  return (
+    <View as="section" display="block">
+      <Heading level="h2" margin="0 0 small">
+        Staff roles
+      </Heading>
+      {roles.isError && <ErrorAlert error={roles.error} />}
+      <Table caption="Staff roles">
+        <Table.Head>
+          <Table.Row>
+            <Table.ColHeader id="r-person">Person</Table.ColHeader>
+            <Table.ColHeader id="r-role">Role</Table.ColHeader>
+            <Table.ColHeader id="r-scope">Where</Table.ColHeader>
+            <Table.ColHeader id="r-src">Source</Table.ColHeader>
+            <Table.ColHeader id="r-act">Action</Table.ColHeader>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
+          {(roles.data ?? []).map((r) => (
+            <Table.Row key={r.id}>
+              <Table.RowHeader>{r.user_name ?? "(no name)"}</Table.RowHeader>
+              <Table.Cell>{ROLE_LABELS[r.role] ?? r.role}</Table.Cell>
+              <Table.Cell>{r.scope_name}</Table.Cell>
+              <Table.Cell>
+                {r.source === "lti" ? "Canvas" : "Granted here"}
+                {r.expires_at ? `, until ${fmtDate(r.expires_at)}` : ""}
+              </Table.Cell>
+              <Table.Cell>
+                <Button size="small" onClick={() => revoke.mutate(r.id)}>
+                  Remove {ROLE_LABELS[r.role] ?? r.role} from {r.user_name ?? "this person"}
+                </Button>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table>
+      {revoke.isError && <ErrorAlert error={revoke.error} />}
+      <Heading level="h3" margin="medium 0 small">
+        Grant a role
+      </Heading>
+      <Flex gap="small" alignItems="end" wrap="wrap">
+        <TextInput renderLabel="Find a person by name" value={search} onChange={(_e, v) => setSearch(v)} width="16rem" />
+        <SimpleSelect renderLabel="Person" value={g.user_id} onChange={(_e, { value }) => setG({ ...g, user_id: String(value) })} width="16rem">
+          <SimpleSelect.Option id="p-none" value="">
+            {search.trim().length >= 2 ? "Choose" : "Type at least two letters"}
+          </SimpleSelect.Option>
+          {(people.data ?? []).map((p) => (
+            <SimpleSelect.Option key={p.id} id={`p-${p.id}`} value={p.id}>
+              {p.display_name ?? p.id}
+            </SimpleSelect.Option>
+          ))}
+        </SimpleSelect>
+        <SimpleSelect renderLabel="Role" value={g.role} onChange={(_e, { value }) => setG({ ...g, role: String(value), scope_id: "" })} width="16rem">
+          {grantable.map((r) => (
+            <SimpleSelect.Option key={r} id={`role-${r}`} value={r}>
+              {ROLE_LABELS[r]}
+            </SimpleSelect.Option>
+          ))}
+        </SimpleSelect>
+        {SCOPE_FOR[g.role] !== "institution" && (
+          <SimpleSelect renderLabel="Where" value={g.scope_id} onChange={(_e, { value }) => setG({ ...g, scope_id: String(value) })} width="16rem">
+            <SimpleSelect.Option id="s-none" value="">
+              Choose
+            </SimpleSelect.Option>
+            {scopeOptions.map((o) => (
+              <SimpleSelect.Option key={o.id} id={`s-${o.id}`} value={o.id}>
+                {o.label}
+              </SimpleSelect.Option>
+            ))}
+          </SimpleSelect>
+        )}
+        <Button
+          color="primary"
+          interaction={g.user_id && (SCOPE_FOR[g.role] === "institution" || g.scope_id) ? "enabled" : "disabled"}
+          onClick={() => grant.mutate()}
+        >
+          Grant role
+        </Button>
+      </Flex>
+      {grant.isError && <ErrorAlert error={grant.error} />}
+    </View>
+  );
+}
