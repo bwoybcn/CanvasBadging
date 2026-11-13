@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # One image for the api and the worker (different commands). Build context: repo root.
 
-FROM node:22-alpine AS frontend
+FROM node:25-alpine AS frontend
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund

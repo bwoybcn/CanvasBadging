@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Build context: repo root.
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /src
 COPY signer/package.json signer/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY signer/ ./
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22-alpine
+FROM node:25-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /src/node_modules ./node_modules
