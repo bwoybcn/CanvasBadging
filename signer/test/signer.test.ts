@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { connect, type AddressInfo } from "node:net";
+
 import { describe, expect, it } from "vitest";
 
 import { buildApp } from "../src/app.js";
@@ -54,6 +56,51 @@ describe("HTTP API", () => {
     const app = buildApp(config, new MemoryStore());
     const res = await app.inject({ method: "POST", url: "/v1/keys", payload: { issuer_key_id: KEY_ID } });
     expect(res.statusCode).toBe(401);
+  });
+
+  it.each([
+    ["percent-encoded prefix", "/%761/keys"],
+    ["percent-encoded digit", "/v%31/keys"],
+  ])("requires the shared secret whatever the path spelling (%s)", async (_name, url) => {
+    const store = new MemoryStore();
+    const app = buildApp(config, store);
+    const res = await app.inject({ method: "POST", url, payload: { issuer_key_id: KEY_ID } });
+    expect(res.statusCode).toBe(401);
+    expect(store.rows.size).toBe(0);
+  });
+
+  it("requires the shared secret for an absolute-form request target on a real socket", async () => {
+    const store = new MemoryStore();
+    const app = buildApp(config, store);
+    await app.listen({ port: 0, host: "127.0.0.1" });
+    try {
+      const { port } = app.server.address() as AddressInfo;
+      const body = JSON.stringify({ issuer_key_id: KEY_ID });
+      const raw = await new Promise<string>((resolve, reject) => {
+        const sock = connect(port, "127.0.0.1", () => {
+          sock.write(
+            `POST http://signer:8790/v1/keys HTTP/1.1\r\nHost: signer\r\nContent-Type: application/json\r\n` +
+              `Content-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\n\r\n${body}`,
+          );
+        });
+        let out = "";
+        sock.on("data", (d) => (out += d.toString()));
+        sock.on("end", () => resolve(out));
+        sock.on("error", reject);
+      });
+      expect(raw.split("\r\n")[0]).toContain(" 401 ");
+      expect(store.rows.size).toBe(0);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("requires the shared secret on encoded destroy and sign paths", async () => {
+    const app = buildApp(config, new MemoryStore());
+    for (const url of [`/%76%31/keys/${KEY_ID}/destroy`, "/%761/sign"]) {
+      const res = await app.inject({ method: "POST", url, payload: {} });
+      expect(res.statusCode).toBe(401);
+    }
   });
 
   it("generates and stores an encrypted key, never returning the secret", async () => {

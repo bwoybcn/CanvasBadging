@@ -67,7 +67,7 @@ class IssuanceError(RuntimeError):
 @dataclass(frozen=True)
 class IssueResult:
     credential_id: uuid.UUID
-    outcome: str  # issued | already_issued | duplicate
+    outcome: str  # issued | already_issued | duplicate | cancelled
     status_list_id: uuid.UUID | None = None
 
 
@@ -188,6 +188,10 @@ def _prepare(
     if existing is not None and existing.status == "issued":
         return None, IssueResult(existing.id, "already_issued", existing.status_list_id)
     if existing is not None and existing.status == "pending_signature":
+        if decision.status != "ready":
+            # The award was cancelled (rejected, erased) after signing was first attempted:
+            # nothing new is issued afterwards (spec §16.4), so abandon the unsigned row.
+            return None, _cancel_pending(db, existing, decision)
         return existing, None
     if decision.status != "ready":
         raise IssuanceError(f"decision is {decision.status}, not ready for issuance")
@@ -285,6 +289,24 @@ def _prepare(
     return cred, None
 
 
+CANCELLED_ERROR = "award decision cancelled before signing"
+
+
+def _cancel_pending(db: Session, cred: Credential, decision: AwardDecision) -> IssueResult:
+    cred.status = "failed"
+    cred.last_error = CANCELLED_ERROR
+    audit.record(
+        db,
+        action="credential.cancel",
+        resource_type="credential",
+        resource_id=cred.id,
+        institution_id=cred.institution_id,
+        actor_kind="system",
+        data={"award_decision_id": str(decision.id), "decision_status": decision.status},
+    )
+    return IssueResult(cred.id, "cancelled")
+
+
 def issue(
     institution_id: uuid.UUID,
     decision_id: uuid.UUID,
@@ -335,6 +357,18 @@ def issue(
         assert cred is not None
         if cred.status == "issued":
             return IssueResult(cred.id, "already_issued", cred.status_list_id)
+        decision = db.get(AwardDecision, decision_id, with_for_update=True)
+        assert decision is not None
+        if decision.status != "ready" or cred.status != "pending_signature":
+            # Cancelled while the signer was working (erasure, rejection): discard the
+            # signature rather than issue a credential the institution has withdrawn.
+            result = (
+                _cancel_pending(db, cred, decision)
+                if cred.status == "pending_signature"
+                else IssueResult(cred.id, "cancelled")
+            )
+            log.info("credential_cancelled", credential_id=str(cred_id))
+            return result
         cred.signed_json = signed
         cred.content_hash = content_hash(signed)
         cred.issuer_key_id = key_id
@@ -346,8 +380,6 @@ def issue(
                 institution_id=cred.institution_id, credential_id=cred.id, state="active"
             )
         )
-        decision = db.get(AwardDecision, decision_id)
-        assert decision is not None
         decision.status = "issued"
         audit.record(
             db,
@@ -379,7 +411,11 @@ def _record_failure(institution_id: uuid.UUID, cred_id: uuid.UUID, error: str) -
 
 
 def pending(db: Session, older_than: timedelta = timedelta(minutes=10)) -> list[AwardDecision]:
-    """Decisions whose credential is stuck in ``pending_signature`` (reconciliation, §17.2)."""
+    """Decisions whose credential is stuck in ``pending_signature`` (reconciliation, §17.2).
+
+    Includes decisions cancelled since: re-running ``issue`` for them marks the unsigned row
+    failed instead of signing it.
+    """
     cutoff = datetime.now(UTC) - older_than
     return list(
         db.scalars(

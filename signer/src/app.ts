@@ -16,6 +16,8 @@ import type { DidDocuments } from "./loader.js";
 import { publicFromSecret, signCredential, SigningRefused, verifyProof } from "./proofs.js";
 import type { KeyStore } from "./store.js";
 
+const PUBLIC_ROUTES = new Set(["/healthz", "/readyz"]);
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function authorised(req: FastifyRequest, secret: string): boolean {
@@ -44,8 +46,13 @@ export function buildApp(config: SignerConfig, store: KeyStore): FastifyInstance
     }
   });
 
+  // Authenticate on the route Fastify actually matched, never on the raw request target:
+  // the router percent-decodes paths ("/%761/sign" routes to /v1/sign) and strips
+  // absolute-form targets, so a prefix check on req.url could be skipped. Everything except
+  // the two health routes needs the shared secret, including unmatched paths.
   app.addHook("onRequest", async (req, reply) => {
-    if (req.url.startsWith("/v1/") && !authorised(req, config.sharedSecret)) {
+    const route = req.routeOptions.url;
+    if (!(route !== undefined && PUBLIC_ROUTES.has(route)) && !authorised(req, config.sharedSecret)) {
       return reply.code(401).send({ code: "UNAUTHENTICATED", title: "Signer credentials missing" });
     }
   });

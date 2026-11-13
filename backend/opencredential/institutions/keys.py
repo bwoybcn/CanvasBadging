@@ -4,6 +4,11 @@
 The private half never leaves the signer. This module records the public half and the key's
 state, and tells the signer when a key must stop signing (retire) or be erased (destroy).
 
+Retire and destroy cannot be undone in the signer, so they only happen once the database change
+that calls for them has committed: straight after the commit, and through a job queued in the
+same transaction in case the signer is unreachable at that moment. A rollback therefore never
+leaves the signer refusing a key the database still calls active.
+
 States: ``pending → active → retired → (revoked)``; exactly one active key per issuer.
 """
 
@@ -13,13 +18,21 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import event, select
+from sqlalchemy.orm import Session, SessionTransaction
 
 from opencredential import audit
 from opencredential.db.models import Credential, Issuer, IssuerKey
 from opencredential.institutions.identity import verification_method_id
+from opencredential.jobs import enqueue
+from opencredential.logging import get_logger
 from opencredential.signer_client import SignerClient
+
+log = get_logger("keys")
+
+#: Job that tells the signer to retire or destroy a key (idempotent; see module docstring).
+SIGNER_KEY_LIFECYCLE = "oc:signer_key_lifecycle"
+_AFTER_COMMIT = "oc_signer_after_commit"
 
 #: Retired private keys are erased after this long (no further signing need, ADR-0005).
 RETIRED_KEY_DESTROY_AFTER = timedelta(days=30)
@@ -27,6 +40,54 @@ RETIRED_KEY_DESTROY_AFTER = timedelta(days=30)
 
 class KeyLifecycleError(RuntimeError):
     pass
+
+
+@event.listens_for(Session, "after_commit")
+def _run_signer_actions(session: Session) -> None:
+    if session.get_nested_transaction() is not None:
+        return  # a savepoint was released; the real transaction is still open
+    for client, act, kid in session.info.pop(_AFTER_COMMIT, []):
+        try:
+            apply_in_signer(client, act, kid)
+        except Exception as exc:  # the job queued in the same transaction retries
+            log.warning(
+                "signer_key_action_deferred",
+                issuer_key_id=str(kid),
+                action=act,
+                error=type(exc).__name__,
+            )
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _drop_signer_actions(session: Session, transaction: SessionTransaction) -> None:
+    if transaction.parent is None:
+        # After a commit the list is already empty; after a rollback it goes with it.
+        session.info.pop(_AFTER_COMMIT, None)
+
+
+def apply_in_signer(signer: SignerClient, action: str, key_id: uuid.UUID) -> None:
+    if action == "retire":
+        signer.retire_key(key_id)
+    elif action == "destroy":
+        signer.destroy_key(key_id)
+    else:
+        raise ValueError(f"unknown signer key action {action!r}")
+
+
+def _signer_after_commit(db: Session, signer: SignerClient, action: str, key: IssuerKey) -> None:
+    """Retire or destroy ``key`` in the signer once, and only if, this transaction commits."""
+    enqueue.defer(
+        db,
+        SIGNER_KEY_LIFECYCLE,
+        queue="maintenance",
+        institution_id=key.institution_id,
+        args={"key_id": str(key.id), "action": action},
+        subject_type="issuer_key",
+        subject_id=key.id,
+        queueing_lock=f"signer_key:{action}:{key.id}",
+    )
+    pending: list[tuple[SignerClient, str, uuid.UUID]] = db.info.setdefault(_AFTER_COMMIT, [])
+    pending.append((signer, action, key.id))
 
 
 def active_key(db: Session, issuer_id: uuid.UUID) -> IssuerKey | None:
@@ -88,7 +149,7 @@ def activate(
     key.activated_at = now
     db.flush()
     if previous is not None:
-        signer.retire_key(previous.id)
+        _signer_after_commit(db, signer, "retire", previous)
     audit.record(
         db,
         action="issuer_key.activate",
@@ -153,7 +214,7 @@ def handle_compromise(
     key.revoked_at = now
     key.revocation_reason = reason
     db.flush()
-    signer.destroy_key(key.id)
+    _signer_after_commit(db, signer, "destroy", key)
     affected = list(
         db.scalars(
             select(Credential.id).where(

@@ -112,6 +112,11 @@ def sync_course_task(
             course = db.get(Course, cid)
             if course is None:
                 return {"status": "course_missing"}
+            if course.status != "active":
+                # Deactivated after the job was queued, or never switched on: no Canvas read,
+                # no evaluation, no awards (spec §4.1).
+                log.info("sync.skipped_inactive", course_id=course_id, status=course.status)
+                return {"status": "course_inactive"}
             integration = integration_for(db, course)
             adapter = get_adapter(integration, course.canvas_course_id)
             _refresh_roster(db, integration, course)
@@ -388,6 +393,22 @@ def reconcile_issuance(timestamp: int) -> int:
             )
             count += 1
     return count
+
+
+@blueprint.task(name="signer_key_lifecycle", queue="maintenance", retry=RETRY_TRANSIENT)
+def signer_key_lifecycle(key_id: str, action: str, **_meta: Any) -> str:
+    """Retire or destroy a key in the signer after the change that needs it has committed.
+
+    Usually already done straight after the commit; this is the durable retry. Idempotent.
+    """
+    from opencredential.institutions.keys import apply_in_signer
+
+    signer = _signer()
+    try:
+        apply_in_signer(signer, action, uuid.UUID(key_id))
+    finally:
+        signer.close()
+    return action
 
 
 @blueprint.periodic(cron="41 3 * * *", periodic_id="destroy_retired_keys")
