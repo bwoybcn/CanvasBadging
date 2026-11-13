@@ -13,6 +13,10 @@ x-backend-env: &backend-env
   OC_PUBLIC_BASE_URL: ${OC_PUBLIC_BASE_URL:-http://localhost:8000}
   OC_LOG_JSON: ${OC_LOG_JSON:-true}
   OC_STORAGE_DIR: /var/lib/opencredential/assets
+  # W3: LTI tool key (generated on first use in development) and Canvas access from containers.
+  OC_LTI_PRIVATE_KEY_FILE: /var/lib/opencredential/lti/tool_key.pem
+  # A Canvas on the host at http://localhost:3000 is not "localhost" inside a container.
+  OC_CANVAS_URL_REWRITE: ${OC_CANVAS_URL_REWRITE:-http://localhost:3000=http://host.docker.internal:3000}
 
 services:
   postgres:
@@ -60,6 +64,9 @@ services:
     environment: *backend-env
     volumes:
       - assets:/var/lib/opencredential/assets
+      - lti:/var/lib/opencredential/lti
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -71,6 +78,9 @@ services:
     command: ["oc", "worker"]
     volumes:
       - assets:/var/lib/opencredential/assets
+      - lti:/var/lib/opencredential/lti
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       disable: true # the image's check probes the api port
     depends_on:
@@ -89,4 +99,5 @@ services:
 volumes:
   pgdata:
   assets:
+  lti:
   caddydata:

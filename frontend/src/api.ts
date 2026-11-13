@@ -45,6 +45,19 @@ export interface Me {
   institution: { id: string; slug: string; name: string; is_demo: boolean };
   memberships: { role: string; scope_type: string; scope_id: string; scope_name: string | null }[];
   session_method: string;
+  email?: string | null;
+  /** Present when the session came from a Canvas launch: the course it was opened in. */
+  launch_course?: LaunchCourse | null;
+}
+
+export interface LaunchCourse {
+  id: string;
+  title: string;
+  course_code: string | null;
+  canvas_course_id: string;
+  status: string;
+  roles: string[];
+  view: "lecturer" | "student";
 }
 
 /* ---- W5: authoring, rules and awards ------------------------------------------------------ */

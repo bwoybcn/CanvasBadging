@@ -33,12 +33,27 @@ class InstitutionOut(BaseModel):
     is_demo: bool
 
 
+class LaunchCourseOut(BaseModel):
+    """The Canvas course this session was launched from (LTI sessions only)."""
+
+    id: uuid.UUID
+    title: str
+    course_code: str | None
+    canvas_course_id: str
+    status: str
+    roles: list[str]
+    #: ``lecturer`` view for course staff, ``student`` view otherwise (spec §4.1).
+    view: str
+
+
 class MeOut(BaseModel):
     id: uuid.UUID
     display_name: str | None
+    email: str | None = None
     institution: InstitutionOut
     memberships: list[MembershipOut]
     session_method: str
+    launch_course: LaunchCourseOut | None = None
 
 
 @router.get("/me", response_model=MeOut)
@@ -69,9 +84,27 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
         )
         for m in rows
     ]
+    launch_course = None
+    if claims.course_id is not None:
+        course = db.get(Course, claims.course_id)
+        if course is not None:
+            roles = sorted(
+                m.role for m in rows if m.scope_type == "course" and m.scope_id == course.id
+            )
+            launch_course = LaunchCourseOut(
+                id=course.id,
+                title=course.title,
+                course_code=course.course_code,
+                canvas_course_id=course.canvas_course_id,
+                status=course.status,
+                roles=roles,
+                view="lecturer" if set(roles) & policy.COURSE_STAFF else "student",
+            )
     return MeOut(
         id=user.id,
         display_name=user.display_name,
+        email=user.email,
+        launch_course=launch_course,
         institution=InstitutionOut(
             id=institution.id,
             slug=institution.slug,

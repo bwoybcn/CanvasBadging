@@ -185,3 +185,14 @@ def openapi(out: Path = typer.Option(None, help="Write to file instead of stdout
 
 if __name__ == "__main__":
     app()
+
+
+def _register_subcommands() -> None:
+    from opencredential.cli_canvas import admin_app, canvas_app, lti_app
+
+    app.add_typer(lti_app, name="lti")
+    app.add_typer(canvas_app, name="canvas")
+    app.add_typer(admin_app, name="admin")
+
+
+_register_subcommands()

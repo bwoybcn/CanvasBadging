@@ -23,7 +23,14 @@ def test_healthz() -> None:
 
 
 def test_dev_login_routes_absent_in_production() -> None:
-    prod = create_app(Settings(env="production", secret_key=STRONG, signer_shared_secret=STRONG))
+    prod = create_app(
+        Settings(
+            env="production",
+            secret_key=STRONG,
+            signer_shared_secret=STRONG,
+            token_encryption_key=STRONG,
+        )
+    )
     dev = create_app(Settings(env="development"))
     assert "/dev/login" in _paths(dev)
     assert not any(p.startswith("/dev") for p in _paths(prod))
