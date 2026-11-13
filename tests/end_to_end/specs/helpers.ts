@@ -105,3 +105,9 @@ export interface Credential {
   name: string;
   status: string;
 }
+
+/** Pick an option in an InstUI SimpleSelect by its visible label. */
+export async function choose(page: Page, label: string | RegExp, option: string | RegExp): Promise<void> {
+  await page.getByRole("combobox", { name: label }).click();
+  await page.getByRole("option", { name: option }).first().click();
+}

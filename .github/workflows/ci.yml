@@ -137,6 +137,67 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/signer.log" "$RUNNER_TEMP/api.log"
 
+  e2e:
+    # W8 (spec §19.3, §19.5): the twelve end-to-end scenarios and the accessibility suite, in a
+    # real browser against the running stack (api, worker, signer, built frontend).
+    name: End-to-end scenarios and accessibility (Playwright)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPASSWORD: postgres
+      POSTGRES_USER: postgres
+      SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Start the stack (database, signer, API with the built frontend, worker)
+        run: |
+          sh docker/postgres/init/01-roles.sh
+          (cd frontend && npm ci --no-audit --no-fund && npm run build)
+          (cd backend && uv sync --frozen && uv run oc migrate)
+          (cd signer && npm ci --no-audit --no-fund && npm run build)
+          (cd signer && OC_ENV=development nohup node dist/server.js > "$RUNNER_TEMP/signer.log" 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS localhost:8790/healthz && break; sleep 1; done
+          (cd backend && uv run oc seed)
+          export OC_STATIC_DIR="$GITHUB_WORKSPACE/frontend/dist"
+          (cd backend && nohup uv run oc api > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd backend && nohup uv run oc worker > "$RUNNER_TEMP/worker.log" 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS localhost:8000/readyz && break; sleep 1; done
+      - name: Playwright (E1–E12, WCAG 2.2 AA checks on desktop and phone)
+        working-directory: tests/end_to_end
+        env:
+          OC_E2E_SIGNER_STOP: fuser -k 8790/tcp; sleep 1
+          OC_E2E_SIGNER_START: >-
+            cd "$GITHUB_WORKSPACE/signer" && (OC_ENV=development nohup node dist/server.js >> "$RUNNER_TEMP/signer.log" 2>&1 &) && sleep 2
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          npx playwright test --trace off
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-results
+          path: |
+            tests/end_to_end/results
+            tests/end_to_end/test-results
+      - name: Service logs
+        if: failure()
+        run: cat "$RUNNER_TEMP/signer.log" "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/worker.log"
+
   signer:
     name: Signer (lint, Vitest, build)
     runs-on: ubuntu-latest
