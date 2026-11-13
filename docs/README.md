@@ -10,5 +10,8 @@
 | Decisions | [architecture/adr/](architecture/adr/README.md) |
 | Dependencies and licences | [architecture/dependencies.md](architecture/dependencies.md) |
 | Open questions and defaults | [architecture/open-questions.md](architecture/open-questions.md) |
+| API (OpenAPI snapshot) | [api/openapi.json](api/openapi.json) |
+| Local development | [development/local-setup.md](development/local-setup.md) |
+| Development keys and secrets | [security/development-keys.md](security/development-keys.md) |
 
-Source specification: OpenCredential v1.0 (13 Nov 2026). Deployment, administration, development and security guides are written by later workstreams.
+Source specification: OpenCredential v1.0 (13 Nov 2026). Deployment and administration guides are written by later workstreams.

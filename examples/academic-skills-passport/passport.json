@@ -1,0 +1,190 @@
+{
+  "$comment": "Academic Skills Passport demonstration content (spec §11.3). Reusable seed data, not mandatory credentials. All people are synthetic. Licence: CC0-1.0.",
+  "institution": {
+    "slug": "demo-university",
+    "name": "Demo University (development)",
+    "description": "Synthetic institution for local development and demonstrations. Not a real organisation.",
+    "website_url": "https://demo-university.example",
+    "categories": ["Academic Communication", "Research Skills", "Digital Skills"]
+  },
+  "org_unit": {"name": "Library and Academic Skills", "kind": "department"},
+  "issuer": {
+    "slug": "academic-skills-centre",
+    "name": "Academic Skills Centre (DEVELOPMENT)",
+    "url": "https://demo-university.example/academic-skills",
+    "email": "academic-skills@demo-university.example",
+    "description": "Development issuer. Credentials it signs use a development key and must never be presented as real."
+  },
+  "canvas": {
+    "name": "Local Canvas (development)",
+    "base_url": "http://localhost:3000",
+    "lti_issuer": "https://canvas.instructure.com",
+    "lti_client_id": "dev-placeholder-client-id",
+    "$comment": "Placeholder registration. W3 replaces these with the real developer key values from the local Canvas."
+  },
+  "course": {
+    "canvas_course_id": "demo-academic-skills-passport",
+    "title": "Academic Skills Passport (demo)",
+    "course_code": "ASP-DEMO"
+  },
+  "modules": [
+    {"key": "m-awf", "name": "Academic Writing Foundations", "requirement_type": "must_mark_done"},
+    {"key": "m-sem", "name": "Seminar Skills", "requirement_type": "must_view"},
+    {"key": "m-pres", "name": "Presenting Academic Work", "requirement_type": "must_submit"},
+    {"key": "m-il", "name": "Information Literacy", "requirement_type": "must_view"},
+    {"key": "m-eas", "name": "Evaluating Sources", "requirement_type": "must_mark_done"},
+    {"key": "m-rm1", "name": "Research Methods 1: Designing a Question", "requirement_type": "must_mark_done"},
+    {"key": "m-rm2", "name": "Research Methods 2: Choosing Methods", "requirement_type": "must_mark_done"},
+    {"key": "m-dl", "name": "Digital Literacy", "requirement_type": "must_view"},
+    {"key": "m-rai", "name": "Responsible AI Use", "requirement_type": "must_mark_done"},
+    {"key": "m-data", "name": "Working with Data", "requirement_type": "must_view"}
+  ],
+  "assignments": [
+    {"key": "a-awf-essay", "name": "Short academic essay", "points_possible": 100},
+    {"key": "a-pres", "name": "Recorded presentation", "points_possible": 20},
+    {"key": "a-eas-quiz", "name": "Source evaluation quiz", "points_possible": 10},
+    {"key": "a-rai-reflection", "name": "AI use reflection", "points_possible": 10},
+    {"key": "a-data-quiz", "name": "Data literacy quiz", "points_possible": 25}
+  ],
+  "badges": [
+    {
+      "key": "academic-writing-foundations",
+      "category": "Academic Communication",
+      "title": "Academic Writing Foundations",
+      "short_description": "Plans, drafts and revises a short academic text using appropriate structure and referencing.",
+      "learning_outcomes": ["Structure an academic argument", "Use a recognised referencing style consistently", "Revise writing in response to feedback"],
+      "criteria_narrative": "Complete the Academic Writing Foundations module and submit a short academic essay.",
+      "demonstration_kind": "completing",
+      "achievement_type": "Badge",
+      "award_policy": "automatic",
+      "rules": {"mode": "ALL", "rules": [{"type": "module_completed", "module": "m-awf"}, {"type": "assignment_submitted", "assignment": "a-awf-essay"}]}
+    },
+    {
+      "key": "seminar-participation",
+      "category": "Academic Communication",
+      "title": "Seminar Participation",
+      "short_description": "Contributes constructively to academic seminar discussion.",
+      "learning_outcomes": ["Prepare for seminar discussion", "Respond to others' points respectfully and with evidence"],
+      "criteria_narrative": "A seminar leader confirms sustained, constructive participation across the seminar series.",
+      "demonstration_kind": "participating",
+      "achievement_type": "Badge",
+      "award_policy": "manual",
+      "rules": {"mode": "ALL", "rules": [{"type": "manual_approval"}]}
+    },
+    {
+      "key": "academic-presentations",
+      "category": "Academic Communication",
+      "title": "Academic Presentations",
+      "short_description": "Delivers a clear, well-evidenced short academic presentation.",
+      "learning_outcomes": ["Structure a short presentation for an academic audience", "Support claims with appropriate evidence"],
+      "criteria_narrative": "Achieve at least 60% on the recorded presentation, confirmed by the lecturer.",
+      "demonstration_kind": "assessed",
+      "achievement_type": "Badge",
+      "award_policy": "lecturer_confirmed",
+      "rules": {"mode": "ALL", "rules": [{"type": "assignment_score", "assignment": "a-pres", "operator": ">=", "threshold_percent": 60}]}
+    },
+    {
+      "key": "information-literacy",
+      "category": "Research Skills",
+      "title": "Information Literacy",
+      "short_description": "Finds and retrieves scholarly information using library tools.",
+      "learning_outcomes": ["Search library databases effectively", "Distinguish scholarly from non-scholarly sources"],
+      "criteria_narrative": "Complete the Information Literacy module.",
+      "demonstration_kind": "completing",
+      "achievement_type": "Badge",
+      "award_policy": "automatic",
+      "rules": {"mode": "ALL", "rules": [{"type": "module_completed", "module": "m-il"}]}
+    },
+    {
+      "key": "evaluating-academic-sources",
+      "category": "Research Skills",
+      "title": "Evaluating Academic Sources",
+      "short_description": "Judges the credibility and relevance of academic sources.",
+      "learning_outcomes": ["Apply evaluation criteria to a source", "Justify the choice of sources for an assignment"],
+      "criteria_narrative": "Complete the Evaluating Sources module and score at least 50% on the source evaluation quiz.",
+      "demonstration_kind": "demonstrating",
+      "achievement_type": "Badge",
+      "award_policy": "lecturer_confirmed",
+      "rules": {"mode": "ALL", "rules": [{"type": "module_completed", "module": "m-eas"}, {"type": "assignment_score", "assignment": "a-eas-quiz", "operator": ">=", "threshold_percent": 50}]}
+    },
+    {
+      "key": "research-methods-foundations",
+      "category": "Research Skills",
+      "title": "Research Methods Foundations",
+      "short_description": "Frames a research question and selects suitable methods.",
+      "learning_outcomes": ["Write a focused research question", "Compare qualitative and quantitative approaches"],
+      "criteria_narrative": "Complete both Research Methods modules.",
+      "demonstration_kind": "completing",
+      "achievement_type": "Badge",
+      "award_policy": "automatic",
+      "rules": {"mode": "ALL", "rules": [{"type": "modules_completed", "modules": ["m-rm1", "m-rm2"]}]}
+    },
+    {
+      "key": "digital-literacy",
+      "category": "Digital Skills",
+      "title": "Digital Literacy",
+      "short_description": "Uses university digital tools safely and effectively for study.",
+      "learning_outcomes": ["Manage files and collaboration tools securely", "Protect personal data online"],
+      "criteria_narrative": "Complete the Digital Literacy module.",
+      "demonstration_kind": "completing",
+      "achievement_type": "Badge",
+      "award_policy": "automatic",
+      "rules": {"mode": "ALL", "rules": [{"type": "module_completed", "module": "m-dl"}]}
+    },
+    {
+      "key": "responsible-ai-use",
+      "category": "Digital Skills",
+      "title": "Responsible AI Use",
+      "short_description": "Uses generative AI tools transparently and in line with academic integrity guidance.",
+      "learning_outcomes": ["Explain the institution's guidance on generative AI in assessment", "Acknowledge AI assistance appropriately"],
+      "criteria_narrative": "Complete the Responsible AI Use module and submit a short reflection on your own AI use.",
+      "demonstration_kind": "completing",
+      "achievement_type": "Badge",
+      "award_policy": "automatic",
+      "rules": {"mode": "ALL", "rules": [{"type": "module_completed", "module": "m-rai"}, {"type": "assignment_submitted", "assignment": "a-rai-reflection"}]}
+    },
+    {
+      "key": "data-literacy-foundations",
+      "category": "Digital Skills",
+      "title": "Data Literacy Foundations",
+      "short_description": "Reads, interprets and questions simple data presentations.",
+      "learning_outcomes": ["Interpret common chart types", "Identify misleading data presentation"],
+      "criteria_narrative": "Either score at least 70% on the data literacy quiz, or complete the Working with Data module.",
+      "demonstration_kind": "demonstrating",
+      "achievement_type": "Badge",
+      "award_policy": "automatic",
+      "rules": {"mode": "ANY", "rules": [{"type": "assignment_score", "assignment": "a-data-quiz", "operator": ">=", "threshold_percent": 70}, {"type": "module_completed", "module": "m-data"}]}
+    }
+  ],
+  "staff": [
+    {"key": "admin", "given_name": "Avery", "family_name": "Admin", "role": "inst_admin"},
+    {"key": "reviewer", "given_name": "Riley", "family_name": "Reviewer", "role": "dept_admin"},
+    {"key": "lecturer", "given_name": "Lee", "family_name": "Lecturer", "role": "lecturer"}
+  ],
+  "students": [
+    {"key": "s01", "given_name": "Amara", "family_name": "Synthetic", "completed": ["m-awf", "m-sem", "m-pres", "m-il", "m-eas", "m-rm1", "m-rm2", "m-dl", "m-rai", "m-data"],
+     "submissions": {"a-awf-essay": {"score": 72}, "a-pres": {"score": 17}, "a-eas-quiz": {"score": 8}, "a-rai-reflection": {"score": 9}, "a-data-quiz": {"score": 22}}},
+    {"key": "s02", "given_name": "Ben", "family_name": "Synthetic", "completed": ["m-awf", "m-il", "m-dl"],
+     "submissions": {"a-awf-essay": {"score": 58}}},
+    {"key": "s03", "given_name": "Chloe", "family_name": "Synthetic", "completed": ["m-awf", "m-il", "m-eas"],
+     "submissions": {"a-awf-essay": {"score": null, "posted": false}, "a-eas-quiz": {"score": 7, "posted": false}}},
+    {"key": "s04", "given_name": "Dev", "family_name": "Synthetic", "completed": ["m-rm1"],
+     "submissions": {}},
+    {"key": "s05", "given_name": "Eilidh", "family_name": "Synthetic", "completed": ["m-pres", "m-dl", "m-rai"],
+     "submissions": {"a-pres": {"score": 10}, "a-rai-reflection": {"score": 8}}},
+    {"key": "s06", "given_name": "Farah", "family_name": "Synthetic", "completed": ["m-eas", "m-rm1", "m-rm2"],
+     "submissions": {"a-eas-quiz": {"excused": true}}},
+    {"key": "s07", "given_name": "Gwen", "family_name": "Synthetic", "completed": ["m-il", "m-eas", "m-data"],
+     "submissions": {"a-eas-quiz": {"score": 4}, "a-data-quiz": {"score": 12}}},
+    {"key": "s08", "given_name": "Hamza", "family_name": "Synthetic", "completed": [],
+     "submissions": {"a-data-quiz": {"score": 20}}},
+    {"key": "s09", "given_name": "Iris", "family_name": "Synthetic", "completed": ["m-awf", "m-rai"],
+     "submissions": {"a-awf-essay": {"score": 81}}},
+    {"key": "s10", "given_name": "Jonah", "family_name": "Synthetic", "completed": ["m-dl", "m-il", "m-rm1", "m-rm2"],
+     "submissions": {"a-pres": {"score": 14, "posted": false}}},
+    {"key": "s11", "given_name": "Kemi", "family_name": "Synthetic", "completed": ["m-awf", "m-pres", "m-il", "m-eas", "m-rai", "m-data"],
+     "submissions": {"a-awf-essay": {"score": 66}, "a-pres": {"score": 15}, "a-eas-quiz": {"score": 9}, "a-rai-reflection": {"score": 10}}},
+    {"key": "s12", "given_name": "Luca", "family_name": "Synthetic", "completed": ["m-sem"],
+     "submissions": {"a-data-quiz": {"excused": true}}}
+  ]
+}

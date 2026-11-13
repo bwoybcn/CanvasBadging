@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Local development environment: `docker compose up --build`
+#   api     http://localhost:8000   (SPA at /app/, API docs at /docs)
+#   https   https://localhost:8443  (Caddy, self-signed; for LTI launches from local Canvas)
+#   signer  internal only
+# Every secret below is a committed DEVELOPMENT value. Production refuses to start with them.
+
+x-backend-env: &backend-env
+  OC_ENV: ${OC_ENV:-development}
+  OC_DATABASE_URL: postgresql+psycopg://oc_app:oc_app_dev@postgres:5432/opencredential
+  OC_DATABASE_OWNER_URL: postgresql+psycopg://oc_owner:oc_owner_dev@postgres:5432/opencredential
+  OC_SIGNER_URL: http://signer:8790
+  OC_PUBLIC_BASE_URL: ${OC_PUBLIC_BASE_URL:-http://localhost:8000}
+  OC_LOG_JSON: ${OC_LOG_JSON:-true}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres_dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${OC_POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d opencredential"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: { context: ., dockerfile: docker/api.Dockerfile }
+    image: opencredential-api:dev
+    environment: *backend-env
+    command: ["oc", "migrate"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  signer:
+    build: { context: ., dockerfile: docker/signer.Dockerfile }
+    image: opencredential-signer:dev
+    environment:
+      OC_ENV: ${OC_ENV:-development}
+      SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@postgres:5432/opencredential
+      # SIGNER_KEK unset -> committed development KEK (refused in production)
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  seed:
+    image: opencredential-api:dev
+    environment: *backend-env
+    command: ["oc", "seed"]
+    depends_on:
+      signer: { condition: service_healthy }
+
+  api:
+    image: opencredential-api:dev
+    environment: *backend-env
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      seed: { condition: service_completed_successfully }
+
+  worker:
+    image: opencredential-api:dev
+    environment: *backend-env
+    command: ["oc", "worker"]
+    healthcheck:
+      disable: true # the image's check probes the api port
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "127.0.0.1:8443:8443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  caddydata:
