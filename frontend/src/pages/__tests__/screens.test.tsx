@@ -257,8 +257,8 @@ describe("course activation", () => {
   });
 });
 
-describe("revocation request from course progress", () => {
-  it("lets course staff ask for a revocation with a reason, without revoking anything", async () => {
+describe("course progress: history and revocation requests", () => {
+  it("shows the course award history and lets staff ask for a revocation, without revoking anything", async () => {
     const calls = stubApi({
       "GET /api/v1/learners/me": STAFF_ME,
       "GET /api/v1/courses/c-1/progress": {
@@ -277,9 +277,30 @@ describe("revocation request from course progress", () => {
         ],
       },
       "GET /api/v1/courses/c-1/sync": { last_run: null, last_success_at: null },
+      "GET /api/v1/courses/c-1/credentials": [
+        {
+          credential_id: "cred-1",
+          definition_id: "d-1",
+          course_id: "c-1",
+          issued_at: "2026-11-13T10:00:00Z",
+          badge_title: "Seminar Skills",
+          version_no: 1,
+          course_title: "Study Skills 101",
+          course_code: null,
+          issuer_name: "Skills Centre",
+          learner_name: "Sam Student",
+          award_kind: "automatic",
+          status: "active",
+          revoked_at: null,
+          revocation_reason: null,
+        },
+      ],
       "POST /api/v1/credentials/cred-1/revocation-requests": { id: "rr-1", status: "pending" },
     });
     renderAt("/courses/c-1/progress");
+    const history = await screen.findByRole("table", { name: /Credentials issued in Study Skills 101/ });
+    expect(within(history).getByText("Seminar Skills (version 1)")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Download as CSV" })).toBeTruthy();
     await userEvent.click(await screen.findByRole("button", { name: "Request revocation for Sam Student" }));
     const send = await screen.findByRole("button", { name: "Send request" });
     await userEvent.type(screen.getByLabelText(/Why should it be revoked/), "Issued to the wrong learner");

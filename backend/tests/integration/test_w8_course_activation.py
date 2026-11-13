@@ -172,3 +172,32 @@ def test_activation_policy_is_set_by_an_institution_administrator(client: TestCl
     assert w.patch("lecturer", url, {"course_activation_required": False}).status_code in (403, 404)
     r = w.patch("admin", url, {"course_activation_required": False})
     assert r.status_code == 200 and r.json()["course_activation_required"] is False
+
+
+def test_course_staff_see_and_export_their_course_award_history(client: TestClient) -> None:
+    """Spec §2.2: lecturers review award history and export course-level issuance records."""
+    from tests.integration.test_w7_governance import _issue_to
+
+    w = build_world(client)
+    definition_id = _manual_badge(w, _authorised_issuer(w))
+    cred_id = _issue_to(w, definition_id, "s1")
+    path = f"/api/v1/courses/{w.course_id}/credentials"
+
+    rows = w.get("lecturer", path).json()
+    assert [r["credential_id"] for r in rows] == [cred_id]
+    assert rows[0]["award_kind"] == "manual" and rows[0]["status"] == "active"
+
+    csv = w.get("lecturer", f"{path}.csv")
+    assert csv.status_code == 200 and csv.headers["content-type"].startswith("text/csv")
+    lines = csv.text.strip().splitlines()
+    assert lines[0].startswith("credential_id,") and len(lines) == 2 and cred_id in lines[1]
+    assert "@" not in csv.text  # no email addresses
+
+    # students, staff of other courses and other institutions see nothing
+    assert w.get("s1", path).status_code == 404
+    assert w.get("outsider", f"{path}.csv").status_code == 404
+    assert build_world(client).get("admin", path).status_code == 404
+    with tenant_session(w.iid) as db:
+        assert db.scalar(
+            select(m.AuditEvent.id).where(m.AuditEvent.action == "course.report_export")
+        )

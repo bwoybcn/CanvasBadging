@@ -5,10 +5,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router";
 
-import { apiFetch, apiSend, problemText, type CourseProgress as Progress, type Rule, type SyncState } from "../api";
+import {
+  apiFetch,
+  apiSend,
+  problemText,
+  type CourseProgress as Progress,
+  type CredentialRecord,
+  type Rule,
+  type SyncState,
+} from "../api";
 import { useAuth } from "../auth";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
+import { DownloadButton } from "./admin/AdminPage";
 
 export const OUTCOME_LABELS: Record<string, string> = {
   met: "Requirements met",
@@ -155,6 +164,62 @@ function RevocationRequestModal({ credentialId, learner, badge, onClose }: { cre
         )}
       </Modal.Footer>
     </Modal>
+  );
+}
+
+const KIND_LABELS: Record<string, string> = { automatic: "Automatic", confirmed: "Lecturer-confirmed", manual: "Manual" };
+
+/** Award history for course staff (spec §2.2): what was issued here, and a CSV of it. */
+function IssuedInCourse({ courseId, title }: { courseId: string; title: string }) {
+  const { token } = useAuth();
+  const q = useQuery({
+    queryKey: ["course-credentials", courseId],
+    queryFn: () => apiFetch<CredentialRecord[]>(`/api/v1/courses/${courseId}/credentials`, token),
+  });
+  return (
+    <View as="section" aria-labelledby="issued-h" display="block" margin="large 0 0">
+      <Flex justifyItems="space-between" alignItems="center" wrap="wrap">
+        <Heading level="h2" id="issued-h">
+          Credentials issued in this course
+        </Heading>
+        <DownloadButton path={`/api/v1/courses/${courseId}/credentials.csv`} filename="course-credentials.csv">
+          Download as CSV
+        </DownloadButton>
+      </Flex>
+      {q.isPending && <Loading what="issued credentials" />}
+      {q.isError && <ErrorAlert error={q.error} />}
+      {q.data && q.data.length === 0 && <Text as="p">No credentials have been issued in this course yet.</Text>}
+      {q.data && q.data.length > 0 && (
+        <TableScroll>
+          <Table caption={`Credentials issued in ${title}`} layout="auto">
+            <Table.Head>
+              <Table.Row>
+                <Table.ColHeader id="i-learner">Learner</Table.ColHeader>
+                <Table.ColHeader id="i-badge">Badge</Table.ColHeader>
+                <Table.ColHeader id="i-kind">How awarded</Table.ColHeader>
+                <Table.ColHeader id="i-date">Issued</Table.ColHeader>
+                <Table.ColHeader id="i-status">Status</Table.ColHeader>
+              </Table.Row>
+            </Table.Head>
+            <Table.Body>
+              {q.data.map((r) => (
+                <Table.Row key={r.credential_id}>
+                  <Table.RowHeader>{r.learner_name ?? "Erased learner"}</Table.RowHeader>
+                  <Table.Cell>
+                    {r.badge_title} (version {r.version_no})
+                  </Table.Cell>
+                  <Table.Cell>{KIND_LABELS[r.award_kind] ?? r.award_kind}</Table.Cell>
+                  <Table.Cell>{r.issued_at ? new Date(r.issued_at).toLocaleDateString() : ""}</Table.Cell>
+                  <Table.Cell>
+                    {r.status === "revoked" ? `Revoked (${r.revocation_reason ?? "no reason code"})` : r.status === "expired" ? "Expired" : "Valid"}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table>
+        </TableScroll>
+      )}
+    </View>
   );
 }
 
@@ -306,6 +371,7 @@ export function CourseProgress() {
         </>
       )}
       {approval && <ApprovalModal open onClose={() => setApproval(null)} {...approval} />}
+      <IssuedInCourse courseId={p.course.id} title={p.course.title} />
       {revoke && <RevocationRequestModal onClose={() => setRevoke(null)} {...revoke} />}
     </Page>
   );

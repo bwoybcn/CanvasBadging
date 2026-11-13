@@ -55,6 +55,7 @@ CATEGORIES: dict[str, tuple[str, ...]] = {
         "job.",
         "reconciliation.",
         "course.sync_requested",
+        "course.report_export",
         "eligibility.",
         "session.",
         "asset.",

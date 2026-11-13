@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -246,6 +246,62 @@ def deactivate_course(
     db.flush()
     return CourseActivationOut(
         id=course.id, status=course.status, activated_at=course.activated_at, sync_queued=False
+    )
+
+
+def _course_records(
+    db: TenantDb, actor: authz.Actor, course_id: uuid.UUID, status: str | None
+) -> list[dict[str, Any]]:
+    from opencredential.governance import records
+
+    course = _course(db, actor, course_id)  # course staff or an administrator over it; else 404
+    return records.records(db, actor, course_staff_of=course.id, status=status, limit=1_000_000)
+
+
+@router.get("/{course_id}/credentials")
+def course_credentials(
+    course_id: uuid.UUID,
+    db: TenantDb,
+    actor: ActorDep,
+    status: Literal["active", "revoked"] | None = None,
+) -> list[dict[str, Any]]:
+    """Award history for course staff (spec §2.2): every credential issued in this course."""
+    return _course_records(db, actor, course_id, status)
+
+
+@router.get(
+    "/{course_id}/credentials.csv",
+    response_class=Response,
+    responses={200: {"content": {"text/csv": {}}}},
+)
+def course_credentials_csv(
+    course_id: uuid.UUID,
+    db: TenantDb,
+    actor: ActorDep,
+    rid: RequestIdDep,
+    status: Literal["active", "revoked"] | None = None,
+) -> Response:
+    """Course-level issuance records as CSV for course staff (spec §2.2). No email addresses."""
+    from opencredential.governance import records
+
+    rows = _course_records(db, actor, course_id, status)
+    audit.record(
+        db,
+        action="course.report_export",
+        resource_type="course",
+        resource_id=course_id,
+        institution_id=actor.institution_id,
+        actor_user_id=actor.user_id,
+        request_id=rid,
+        data={"counts": {"rows": len(rows)}},
+    )
+    return Response(
+        records.to_csv(rows, records.RECORD_COLUMNS),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="course-credentials.csv"',
+            "Cache-Control": "no-store",
+        },
     )
 
 
