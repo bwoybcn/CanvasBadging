@@ -8,7 +8,7 @@ Scope: spec Phases 3 and 4 (§20), with §5 (authoring), §6 (rules engine and a
 |---|---|
 | Draft fields, categories, completion vs competency, credit-wording check | `backend/opencredential/authoring/service.py` |
 | Lifecycle DRAFT → IN_REVIEW → APPROVED → PUBLISHED → ARCHIVED, reject to draft, new version | `authoring/service.py`, `/api/v1/achievements/*` |
-| Immutable published versions (DB trigger on frozen rule sets) | migration `20261113_0003` |
+| Immutable published versions (DB trigger on frozen rule sets) | migration `20261113_0004` |
 | Non-issued preview (no proof, placeholder id, "PREVIEW: NOT ISSUED AND NOT VERIFIABLE") | `authoring/preview.py` |
 | SVG allow-list sanitiser, PNG chunk filter, size limits, alt text | `authoring/artwork.py` |
 | Four original CC0 templates (roundel, shield, hexagon, ribbon) | `authoring/artwork_templates/` |

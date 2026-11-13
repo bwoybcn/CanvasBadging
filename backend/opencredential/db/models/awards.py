@@ -101,6 +101,8 @@ class StatusList(TenantMixin, Base):
     next_publish_due: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_credential: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: ``validUntil`` of the published list credential; serving stops (503) after it.
+    published_valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_key_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
 
 
@@ -146,6 +148,9 @@ class Credential(TenantMixin, Base):
     status_list_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     status_list_index: Mapped[int | None] = mapped_column(Integer)
     superseded_by_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    #: Signing attempts and the last failure (reconciliation, spec §17.2). Not PII.
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
 
 
 class StatusListBit(TenantMixin, Base):

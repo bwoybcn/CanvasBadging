@@ -29,6 +29,10 @@ ALLOWED = {
 REVIEWED = {
     "opencredential": "AGPL-3.0-or-later (this project)",
     "jsonify": "Public Domain; transitive frontend dependency, compatible with AGPL",
+    "@digitalbazaar/credentials-context": (
+        "W3C Software and Document License (context files) + BSD-3-Clause (code); "
+        "both permissive and AGPL-compatible (reviewed W4)"
+    ),
 }
 
 

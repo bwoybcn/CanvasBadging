@@ -257,6 +257,86 @@
         "title": "AwardPolicyIn",
         "type": "object"
       },
+      "CheckOut": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "ok",
+          "detail"
+        ],
+        "title": "CheckOut",
+        "type": "object"
+      },
+      "CompromiseIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CompromiseIn",
+        "type": "object"
+      },
+      "CompromiseOut": {
+        "properties": {
+          "credentials_revoked": {
+            "title": "Credentials Revoked",
+            "type": "integer"
+          },
+          "replacement_key_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replacement Key Id"
+          },
+          "revoked_key_id": {
+            "format": "uuid",
+            "title": "Revoked Key Id",
+            "type": "string"
+          },
+          "status_lists_republished": {
+            "title": "Status Lists Republished",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revoked_key_id",
+          "replacement_key_id",
+          "credentials_revoked",
+          "status_lists_republished"
+        ],
+        "title": "CompromiseOut",
+        "type": "object"
+      },
       "ConfirmIn": {
         "properties": {
           "note": {
@@ -356,6 +436,71 @@
           "issuer_id"
         ],
         "title": "CreateIn",
+        "type": "object"
+      },
+      "CredentialSummary": {
+        "properties": {
+          "credential_id": {
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issued At"
+          },
+          "issuer_name": {
+            "title": "Issuer Name",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "revoked",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "id",
+          "credential_id",
+          "name",
+          "issuer_name",
+          "issued_at",
+          "valid_until",
+          "status"
+        ],
+        "title": "CredentialSummary",
         "type": "object"
       },
       "DecisionOut": {
@@ -1233,6 +1378,79 @@
         "title": "Issue",
         "type": "object"
       },
+      "KeyOut": {
+        "properties": {
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_dev": {
+            "title": "Is Dev",
+            "type": "boolean"
+          },
+          "public_key_multibase": {
+            "title": "Public Key Multibase",
+            "type": "string"
+          },
+          "retired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retired At"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "verification_method_id": {
+            "title": "Verification Method Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "verification_method_id",
+          "public_key_multibase",
+          "state",
+          "activated_at",
+          "retired_at",
+          "revoked_at",
+          "is_dev"
+        ],
+        "title": "KeyOut",
+        "type": "object"
+      },
       "ManualApproval": {
         "additionalProperties": false,
         "description": "Rule E: an authorised lecturer or administrator confirms completion for the learner.",
@@ -1558,6 +1776,62 @@
         "title": "ReviewOut",
         "type": "object"
       },
+      "RevokeIn": {
+        "properties": {
+          "reason_code": {
+            "enum": [
+              "issued_in_error",
+              "academic_misconduct",
+              "requirements_not_met",
+              "learner_request",
+              "other"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "reason_text": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason_code",
+          "reason_text"
+        ],
+        "title": "RevokeIn",
+        "type": "object"
+      },
+      "RevokeOut": {
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "credential_id": {
+            "format": "uuid",
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "status_list_published": {
+            "title": "Status List Published",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "credential_id",
+          "state",
+          "changed",
+          "status_list_published"
+        ],
+        "title": "RevokeOut",
+        "type": "object"
+      },
       "RuleApprovalIn": {
         "properties": {
           "decision": {
@@ -1847,6 +2121,110 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VerifyOut": {
+        "properties": {
+          "achievement": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achievement"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "credential_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Id"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "issuer_trust": {
+            "additionalProperties": true,
+            "title": "Issuer Trust",
+            "type": "object"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Until"
+          }
+        },
+        "required": [
+          "result",
+          "label",
+          "checks",
+          "issuer",
+          "achievement",
+          "credential_id",
+          "valid_from",
+          "valid_until",
+          "issuer_trust",
+          "explanation",
+          "checked_at"
+        ],
+        "title": "VerifyOut",
+        "type": "object"
+      },
       "VersionOut": {
         "properties": {
           "achievement_type": {
@@ -2058,6 +2436,47 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/achievements/{version_id}": {
+      "get": {
+        "operationId": "achievement_achievements__version_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Published achievement definition",
+        "tags": [
+          "public verification"
+        ]
+      }
+    },
     "/api/v1/achievement-versions/{version_id}": {
       "get": {
         "operationId": "get_version_api_v1_achievement_versions__version_id__get",
@@ -3775,6 +4194,98 @@
         ]
       }
     },
+    "/api/v1/credentials/{credential_id}/export": {
+      "get": {
+        "operationId": "export_api_v1_credentials__credential_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/ld+json": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download the signed Open Badges 3.0 credential",
+        "tags": [
+          "credentials"
+        ]
+      }
+    },
+    "/api/v1/credentials/{credential_id}/revoke": {
+      "post": {
+        "operationId": "revoke_api_v1_credentials__credential_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke",
+        "tags": [
+          "credentials"
+        ]
+      }
+    },
     "/api/v1/evaluations": {
       "get": {
         "operationId": "evaluation_history_api_v1_evaluations_get",
@@ -3957,6 +4468,162 @@
         ]
       }
     },
+    "/api/v1/issuers/{issuer_id}/keys": {
+      "get": {
+        "operationId": "list_keys_api_v1_issuers__issuer_id__keys_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KeyOut"
+                  },
+                  "title": "Response List Keys Api V1 Issuers  Issuer Id  Keys Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Keys",
+        "tags": [
+          "credentials",
+          "issuers"
+        ]
+      }
+    },
+    "/api/v1/issuers/{issuer_id}/keys/rotate": {
+      "post": {
+        "operationId": "rotate_key_api_v1_issuers__issuer_id__keys_rotate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate Key",
+        "tags": [
+          "credentials",
+          "issuers"
+        ]
+      }
+    },
+    "/api/v1/issuers/{issuer_id}/keys/{key_id}/compromise": {
+      "post": {
+        "operationId": "compromise_key_api_v1_issuers__issuer_id__keys__key_id__compromise_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issuer_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Issuer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Key Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompromiseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompromiseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Key-compromise response (docs/security/key-compromise.md)",
+        "tags": [
+          "credentials",
+          "issuers"
+        ]
+      }
+    },
     "/api/v1/learners/me": {
       "get": {
         "operationId": "me_api_v1_learners_me_get",
@@ -4002,6 +4669,53 @@
         "summary": "My Achievements",
         "tags": [
           "learners"
+        ]
+      }
+    },
+    "/api/v1/learners/me/credentials": {
+      "get": {
+        "operationId": "my_credentials_api_v1_learners_me_credentials_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CredentialSummary"
+                  },
+                  "title": "Response My Credentials Api V1 Learners Me Credentials Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Credentials",
+        "tags": [
+          "credentials"
+        ]
+      }
+    },
+    "/api/v1/verify": {
+      "post": {
+        "description": "Body: the credential JSON (at most 256 KB). Result is one of verified, revoked, expired, invalid, unable_to_verify, with the individual checks.",
+        "operationId": "verify_api_v1_verify_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verify an Open Badges 3.0 credential",
+        "tags": [
+          "public verification"
         ]
       }
     },
@@ -4118,6 +4832,46 @@
         ]
       }
     },
+    "/issuers/{slug}/did.json": {
+      "get": {
+        "operationId": "did_json_issuers__slug__did_json_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "did:web DID document for an issuer",
+        "tags": [
+          "public verification"
+        ]
+      }
+    },
     "/readyz": {
       "get": {
         "description": "Ready to serve: database reachable, schema at the expected revision, signer up.",
@@ -4135,6 +4889,59 @@
         "summary": "Readyz",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/status/{slug}/{list_id}": {
+      "get": {
+        "operationId": "status_list_status__slug___list_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "list_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "List Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "No valid list is published right now"
+          }
+        },
+        "summary": "Signed BitstringStatusListCredential",
+        "tags": [
+          "public verification"
         ]
       }
     }
