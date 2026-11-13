@@ -39,6 +39,10 @@ PostgreSQL WAL archiving (for example pgBackRest). The logical dump stays the po
    scripts/restore.sh /backups/2026-11-13
    ```
 
+   If your PostgreSQL client tools are a newer major version than the server (for example
+   `pg_restore` 17 against PostgreSQL 16), the script notices and restores through `psql`,
+   leaving out the one setting (`transaction_timeout`) that an older server does not know.
+
 4. Run `oc migrate` (this applies any migrations newer than the backup).
 5. Start the signer, then the api and worker. Check that `GET /readyz` reports `ok`.
 6. Status lists republish within the hour (or at once from Administration, Failed issuance,

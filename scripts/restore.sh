@@ -19,7 +19,17 @@ if [ "$tables" != "0" ]; then
   echo "target database is not empty ($tables tables in app/jobs/keys): refusing to overwrite" >&2
   exit 1
 fi
-pg_restore --exit-on-error --no-owner --dbname "$DB_URL" "$IN/opencredential.dump"
+# pg_restore 17 and later write "SET transaction_timeout", which a PostgreSQL 16 server rejects.
+# When the client tools are newer than the server, restore through psql without that one line.
+client_major=$(pg_restore --version | grep -oE '[0-9]+' | head -1)
+server_major=$(psql -X -At "$DB_URL" -c "show server_version_num" | cut -c1-2)
+if [ "${OC_RESTORE_VIA_SQL:-}" = "1" ] || [ "$client_major" -gt "$server_major" ]; then
+  pg_restore --no-owner --file - "$IN/opencredential.dump" \
+    | grep -v '^SET transaction_timeout' \
+    | psql -X -q -v ON_ERROR_STOP=1 --single-transaction "$DB_URL" >/dev/null
+else
+  pg_restore --exit-on-error --no-owner --dbname "$DB_URL" "$IN/opencredential.dump"
+fi
 if [ -f "$IN/assets.tar.gz" ] && [ -n "$STORAGE" ]; then
   mkdir -p "$STORAGE"
   tar -C "$STORAGE" -xzf "$IN/assets.tar.gz"
