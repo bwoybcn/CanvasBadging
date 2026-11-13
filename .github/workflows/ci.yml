@@ -113,7 +113,7 @@ jobs:
           node verify.mjs active "$OUT"/active/*.json
           node verify.mjs revoked "$OUT"/revoked/*.json
           node verify.mjs active "$OUT"/student/*.json
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
