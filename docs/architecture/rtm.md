@@ -5,6 +5,7 @@ Source: OpenCredential specification v1.0 (13 Nov 2026). Every requirement the s
 **How to read this.** *Component* names refer to [architecture.md §2](architecture.md#2-components). *Acceptance test* names the test that proves the row; IDs map to the test plan in [architecture.md §11](architecture.md#11-test-strategy):
 
 - `U-*` unit (pytest / vitest), `I-*` integration (real Postgres, signer, recorded or live Canvas), `E1`–`E12` the end-to-end scenarios of spec §19.3 (Playwright against the Canvas sandbox), `C-*` standards conformance, `A-*` accessibility, `S-*` security, `D-*` documentation review (a named document exists and a reviewer has followed it).
+- W5 status: see [w5-delivery.md](w5-delivery.md) for the tests that cover the W5 rows today and what still needs real Canvas.
 - *WS* is the workstream that owns delivery (see `plan/workstreams.md`). A row is only "done" when its test passes in CI or, for `D-*`, the review is recorded (spec §22: "No feature may be marked complete solely because a UI element exists").
 
 Component abbreviations: LTI = LTI launch; CAN = Canvas adapter; SYNC = sync/reconciliation; AUTHZ = authorisation and sessions; INST = institution and issuer admin; AUTH = badge authoring; RULES = rules engine; ISS = issuance service; SIGN = signer service; KEYS = key management; STAT = status lists; VER = verification service; SHARE = sharing/export/LinkedIn; AUD = audit; JOBS = worker; REP = reporting; UI-S / UI-L / UI-A = student / lecturer / admin UI; OPS = deployment and docs.
