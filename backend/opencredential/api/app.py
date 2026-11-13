@@ -20,6 +20,7 @@ from opencredential.api.routes import (
     admin,
     assets,
     awards,
+    collection,
     courses,
     credentials,
     dev,
@@ -29,6 +30,7 @@ from opencredential.api.routes import (
 from opencredential.db.session import app_engine
 from opencredential.logging import configure_logging, get_logger
 from opencredential.public import routes as public_routes
+from opencredential.public import share as share_routes
 from opencredential.settings import Settings, get_settings
 
 log = get_logger("app")
@@ -71,8 +73,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(learners.router)
     for module in (achievements, assets, courses, awards, admin, governance):
         app.include_router(module.router)
+    app.include_router(collection.router)
     app.include_router(credentials.router)
     app.include_router(public_routes.router)
+    app.include_router(share_routes.router)
     if settings.dev_login_enabled:
         app.include_router(dev.router)
 

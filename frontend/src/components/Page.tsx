@@ -43,6 +43,7 @@ export function Nav() {
       <Flex wrap="wrap">
         <NavLink to="/">Home</NavLink>
         {f.isStudent && <NavLink to="/me/progress">My badges</NavLink>}
+        {f.isStudent && <NavLink to="/me/credentials">My credentials</NavLink>}
         {f.isStaff && <NavLink to="/badges">Badges</NavLink>}
         {f.isStaff && <NavLink to="/awards">Awards to confirm</NavLink>}
         {f.isReviewer && <NavLink to="/reviews">Review queue</NavLink>}

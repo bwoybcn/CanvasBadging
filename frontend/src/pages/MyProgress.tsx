@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiFetch, type LearnerBadge, type Requirement } from "../api";
 import { useAuth } from "../auth";
+import { AppLink } from "../components/AppLink";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 
 export const BADGE_STATUS: Record<string, { label: string; color: "success" | "info" | "warning" | "primary" }> = {
@@ -56,6 +57,11 @@ function BadgeCard({ b }: { b: LearnerBadge }) {
           </Text>
           <Pill color={status.color}>{status.label}</Pill>
           <Text as="p">{b.short_description}</Text>
+          {b.credential_id && (
+            <Text as="p">
+              <AppLink to={`/me/credentials/${b.credential_id}`}>View, download or share this credential</AppLink>
+            </Text>
+          )}
           <ProgressBar
             screenReaderLabel={`${b.title} progress`}
             valueNow={b.progress.completed}

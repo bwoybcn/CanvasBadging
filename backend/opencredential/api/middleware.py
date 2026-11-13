@@ -33,6 +33,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         structlog.contextvars.bind_contextvars(request_id=request_id)
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
+        # Spec §8.4 and open question Q17: nothing this service serves is meant for search
+        # engines, including pages a student chose to share. Sharing is not discovery.
+        response.headers.setdefault("X-Robots-Tag", "noindex, nofollow, noarchive")
         if not request.url.path.startswith(("/healthz", "/readyz")):
             log.info(
                 "request",

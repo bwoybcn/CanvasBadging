@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Student collection and portability (W6, spec Phase 6): "My credentials" across courses,
+  credential detail with live verification, signed download, student-controlled public links
+  (off by default, 128-bit random ids, preview of exactly what becomes public, withdraw without
+  revoking), server-rendered public verification page with learner-free Open Graph tags, a
+  "Check a credential" upload page, public badge images, LinkedIn Add-to-Profile values and
+  prefilled link, student and wallet guides, and `noindex` on every response.
 - Phase 1 foundation (W2): repository layout, AGPL-3.0-or-later licence and project docs.
 - Backend: FastAPI app, settings with production guards, problem+json errors, request ids,
   structured logs, health/readiness probes, development-only login.

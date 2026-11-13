@@ -54,9 +54,10 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 | GET | `/awards?status=awaiting_confirmation` | `award.confirm` | lecturer queue |
 | POST | `/awards/{id}/confirm` · `/awards/{id}/reject` | `award.confirm` | Idempotency-Key |
 | POST | `/awards/manual` | `award.manual` | `{version_id, user_id, justification, evidence[]}`; may require second approval per policy |
-| GET | `/credentials/{id}` | owner or `credential.read` | detail + status + share state |
+| GET | `/credentials/{id}` | owner (staff views are W7) | detail + live verification result + share state + LinkedIn values |
 | GET | `/credentials/{id}/export` | owner or `credential.export` | `application/ld+json` download of the exact `signed_json` bytes, filename `<slug>-<date>.json` |
-| GET/POST/DELETE | `/credentials/{id}/share` | owner | `POST {show_name, show_evidence}` → `{share_id, url, linkedin:{url, fields}}`; DELETE revokes the grant |
+| GET/PUT/DELETE | `/credentials/{id}/share` | owner | `PUT {show_name, show_evidence}` turns sharing on or updates it (same link while active) → `{share:{shared, url, …}, linkedin:{fields, add_to_profile_url}, preview}`; DELETE withdraws the grant (credential not revoked). Anyone else gets 404 |
+| POST | `/credentials/{id}/share/preview` | owner | `{show_name, show_evidence}` → exactly what the public page would show, plus what is never shown. Changes nothing |
 | POST | `/credentials/{id}/revoke` | `credential.revoke` | `{reason_code, reason_text}` |
 | POST | `/credentials/{id}/revocation-requests` | `credential.request_revoke` | lecturer path |
 | POST | `/credentials/{id}/reissue` | `credential.reissue` | `{reason}`; old credential revoked as `superseded` |
@@ -70,7 +71,10 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/verify/{share_id}` | HTML page (server-rendered, OG tags, `noindex` unless the student opted in to indexing, which is a LATER option). Shows result, explanation of what verification means, permitted identity and evidence |
-| GET | `/verify/{share_id}/credential.json` | the signed credential, so wallets can "add from URL" |
+| GET | `/verify/{share_id}/credential.json` | the signed credential, so wallets can "add from URL" (CORS `*`) |
+| GET | `/verify/{share_id}/verification.json` | machine-readable verification result for a share |
+| GET | `/verify` | "Check a credential" page: upload a file, posts to `/api/v1/verify` |
+| GET | `/robots.txt` | `Disallow: /` (every response also carries `X-Robots-Tag: noindex`) |
 | POST | `/api/v1/verify` | body: credential JSON (≤256 KB) → `{result: verified|revoked|expired|invalid|unable_to_verify, checks:[{name, ok, detail}], issuer:{id,name}, achievement:{name}}`. Rate-limited |
 | GET | `/issuers/{slug}/did.json` | DID document (did:web resolution path) |
 | GET | `/issuers/{slug}/profile` | OB3 Profile JSON-LD (content-negotiated HTML) |

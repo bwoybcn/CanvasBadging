@@ -11,7 +11,12 @@ verifiers** (`.github/workflows/ci.yml`, job `conformance`) on every pull reques
 2. `run-conformance.sh` issues signed credentials to the demo learners (`oc issue-demo`). It keeps
    one *downloaded copy* aside, then revokes that credential (`oc revoke`), which republishes the
    status list. Our own verifier must agree before anyone else is asked.
-3. Two independent verifiers then check the credentials:
+3. `student_share.py` (W6) then does what a student does: signs in as each demo learner,
+   downloads every active credential from the student export endpoint, turns on a public link
+   and fetches `/verify/<share>/credential.json` without a session (as a wallet's "add from URL"
+   or an employer would). It also checks the public page is `noindex` and does not show the
+   learner's name. Those files go to `student/` and are checked like the others.
+4. Two independent verifiers then check the credentials:
 
 | Verifier | Maintainer | What it checks | Expectation |
 |---|---|---|---|
