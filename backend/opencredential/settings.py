@@ -9,6 +9,8 @@ from functools import lru_cache
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from opencredential.paths import BACKEND_DIR
+
 #: Committed, publicly known development secrets. Production refuses to start with them.
 DEV_SECRET_KEY = "dev-only-insecure-session-key-change-me-0000000000"  # noqa: S105
 DEV_SIGNER_SHARED_SECRET = "dev-only-insecure-signer-secret"  # noqa: S105
@@ -48,6 +50,11 @@ class Settings(BaseSettings):
     log_json: bool = True
 
     static_dir: str | None = None
+
+    #: Filesystem store for badge artwork (content-addressed, immutable files).
+    storage_dir: str = str(BACKEND_DIR / "var" / "assets")
+    #: Rate limit for on-demand Canvas refreshes (spec §4.4), per course.
+    sync_min_interval_seconds: int = Field(default=300, ge=0)
 
     @property
     def is_production(self) -> bool:

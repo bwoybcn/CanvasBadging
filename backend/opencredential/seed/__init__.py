@@ -151,6 +151,16 @@ def _build(db: Session, data: dict[str, Any], key: Any) -> SeedResult:
         if role == "inst_admin":  # admins can view the demo course too
             course.activated_by = people[person["key"]].id
     for person in data["students"]:
+        # The demo LMS adapter (integrations.fake.passport_adapter) knows learners by seed key.
+        db.add(
+            m.ExternalIdentity(
+                institution_id=iid,
+                user_id=people[person["key"]].id,
+                canvas_integration_id=canvas.id,
+                kind="canvas_user_id",
+                value=person["key"],
+            )
+        )
         db.add(
             m.Membership(
                 institution_id=iid,

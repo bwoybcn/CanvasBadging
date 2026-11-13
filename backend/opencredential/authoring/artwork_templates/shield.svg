@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img">
+  <title>$label</title>
+  <path d="M200 8 L368 64 V196 C368 292 296 360 200 392 C104 360 32 292 32 196 V64 Z" fill="$secondary"/>
+  <path d="M200 32 L346 80 V196 C346 278 284 338 200 366 C116 338 54 278 54 196 V80 Z" fill="$primary"/>
+  <path d="M136 150 l40 40 88 -88" fill="none" stroke="$text" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="200" y="262" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="bold" fill="$text">$label</text>
+</svg>

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Index, UniqueConstraint
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
@@ -131,6 +131,9 @@ class AchievementVersion(TenantMixin, Base):
     skills: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     credit_claim_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: Awarding policy chosen for this version. ``NULL`` while drafting means "use the
+    #: institution default"; publication resolves and snapshots it (ADR-0017).
+    award_policy: Mapped[str | None] = mapped_column(choice(*AWARD_POLICIES, name="award_policy"))
     content_hash: Mapped[str | None] = mapped_column(Text)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     published_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
@@ -152,6 +155,31 @@ class DefinitionReview(TenantMixin, Base):
     decision: Mapped[str] = mapped_column(choice("approve", "reject", "comment", name="decision"))
     checklist: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     comment: Mapped[str | None] = mapped_column(Text)
+
+
+class ManualRuleApproval(TenantMixin, Base):
+    """A lecturer's decision on a ``manual_approval`` rule (Rule E) for one learner.
+
+    Append-only history: the latest row per (rule, learner) is the one the engine reads.
+    """
+
+    __tablename__ = "manual_rule_approvals"
+    __table_args__ = tenant_args(
+        "manual_rule_approvals",
+        tenant_fk("version_id", "achievement_versions"),
+        tenant_fk("rule_id", "award_rules"),
+        tenant_fk("user_id", "users", ondelete="CASCADE"),
+        tenant_fk("decided_by", "users"),
+        Index("ix_manual_rule_approvals_lookup", "version_id", "user_id", "rule_id", "decided_at"),
+    )
+
+    version_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    rule_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    decision: Mapped[str] = mapped_column(choice("approve", "decline", name="decision"))
+    note: Mapped[str | None] = mapped_column(Text)
+    decided_by: Mapped[uuid.UUID] = mapped_column(Uuid)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class AwardRuleSet(TenantMixin, Base):

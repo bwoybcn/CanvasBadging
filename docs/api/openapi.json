@@ -1,6 +1,262 @@
 {
   "components": {
     "schemas": {
+      "AssetOut": {
+        "properties": {
+          "alt_text": {
+            "title": "Alt Text",
+            "type": "string"
+          },
+          "bytes": {
+            "title": "Bytes",
+            "type": "integer"
+          },
+          "data_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Url"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "licence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licence"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "media_type",
+          "width",
+          "height",
+          "bytes",
+          "sha256",
+          "alt_text",
+          "licence",
+          "data_url"
+        ],
+        "title": "AssetOut",
+        "type": "object"
+      },
+      "AssignmentScore": {
+        "additionalProperties": false,
+        "description": "Rule D: a released score at or above ``threshold_percent`` of points possible.",
+        "properties": {
+          "assignment_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_\\-:.]+$",
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "operator": {
+            "const": ">=",
+            "default": ">=",
+            "title": "Operator",
+            "type": "string"
+          },
+          "threshold_percent": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 100.0,
+            "title": "Threshold Percent",
+            "type": "number"
+          },
+          "type": {
+            "const": "assignment_score",
+            "default": "assignment_score",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "threshold_percent"
+        ],
+        "title": "AssignmentScore",
+        "type": "object"
+      },
+      "AssignmentSubmitted": {
+        "additionalProperties": false,
+        "description": "Rule C: a qualifying submission exists for a Canvas assignment.",
+        "properties": {
+          "assignment_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_\\-:.]+$",
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "type": {
+            "const": "assignment_submitted",
+            "default": "assignment_submitted",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignment_id"
+        ],
+        "title": "AssignmentSubmitted",
+        "type": "object"
+      },
+      "AwardPolicyIn": {
+        "properties": {
+          "definitions_require_approval": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Definitions Require Approval"
+          },
+          "manual_awards_require_second_approval": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Awards Require Second Approval"
+          },
+          "max_snapshot_age_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Snapshot Age Minutes"
+          },
+          "score_rules_default_policy": {
+            "anyOf": [
+              {
+                "enum": [
+                  "automatic",
+                  "lecturer_confirmed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Rules Default Policy"
+          },
+          "score_rules_force_confirmation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Rules Force Confirmation"
+          },
+          "self_approval_allowed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Self Approval Allowed"
+          }
+        },
+        "title": "AwardPolicyIn",
+        "type": "object"
+      },
       "CheckOut": {
         "properties": {
           "detail": {
@@ -81,6 +337,107 @@
         "title": "CompromiseOut",
         "type": "object"
       },
+      "ConfirmIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ConfirmIn",
+        "type": "object"
+      },
+      "CourseOut": {
+        "properties": {
+          "course_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "course_code",
+          "status",
+          "roles"
+        ],
+        "title": "CourseOut",
+        "type": "object"
+      },
+      "CreateIn": {
+        "properties": {
+          "course_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
+          },
+          "fields": {
+            "$ref": "#/components/schemas/DraftFields"
+          },
+          "issuer_id": {
+            "format": "uuid",
+            "title": "Issuer Id",
+            "type": "string"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RuleSet"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "issuer_id"
+        ],
+        "title": "CreateIn",
+        "type": "object"
+      },
       "CredentialSummary": {
         "properties": {
           "credential_id": {
@@ -144,6 +501,363 @@
           "status"
         ],
         "title": "CredentialSummary",
+        "type": "object"
+      },
+      "DecisionOut": {
+        "properties": {
+          "badge_title": {
+            "title": "Badge Title",
+            "type": "string"
+          },
+          "current_eligibility": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Eligibility"
+          },
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "definition_id": {
+            "format": "uuid",
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "evaluation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Id"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "learner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learner Name"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version_id",
+          "definition_id",
+          "badge_title",
+          "user_id",
+          "learner_name",
+          "kind",
+          "status",
+          "evaluation_id",
+          "justification",
+          "evidence",
+          "rejection_reason",
+          "decided_by",
+          "decided_at",
+          "idempotency_key"
+        ],
+        "title": "DecisionOut",
+        "type": "object"
+      },
+      "DefinitionList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DefinitionSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DefinitionList",
+        "type": "object"
+      },
+      "DefinitionOut": {
+        "properties": {
+          "award_policy": {
+            "title": "Award Policy",
+            "type": "string"
+          },
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_review": {
+            "title": "Can Review",
+            "type": "boolean"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
+          },
+          "effective_award_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What publication would resolve the awarding method to right now",
+            "title": "Effective Award Policy"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "issuer": {
+            "additionalProperties": true,
+            "title": "Issuer",
+            "type": "object"
+          },
+          "live_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Version Id"
+          },
+          "owner_user_id": {
+            "format": "uuid",
+            "title": "Owner User Id",
+            "type": "string"
+          },
+          "readiness": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Readiness",
+            "type": "array"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewOut"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "working_version": {
+            "$ref": "#/components/schemas/VersionOut"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "course_id",
+          "issuer",
+          "owner_user_id",
+          "award_policy",
+          "live_version_id",
+          "working_version",
+          "rules",
+          "readiness",
+          "reviews",
+          "can_edit",
+          "can_review",
+          "effective_award_policy"
+        ],
+        "title": "DefinitionOut",
+        "type": "object"
+      },
+      "DefinitionSummary": {
+        "properties": {
+          "award_policy": {
+            "title": "Award Policy",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "live_version_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live Version Id"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "state",
+          "course_id",
+          "title",
+          "category",
+          "version_no",
+          "live_version_id",
+          "award_policy",
+          "updated_at"
+        ],
+        "title": "DefinitionSummary",
         "type": "object"
       },
       "DevLoginRequest": {
@@ -230,6 +944,370 @@
         "title": "DevUser",
         "type": "object"
       },
+      "DraftFields": {
+        "additionalProperties": false,
+        "description": "Editable fields of a draft version. Everything is optional while drafting; completeness\nis checked when the draft is submitted (see :func:`readiness`).",
+        "properties": {
+          "achievement_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achievement Type"
+          },
+          "asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "award_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "automatic | lecturer_confirmed | manual | null (default)",
+            "title": "Award Policy"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "criteria_narrative": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Criteria Narrative"
+          },
+          "demonstration_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demonstration Kind"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "evidence_description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Description"
+          },
+          "learning_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learning Outcomes"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "skills": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Skill"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skills"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
+          }
+        },
+        "title": "DraftFields",
+        "type": "object"
+      },
+      "EvaluateIn": {
+        "properties": {
+          "definition_id": {
+            "format": "uuid",
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "user_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Ids"
+          }
+        },
+        "required": [
+          "definition_id"
+        ],
+        "title": "EvaluateIn",
+        "type": "object"
+      },
+      "EvaluationOut": {
+        "properties": {
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "evaluated_at": {
+            "format": "date-time",
+            "title": "Evaluated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "inputs_hash": {
+            "title": "Inputs Hash",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "triggered_by": {
+            "title": "Triggered By",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version_id",
+          "user_id",
+          "outcome",
+          "detail",
+          "inputs_hash",
+          "triggered_by",
+          "evaluated_at"
+        ],
+        "title": "EvaluationOut",
+        "type": "object"
+      },
+      "Evidence": {
+        "properties": {
+          "kind": {
+            "pattern": "^(completion_record|assessment_result|evaluation_statement|artefact|lecturer_confirmation)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "narrative": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Narrative",
+            "type": "string"
+          },
+          "public": {
+            "default": false,
+            "title": "Public",
+            "type": "boolean"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "pattern": "^https://",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "kind",
+          "narrative"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "Group": {
+        "additionalProperties": false,
+        "description": "Rule F (nested): a combination of leaf rules with its own mode.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "mode": {
+            "enum": [
+              "ALL",
+              "ANY"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "assignment_score": "#/components/schemas/AssignmentScore",
+                  "assignment_submitted": "#/components/schemas/AssignmentSubmitted",
+                  "manual_approval": "#/components/schemas/ManualApproval",
+                  "module_completed": "#/components/schemas/ModuleCompleted",
+                  "modules_completed": "#/components/schemas/ModulesCompleted"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ModuleCompleted"
+                },
+                {
+                  "$ref": "#/components/schemas/ModulesCompleted"
+                },
+                {
+                  "$ref": "#/components/schemas/AssignmentSubmitted"
+                },
+                {
+                  "$ref": "#/components/schemas/AssignmentScore"
+                },
+                {
+                  "$ref": "#/components/schemas/ManualApproval"
+                }
+              ]
+            },
+            "maxItems": 8,
+            "minItems": 2,
+            "title": "Rules",
+            "type": "array"
+          },
+          "type": {
+            "const": "group",
+            "default": "group",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "rules"
+        ],
+        "title": "Group",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -270,6 +1348,34 @@
           "is_demo"
         ],
         "title": "InstitutionOut",
+        "type": "object"
+      },
+      "Issue": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "code",
+          "message",
+          "severity"
+        ],
+        "title": "Issue",
         "type": "object"
       },
       "KeyOut": {
@@ -343,6 +1449,78 @@
           "is_dev"
         ],
         "title": "KeyOut",
+        "type": "object"
+      },
+      "ManualApproval": {
+        "additionalProperties": false,
+        "description": "Rule E: an authorised lecturer or administrator confirms completion for the learner.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "type": {
+            "const": "manual_approval",
+            "default": "manual_approval",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "ManualApproval",
+        "type": "object"
+      },
+      "ManualAwardIn": {
+        "properties": {
+          "definition_id": {
+            "format": "uuid",
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "maxItems": 10,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "justification": {
+            "maxLength": 4000,
+            "title": "Justification",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_id",
+          "user_id",
+          "justification"
+        ],
+        "title": "ManualAwardIn",
         "type": "object"
       },
       "MeOut": {
@@ -424,6 +1602,180 @@
         "title": "MembershipOut",
         "type": "object"
       },
+      "ModuleCompleted": {
+        "additionalProperties": false,
+        "description": "Rule A: a Canvas module is reported complete for the learner.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "module_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_\\-:.]+$",
+            "title": "Module Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "module_completed",
+            "default": "module_completed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module_id"
+        ],
+        "title": "ModuleCompleted",
+        "type": "object"
+      },
+      "ModulesCompleted": {
+        "additionalProperties": false,
+        "description": "Rule B: every module in a collection is reported complete.",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "module_ids": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_\\-:.]+$",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 2,
+            "title": "Module Ids",
+            "type": "array"
+          },
+          "type": {
+            "const": "modules_completed",
+            "default": "modules_completed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module_ids"
+        ],
+        "title": "ModulesCompleted",
+        "type": "object"
+      },
+      "ReviewIn": {
+        "properties": {
+          "checklist": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checklist",
+            "type": "object"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "credit_claim_approved": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Claim Approved"
+          }
+        },
+        "title": "ReviewIn",
+        "type": "object"
+      },
+      "ReviewOut": {
+        "properties": {
+          "checklist": {
+            "additionalProperties": true,
+            "title": "Checklist",
+            "type": "object"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reviewer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version_id",
+          "reviewer",
+          "decision",
+          "checklist",
+          "comment",
+          "created_at"
+        ],
+        "title": "ReviewOut",
+        "type": "object"
+      },
       "RevokeIn": {
         "properties": {
           "reason_code": {
@@ -478,6 +1830,255 @@
           "status_list_published"
         ],
         "title": "RevokeOut",
+        "type": "object"
+      },
+      "RuleApprovalIn": {
+        "properties": {
+          "decision": {
+            "pattern": "^(approve|decline)$",
+            "title": "Decision",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rule_id": {
+            "format": "uuid",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "rule_id",
+          "decision"
+        ],
+        "title": "RuleApprovalIn",
+        "type": "object"
+      },
+      "RuleSet": {
+        "additionalProperties": false,
+        "description": "Rule F (top level): ALL or ANY of up to :data:`MAX_RULES` rules.",
+        "properties": {
+          "mode": {
+            "enum": [
+              "ALL",
+              "ANY"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "assignment_score": "#/components/schemas/AssignmentScore",
+                  "assignment_submitted": "#/components/schemas/AssignmentSubmitted",
+                  "group": "#/components/schemas/Group",
+                  "manual_approval": "#/components/schemas/ManualApproval",
+                  "module_completed": "#/components/schemas/ModuleCompleted",
+                  "modules_completed": "#/components/schemas/ModulesCompleted"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ModuleCompleted"
+                },
+                {
+                  "$ref": "#/components/schemas/ModulesCompleted"
+                },
+                {
+                  "$ref": "#/components/schemas/AssignmentSubmitted"
+                },
+                {
+                  "$ref": "#/components/schemas/AssignmentScore"
+                },
+                {
+                  "$ref": "#/components/schemas/ManualApproval"
+                },
+                {
+                  "$ref": "#/components/schemas/Group"
+                }
+              ]
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mode",
+          "rules"
+        ],
+        "title": "RuleSet",
+        "type": "object"
+      },
+      "Skill": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "framework": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "pattern": "^https://",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "Skill",
+        "type": "object"
+      },
+      "SubmitOut": {
+        "properties": {
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "warnings"
+        ],
+        "title": "SubmitOut",
+        "type": "object"
+      },
+      "TemplateIn": {
+        "properties": {
+          "alt_text": {
+            "maxLength": 250,
+            "title": "Alt Text",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 22,
+            "title": "Label",
+            "type": "string"
+          },
+          "primary_colour": {
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Primary Colour",
+            "type": "string"
+          },
+          "secondary_colour": {
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Secondary Colour",
+            "type": "string"
+          },
+          "template": {
+            "title": "Template",
+            "type": "string"
+          }
+        },
+        "required": [
+          "template",
+          "primary_colour",
+          "secondary_colour",
+          "label",
+          "alt_text"
+        ],
+        "title": "TemplateIn",
+        "type": "object"
+      },
+      "UploadIn": {
+        "properties": {
+          "alt_text": {
+            "maxLength": 250,
+            "title": "Alt Text",
+            "type": "string"
+          },
+          "data_base64": {
+            "maxLength": 1333341,
+            "title": "Data Base64",
+            "type": "string"
+          },
+          "licence": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Licence"
+          },
+          "media_type": {
+            "enum": [
+              "image/svg+xml",
+              "image/png"
+            ],
+            "title": "Media Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "media_type",
+          "data_base64",
+          "alt_text"
+        ],
+        "title": "UploadIn",
         "type": "object"
       },
       "ValidationError": {
@@ -623,6 +2224,205 @@
         ],
         "title": "VerifyOut",
         "type": "object"
+      },
+      "VersionOut": {
+        "properties": {
+          "achievement_type": {
+            "title": "Achievement Type",
+            "type": "string"
+          },
+          "asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "award_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Award Policy"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash"
+          },
+          "credit_claim_approved": {
+            "title": "Credit Claim Approved",
+            "type": "boolean"
+          },
+          "criteria_narrative": {
+            "title": "Criteria Narrative",
+            "type": "string"
+          },
+          "demonstration_kind": {
+            "title": "Demonstration Kind",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "evidence_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Description"
+          },
+          "frozen": {
+            "title": "Frozen",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "learning_outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Learning Outcomes",
+            "type": "array"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "short_description": {
+            "title": "Short Description",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "validity_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity Days"
+          },
+          "version_no": {
+            "title": "Version No",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version_no",
+          "frozen",
+          "title",
+          "short_description",
+          "description",
+          "learning_outcomes",
+          "criteria_narrative",
+          "category",
+          "achievement_type",
+          "demonstration_kind",
+          "evidence_description",
+          "validity_days",
+          "skills",
+          "asset_id",
+          "award_policy",
+          "credit_claim_approved",
+          "content_hash",
+          "published_at"
+        ],
+        "title": "VersionOut",
+        "type": "object"
+      },
+      "opencredential__api__routes__achievements__RejectIn": {
+        "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "boolean"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
+          "comment": {
+            "maxLength": 4000,
+            "minLength": 5,
+            "title": "Comment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "comment"
+        ],
+        "title": "RejectIn",
+        "type": "object"
+      },
+      "opencredential__api__routes__awards__RejectIn": {
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 5,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RejectIn",
+        "type": "object"
       }
     }
   },
@@ -674,6 +2474,1723 @@
         "summary": "Published achievement definition",
         "tags": [
           "public verification"
+        ]
+      }
+    },
+    "/api/v1/achievement-versions/{version_id}": {
+      "get": {
+        "operationId": "get_version_api_v1_achievement_versions__version_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Version",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievement-versions/{version_id}/rules": {
+      "get": {
+        "operationId": "get_version_rules_api_v1_achievement_versions__version_id__rules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Version Rules Api V1 Achievement Versions  Version Id  Rules Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Version Rules",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements": {
+      "get": {
+        "operationId": "list_achievements_api_v1_achievements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "course_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Course Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "description": "Only badges this user can review now",
+            "in": "query",
+            "name": "review_queue",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only badges this user can review now",
+              "title": "Review Queue",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Achievements",
+        "tags": [
+          "achievements"
+        ]
+      },
+      "post": {
+        "operationId": "create_achievement_api_v1_achievements_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Achievement",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}": {
+      "delete": {
+        "operationId": "delete_achievement_api_v1_achievements__definition_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Achievement",
+        "tags": [
+          "achievements"
+        ]
+      },
+      "get": {
+        "operationId": "get_achievement_api_v1_achievements__definition_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Achievement",
+        "tags": [
+          "achievements"
+        ]
+      },
+      "patch": {
+        "operationId": "update_achievement_api_v1_achievements__definition_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftFields"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Achievement",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/approvals": {
+      "post": {
+        "description": "Rule E: confirm (or decline) a lecturer-confirmation requirement for one learner.",
+        "operationId": "approve_requirement_api_v1_achievements__definition_id__approvals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleApprovalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Requirement Api V1 Achievements  Definition Id  Approvals Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Requirement",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/approve": {
+      "post": {
+        "operationId": "approve_api_v1_achievements__definition_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/archive": {
+      "post": {
+        "operationId": "archive_api_v1_achievements__definition_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Archive",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/new-version": {
+      "post": {
+        "operationId": "new_version_api_v1_achievements__definition_id__new_version_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "New Version",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/preview": {
+      "get": {
+        "description": "Non-issued, non-verifiable preview (spec \u00a75.5).",
+        "operationId": "preview_api_v1_achievements__definition_id__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Preview Api V1 Achievements  Definition Id  Preview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/publish": {
+      "post": {
+        "operationId": "publish_api_v1_achievements__definition_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/reject": {
+      "post": {
+        "operationId": "reject_api_v1_achievements__definition_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/opencredential__api__routes__achievements__RejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/rules": {
+      "put": {
+        "operationId": "put_rules_api_v1_achievements__definition_id__rules_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Rules",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/submit": {
+      "post": {
+        "operationId": "submit_api_v1_achievements__definition_id__submit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/admin/data-freshness": {
+      "get": {
+        "description": "Courses with live badges whose Canvas data is older than the policy allows (stale data\ndetection, spec \u00a717.1). Rules on stale data evaluate to ``unknown``, so nothing is issued.",
+        "operationId": "data_freshness_api_v1_admin_data_freshness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Data Freshness Api V1 Admin Data Freshness Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Data Freshness",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/jobs": {
+      "get": {
+        "description": "Failed-job view (spec \u00a717.1 \"dead-letter or failed-job handling\").",
+        "operationId": "list_jobs_api_v1_admin_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "failed",
+              "enum": [
+                "failed",
+                "todo",
+                "doing",
+                "succeeded",
+                "cancelled",
+                "aborted"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Jobs Api V1 Admin Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Jobs",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/jobs/{job_id}/retry": {
+      "post": {
+        "operationId": "retry_job_api_v1_admin_jobs__job_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Retry Job Api V1 Admin Jobs  Job Id  Retry Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry Job",
+        "tags": [
+          "administration"
+        ]
+      }
+    },
+    "/api/v1/artwork-templates": {
+      "get": {
+        "operationId": "list_templates_api_v1_artwork_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "title": "Response List Templates Api V1 Artwork Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Templates",
+        "tags": [
+          "artwork"
+        ]
+      }
+    },
+    "/api/v1/assets": {
+      "post": {
+        "operationId": "upload_asset_api_v1_assets_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Asset",
+        "tags": [
+          "artwork"
+        ]
+      }
+    },
+    "/api/v1/assets/from-template": {
+      "post": {
+        "operationId": "asset_from_template_api_v1_assets_from_template_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Asset From Template",
+        "tags": [
+          "artwork"
+        ]
+      }
+    },
+    "/api/v1/assets/{asset_id}": {
+      "get": {
+        "operationId": "get_asset_api_v1_assets__asset_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Asset",
+        "tags": [
+          "artwork"
+        ]
+      }
+    },
+    "/api/v1/assets/{asset_id}/content": {
+      "get": {
+        "operationId": "asset_content_api_v1_assets__asset_id__content_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Asset Content",
+        "tags": [
+          "artwork"
+        ]
+      }
+    },
+    "/api/v1/awards": {
+      "get": {
+        "operationId": "list_awards_api_v1_awards_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "awaiting_confirmation",
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "course_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Course Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "definition_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Definition Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DecisionOut"
+                  },
+                  "title": "Response List Awards Api V1 Awards Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Awards",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/awards/manual": {
+      "post": {
+        "operationId": "manual_award_api_v1_awards_manual_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualAwardIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Manual Award",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/awards/{decision_id}": {
+      "get": {
+        "operationId": "get_award_api_v1_awards__decision_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Award",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/awards/{decision_id}/confirm": {
+      "post": {
+        "operationId": "confirm_award_api_v1_awards__decision_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Award",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/awards/{decision_id}/reject": {
+      "post": {
+        "operationId": "reject_award_api_v1_awards__decision_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/opencredential__api__routes__awards__RejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Award",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "operationId": "list_categories_api_v1_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Categories Api V1 Categories Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Categories",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/courses": {
+      "get": {
+        "operationId": "my_courses_api_v1_courses_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CourseOut"
+                  },
+                  "title": "Response My Courses Api V1 Courses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Courses",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/canvas/assignments": {
+      "get": {
+        "operationId": "course_assignments_api_v1_courses__course_id__canvas_assignments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Course Assignments Api V1 Courses  Course Id  Canvas Assignments Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Course Assignments",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/canvas/modules": {
+      "get": {
+        "operationId": "course_modules_api_v1_courses__course_id__canvas_modules_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Course Modules Api V1 Courses  Course Id  Canvas Modules Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Course Modules",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/issuers": {
+      "get": {
+        "operationId": "course_issuers_api_v1_courses__course_id__issuers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Course Issuers Api V1 Courses  Course Id  Issuers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Course Issuers",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/progress": {
+      "get": {
+        "operationId": "course_progress_api_v1_courses__course_id__progress_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Course Progress Api V1 Courses  Course Id  Progress Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Course Progress",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/sync": {
+      "get": {
+        "operationId": "get_sync_api_v1_courses__course_id__sync_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Sync Api V1 Courses  Course Id  Sync Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Sync",
+        "tags": [
+          "courses"
+        ]
+      },
+      "post": {
+        "description": "On-demand refresh from Canvas (rate-limited per course, spec \u00a74.4).",
+        "operationId": "request_sync_api_v1_courses__course_id__sync_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request Sync Api V1 Courses  Course Id  Sync Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Sync",
+        "tags": [
+          "courses"
         ]
       }
     },
@@ -766,6 +4283,188 @@
         "summary": "Revoke",
         "tags": [
           "credentials"
+        ]
+      }
+    },
+    "/api/v1/evaluations": {
+      "get": {
+        "operationId": "evaluation_history_api_v1_evaluations_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationOut"
+                  },
+                  "title": "Response Evaluation History Api V1 Evaluations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluation History",
+        "tags": [
+          "eligibility and awards"
+        ]
+      },
+      "post": {
+        "description": "Manual re-evaluation (spec \u00a76.4). Small batches run now; larger ones are queued.",
+        "operationId": "run_evaluation_api_v1_evaluations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Evaluation Api V1 Evaluations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Evaluation",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/institutions/current/policy": {
+      "get": {
+        "operationId": "get_policy_api_v1_institutions_current_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Policy Api V1 Institutions Current Policy Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Policy",
+        "tags": [
+          "administration"
+        ]
+      },
+      "patch": {
+        "operationId": "update_policy_api_v1_institutions_current_policy_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AwardPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Policy Api V1 Institutions Current Policy Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Policy",
+        "tags": [
+          "administration"
         ]
       }
     },
@@ -941,6 +4640,33 @@
           }
         },
         "summary": "Me",
+        "tags": [
+          "learners"
+        ]
+      }
+    },
+    "/api/v1/learners/me/achievements": {
+      "get": {
+        "description": "Badges available in my courses with per-requirement progress (spec \u00a78.1-8.2).\n\nComputed from the latest synced Canvas data without recording anything. ``confirmed`` marks\nrequirements the data confirms; pending ones say what they are waiting for.",
+        "operationId": "my_achievements_api_v1_learners_me_achievements_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response My Achievements Api V1 Learners Me Achievements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "My Achievements",
         "tags": [
           "learners"
         ]

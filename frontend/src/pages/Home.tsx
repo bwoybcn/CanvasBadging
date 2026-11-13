@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiFetch, type Me } from "../api";
 import { useAuth } from "../auth";
+import { Nav } from "../components/Page";
 
 const ROLE_LABELS: Record<string, string> = {
   student: "Student",
@@ -32,6 +33,7 @@ export function Home() {
   const user = me.data;
   return (
     <View as="main" padding="large" maxWidth="60rem" margin="0 auto" display="block">
+      <Nav />
       <Heading level="h1" margin="0 0 small">
         Welcome, {user.display_name ?? "there"}
       </Heading>
@@ -53,8 +55,8 @@ export function Home() {
         ))}
       </List>
       <Text as="p">
-        Badge browsing, authoring and administration screens are added in the next stages of the
-        build.
+        Use the links above to see your badges, create and review micro-credentials, or confirm awards. Badge
+        wallets and sharing are added in a later stage of the build.
       </Text>
       {user.session_method === "dev" && (
         <Button margin="medium 0 0" onClick={() => setToken(null)}>

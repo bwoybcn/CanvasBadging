@@ -54,6 +54,16 @@ class AwardDecision(TenantMixin, Base):
         tenant_fk("evaluation_id", "eligibility_evaluations"),
         tenant_fk("decided_by", "users"),
         CheckConstraint("evaluation_id IS NOT NULL OR justification IS NOT NULL", name="has_basis"),
+        # One live decision per learner, version and issuance sequence (spec §6.6). A rejected
+        # decision does not block a later explicit manual award.
+        Index(
+            "uq_award_decisions_live",
+            "version_id",
+            "user_id",
+            "issuance_seq",
+            unique=True,
+            postgresql_where=text("status <> 'rejected'"),
+        ),
     )
 
     version_id: Mapped[uuid.UUID] = mapped_column(Uuid)
@@ -68,6 +78,11 @@ class AwardDecision(TenantMixin, Base):
         choice("awaiting_confirmation", "ready", "issued", "rejected", "failed", name="status")
     )
     issuance_seq: Mapped[int] = mapped_column(Integer, default=1)
+    #: Evidence references for manual awards (spec §11.4); copied to credential_evidence on issue.
+    evidence: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
     idempotency_key: Mapped[str] = mapped_column(Text, unique=True)
 
 

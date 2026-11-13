@@ -5,8 +5,15 @@ import { type ReactNode, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AuthProvider, useAuth } from "./auth";
+import { AdminPolicy } from "./pages/AdminPolicy";
+import { Awards } from "./pages/Awards";
+import { BadgeDetail } from "./pages/BadgeDetail";
+import { BadgeList, ReviewQueue } from "./pages/BadgeList";
+import { CourseProgress } from "./pages/CourseProgress";
+import { CreateBadge } from "./pages/CreateBadge";
 import { DevLogin } from "./pages/DevLogin";
 import { Home } from "./pages/Home";
+import { MyProgress } from "./pages/MyProgress";
 
 function RequireSession({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -17,14 +24,22 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/dev-login" element={<DevLogin />} />
-      <Route
-        path="/"
-        element={
-          <RequireSession>
-            <Home />
-          </RequireSession>
-        }
-      />
+      {(
+        [
+          ["/", <Home />],
+          ["/badges", <BadgeList />],
+          ["/badges/new", <CreateBadge />],
+          ["/badges/:id", <BadgeDetail />],
+          ["/badges/:id/edit", <CreateBadge />],
+          ["/reviews", <ReviewQueue />],
+          ["/awards", <Awards />],
+          ["/courses/:id/progress", <CourseProgress />],
+          ["/me/progress", <MyProgress />],
+          ["/admin/policy", <AdminPolicy />],
+        ] as const
+      ).map(([path, element]) => (
+        <Route key={path} path={path} element={<RequireSession>{element}</RequireSession>} />
+      ))}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

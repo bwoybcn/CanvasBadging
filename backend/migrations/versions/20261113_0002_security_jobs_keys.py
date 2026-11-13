@@ -22,7 +22,6 @@ from collections.abc import Sequence
 from alembic import op
 from procrastinate import schema as procrastinate_schema
 
-from opencredential.db.base import TENANT_TABLES
 from opencredential.settings import get_settings
 
 revision: str = "0002"
@@ -32,6 +31,45 @@ depends_on: str | Sequence[str] | None = None
 
 # Tables written before a tenant is known (LTI login/launch); no RLS, short-lived rows.
 PRE_TENANT_TABLES = ("lti_launch_state", "lti_nonces_used")
+
+# Tenant tables that exist at this revision. Frozen here on purpose: reading the live
+# ``TENANT_TABLES`` would make this migration touch tables that later revisions create.
+# Later migrations enable RLS on their own new tables.
+TENANT_TABLES = (
+    "badge_assets",
+    "badge_templates",
+    "achievement_definitions",
+    "achievement_versions",
+    "definition_reviews",
+    "award_rule_sets",
+    "award_rules",
+    "eligibility_evaluations",
+    "award_decisions",
+    "status_lists",
+    "credentials",
+    "status_list_bits",
+    "credential_evidence",
+    "credential_status",
+    "credential_status_events",
+    "revocation_requests",
+    "share_grants",
+    "users",
+    "external_identities",
+    "org_units",
+    "courses",
+    "memberships",
+    "issuers",
+    "issuer_keys",
+    "issuer_delegations",
+    "lms_modules",
+    "lms_module_progress",
+    "lms_assignments",
+    "lms_submissions",
+    "sync_runs",
+    "canvas_integrations",
+    "lti_deployments",
+    "canvas_tokens",
+)
 
 
 def _roles() -> tuple[str, str]:

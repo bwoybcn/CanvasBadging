@@ -20,7 +20,9 @@ COPY backend/ ./
 COPY examples/ /app/examples/
 RUN uv sync --frozen --no-dev
 COPY --from=frontend /src/frontend/dist /app/static
-RUN useradd --system --uid 10001 opencredential
+RUN useradd --system --uid 10001 opencredential \
+ && mkdir -p /var/lib/opencredential/assets \
+ && chown -R opencredential /var/lib/opencredential
 USER opencredential
 ENV OC_STATIC_DIR=/app/static
 EXPOSE 8000

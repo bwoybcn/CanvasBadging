@@ -150,9 +150,10 @@ def test_duplicate_event_creates_no_duplicate(tenant: Tenant, signer: SignerClie
 def test_second_decision_for_same_learner_is_a_duplicate(
     tenant: Tenant, signer: SignerClient
 ) -> None:
-    a = _issue(tenant, signer, _decide(tenant))
+    first = _decide(tenant)
+    a = _issue(tenant, signer, first)
     with tenant_session(tenant.institution_id) as db:
-        auto, _ = decisions.decide(
+        auto, created = decisions.decide(
             db,
             institution_id=tenant.institution_id,
             user_id=tenant.student_ids[0],
@@ -160,8 +161,11 @@ def test_second_decision_for_same_learner_is_a_duplicate(
             kind="automatic",
             justification="rule met",
         )
+    # W5's uq_award_decisions_live allows one live decision per learner and version, so the
+    # second decision of another kind resolves to the first one instead of creating a duplicate.
+    assert not created and auto.id == first
     b = _issue(tenant, signer, auto.id)
-    assert b.outcome == "duplicate" and b.credential_id == a.credential_id
+    assert b.outcome == "already_issued" and b.credential_id == a.credential_id
     assert _count(tenant, m.Credential, user_id=tenant.student_ids[0]) == 1
 
 

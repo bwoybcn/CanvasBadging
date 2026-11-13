@@ -10,6 +10,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from opencredential.errors import DomainError
+
 PROBLEM = "application/problem+json"
 
 
@@ -51,6 +53,10 @@ def install(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
         return problem(request, exc.status, exc.code, exc.title, exc.detail)
+
+    @app.exception_handler(DomainError)
+    async def _domain_error(request: Request, exc: DomainError) -> JSONResponse:
+        return problem(request, exc.status, exc.code, exc.title, exc.detail, exc.errors)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException) -> JSONResponse:

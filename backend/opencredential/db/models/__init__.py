@@ -10,6 +10,7 @@ from opencredential.db.models.authoring import (
     BadgeAsset,
     BadgeTemplate,
     DefinitionReview,
+    ManualRuleApproval,
 )
 from opencredential.db.models.awards import (
     AwardDecision,
@@ -77,6 +78,7 @@ __all__ = [
     "LtiDeployment",
     "LtiLaunchState",
     "LtiNonceUsed",
+    "ManualRuleApproval",
     "Membership",
     "OrgUnit",
     "RevocationRequest",

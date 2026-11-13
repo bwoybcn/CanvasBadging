@@ -74,6 +74,19 @@ def decide(
     definition = db.get(AchievementDefinition, version.definition_id)
     assert definition is not None
     key = idempotency_key(institution_id, user_id, version_id, kind, issuance_seq)
+    # One live (not rejected) decision per learner, version and issuance sequence
+    # (``uq_award_decisions_live``): a second decision of another kind reuses the live one.
+    live = db.scalar(
+        select(AwardDecision).where(
+            AwardDecision.version_id == version_id,
+            AwardDecision.user_id == user_id,
+            AwardDecision.issuance_seq == issuance_seq,
+            AwardDecision.status != "rejected",
+            AwardDecision.idempotency_key != key,
+        )
+    )
+    if live is not None:
+        return live, False
     new_id = uuid7()
     stmt = (
         insert(AwardDecision)
