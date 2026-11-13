@@ -54,21 +54,34 @@ def _signer() -> SignerClient:
 
 
 @blueprint.task(name="issue_credential", queue="issuance", retry=RETRY)
-def issue_credential(institution_id: str, award_decision_id: str) -> str:
-    """Issue the credential for an award decision. Idempotent; safe to retry (ADR-0012)."""
+def issue_credential(
+    institution_id: str,
+    decision_id: str | None = None,
+    award_decision_id: str | None = None,
+    **_meta: object,
+) -> str:
+    """Issue the credential for an award decision. Idempotent on the decision; safe to retry.
+
+    Contract with W5 (docs/architecture/w5-delivery.md): deferred with ``decision_id``,
+    ``institution_id``, ``subject_type``/``subject_id`` and queueing lock ``issue:{decision_id}``.
+    ``award_decision_id`` is accepted as an alias.
+    """
     from opencredential.issuance.service import IssuanceError, issue
 
+    did = decision_id or award_decision_id
+    if did is None:
+        raise ValueError("issue_credential needs decision_id")
     signer = _signer()
     try:
         result = issue(
             uuid.UUID(institution_id),
-            uuid.UUID(award_decision_id),
+            uuid.UUID(did),
             signer=signer,
             settings=get_settings(),
         )
     except IssuanceError as exc:
         # Permanent: retrying won't help. The pending row and decision stay for reconciliation.
-        log.error("issuance_refused", award_decision_id=award_decision_id, error=str(exc))
+        log.error("issuance_refused", award_decision_id=did, error=str(exc))
         return "refused"
     finally:
         signer.close()
@@ -151,7 +164,9 @@ def reconcile_issuance(timestamp: int) -> int:
                 "issue_credential",
                 lock=f"issue:{decision_id}",
                 institution_id=str(iid),
-                award_decision_id=str(decision_id),
+                decision_id=str(decision_id),
+                subject_type="award_decision",
+                subject_id=str(decision_id),
             )
             count += 1
     return count

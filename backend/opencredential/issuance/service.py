@@ -258,6 +258,22 @@ def _prepare(
     )
     db.add(cred)
     db.flush()
+    # Evidence chosen at decision time (W5: manual awards, spec §11.4). Only items marked
+    # public go into the signed credential; the rest stay as private records.
+    for item in getattr(decision, "evidence", None) or []:
+        public = bool(item.get("public"))
+        db.add(
+            CredentialEvidence(
+                institution_id=decision.institution_id,
+                credential_id=cred.id,
+                kind=item["kind"],
+                narrative=item["narrative"],
+                url=item.get("url"),
+                include_in_credential=public,
+                public=public,
+            )
+        )
+    db.flush()
     bit = db.scalar(
         select(StatusListBit).where(
             StatusListBit.status_list_id == sl.id, StatusListBit.index == index

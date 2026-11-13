@@ -508,3 +508,21 @@ def test_http_export_verify_and_revoke(tenant: Tenant, signer: SignerClient) -> 
         ach_id = downloaded["credentialSubject"]["achievement"]["id"]
         ach = client.get("/" + ach_id.split("://", 1)[1].split("/", 1)[1])
         assert ach.status_code == 200 and ach.json()["name"] == "Academic Writing Foundations"
+
+
+def test_issue_task_accepts_w5_contract(tenant: Tenant, signer: SignerClient) -> None:
+    """W5 defers oc:issue_credential(decision_id, institution_id, subject_type, subject_id, ...)."""
+    from opencredential.jobs.tasks import issue_credential
+
+    d = _decide(tenant)
+    kwargs = {
+        "decision_id": str(d),
+        "institution_id": str(tenant.institution_id),
+        "subject_type": "award_decision",
+        "subject_id": str(d),
+        "_trace": "x",
+    }
+    assert issue_credential(**kwargs) == "issued"
+    assert issue_credential(**kwargs) == "already_issued"
+    with tenant_session(tenant.institution_id) as db:
+        assert db.get(m.AwardDecision, d).status == "issued"  # type: ignore[union-attr]
