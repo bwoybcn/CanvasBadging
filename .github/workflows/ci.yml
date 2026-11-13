@@ -16,17 +16,27 @@ concurrency:
 
 jobs:
   ob3-schema-snapshot:
-    # TEMPORARY (W4): the sandbox that wrote this PR cannot reach purl.imsglobal.org, so CI prints
-    # the official schema once for pinning into the repo. Removed in the same PR.
-    name: Snapshot official OB 3.0 JSON Schema
+    # TEMPORARY (W4): the sandbox that wrote this PR cannot reach purl.imsglobal.org, so CI commits
+    # the official schema once (pinned by SHA-256 below). Removed again in the same PR.
+    name: Pin official OB 3.0 JSON Schema
+    if: github.event_name == 'pull_request' && github.head_ref == 'claude/project-thread-efjrl8'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - run: |
-          for f in schema/json/ob_v3p0_achievementcredential_schema.json context-3.0.3.json; do
-            curl -fsSL "https://purl.imsglobal.org/spec/ob/v3p0/$f" -o out.json
-            echo "== $f sha256=$(sha256sum out.json | cut -d' ' -f1) bytes=$(wc -c < out.json)"
-            gzip -9n -c out.json | base64 -w0; echo
-          done
+          dest=backend/opencredential/issuance/schemas/ob_v3p0_achievementcredential_schema.json
+          test -f "$dest" && exit 0
+          curl -fsSL https://purl.imsglobal.org/spec/ob/v3p0/schema/json/ob_v3p0_achievementcredential_schema.json -o "$dest"
+          echo "b7358e895f492e74055dc6bfc7ffc420d0e497f90c4579fb83d9519b86d393ea  $dest" | sha256sum -c
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$dest"
+          git commit -m "Pin official OB 3.0 AchievementCredential JSON Schema (sha256 b7358e89…)"
+          git push
 
   backend:
     name: Backend (lint, types, Pytest)

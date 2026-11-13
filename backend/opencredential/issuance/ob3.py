@@ -20,6 +20,9 @@ from typing import Any
 
 VC_V2_CONTEXT = "https://www.w3.org/ns/credentials/v2"
 OB_CONTEXT = "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json"
+#: Defines ``1EdTechJsonSchemaValidator2019`` (the ``credentialSchema`` type); without it the
+#: type is an undefined term and JSON-LD safe mode rightly refuses to sign.
+OB_EXTENSIONS_CONTEXT = "https://purl.imsglobal.org/spec/ob/v3p0/extensions.json"
 OB_CONTEXTS = frozenset(
     {
         OB_CONTEXT,
@@ -200,7 +203,7 @@ def build_credential(inp: CredentialInputs) -> dict[str, Any]:
         )
 
     credential: dict[str, Any] = {
-        "@context": [VC_V2_CONTEXT, OB_CONTEXT],
+        "@context": [VC_V2_CONTEXT, OB_CONTEXT, OB_EXTENSIONS_CONTEXT],
         "id": inp.credential_id,
         "type": ["VerifiableCredential", "OpenBadgeCredential"],
         "name": inp.achievement.name,
