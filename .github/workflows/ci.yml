@@ -15,30 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ob3-schema-snapshot:
-    # TEMPORARY (W4): the sandbox that wrote this PR cannot reach purl.imsglobal.org, so CI commits
-    # the official schema once (pinned by SHA-256 below). Removed again in the same PR.
-    name: Pin official OB 3.0 JSON Schema
-    if: github.event_name == 'pull_request' && github.head_ref == 'claude/project-thread-efjrl8'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-      - run: |
-          dest=backend/opencredential/issuance/schemas/ob_v3p0_achievementcredential_schema.json
-          test -f "$dest" && exit 0
-          mkdir -p "$(dirname "$dest")"
-          curl -fsSL https://purl.imsglobal.org/spec/ob/v3p0/schema/json/ob_v3p0_achievementcredential_schema.json -o "$dest"
-          echo "b7358e895f492e74055dc6bfc7ffc420d0e497f90c4579fb83d9519b86d393ea  $dest" | sha256sum -c
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$dest"
-          git commit -m "Pin official OB 3.0 AchievementCredential JSON Schema (sha256 b7358e89…)"
-          git push
-
   backend:
     name: Backend (lint, types, Pytest)
     runs-on: ubuntu-latest
@@ -86,6 +62,75 @@ jobs:
       - name: Signer log
         if: failure()
         run: cat "$RUNNER_TEMP/signer.log"
+
+  conformance:
+    # Done-when for W4: credentials issued by the app pass verifiers we did not write, and a
+    # downloaded copy of a revoked credential reads as revoked.
+    name: Independent OB 3.0 verifiers (DCC, 1EdTech)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPASSWORD: postgres
+      POSTGRES_USER: postgres
+      OUT: ${{ github.workspace }}/conformance-out
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Start the stack (database, signer, API)
+        run: |
+          sh docker/postgres/init/01-roles.sh
+          (cd backend && uv sync --frozen && uv run oc migrate)
+          (cd signer && npm ci --no-audit --no-fund && npm run build)
+          (cd signer && OC_ENV=development nohup node dist/server.js > "$RUNNER_TEMP/signer.log" 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS localhost:8790/healthz && break; sleep 1; done
+          (cd backend && uv run oc seed)
+          (cd backend && nohup uv run oc api > "$RUNNER_TEMP/api.log" 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS localhost:8000/healthz && break; sleep 1; done
+      - name: Issue credentials, revoke one
+        run: tests/conformance/run-conformance.sh "$OUT"
+      - name: DCC verifier-core (signature, expiry, status list, JSON Schema)
+        working-directory: tests/conformance/dcc
+        env:
+          DCC_REQUIRE_SCHEMA: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          node verify.mjs active "$OUT"/active/*.json
+          node verify.mjs revoked "$OUT"/revoked/*.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: 1EdTech OB 3.0 inspector (digital-credentials-public-validator)
+        run: |
+          git clone --filter=blob:none https://github.com/1EdTech/digital-credentials-public-validator.git "$RUNNER_TEMP/dcpv"
+          cd "$RUNNER_TEMP/dcpv"
+          git checkout 4c6631fb5ea206ee60c2e7128749b44d70801098
+          cp "$GITHUB_WORKSPACE/tests/conformance/1edtech/OpenCredentialConformanceTest.java" \
+            inspector-vc/src/test/java/org/oneedtech/inspect/vc/
+          OC_CONFORMANCE_ACTIVE_DIR="$OUT/active" OC_CONFORMANCE_REVOKED_DIR="$OUT/revoked" \
+            mvn -B -q -pl inspector-vc -am test -Dtest=OpenCredentialConformanceTest \
+              -Dsurefire.failIfNoSpecifiedTests=false
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-credentials
+          path: conformance-out
+      - name: Service logs
+        if: failure()
+        run: cat "$RUNNER_TEMP/signer.log" "$RUNNER_TEMP/api.log"
 
   signer:
     name: Signer (lint, Vitest, build)

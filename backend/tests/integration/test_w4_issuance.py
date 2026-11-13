@@ -416,6 +416,40 @@ def test_key_compromise_procedure(web_tenant: Tenant, signer: SignerClient) -> N
     _publish(t, signer, fresh.status_list_id)
     assert _verifier(signer).verify(_signed(t, fresh.credential_id)).result == Outcome.verified
 
+    # step 7: affected learners get replacement credentials (explicit, idempotent reissue)
+    with tenant_session(t.institution_id) as db:
+        originals = [
+            db.get(m.AwardDecision, db.get(m.Credential, r.credential_id).award_decision_id)  # type: ignore[union-attr]
+            for r in victims
+        ]
+        again = [
+            decisions.reissue(db, d, justification="key compromise", decided_by=t.admin_id)  # type: ignore[arg-type]
+            for d in originals
+        ]
+        twice = decisions.reissue(
+            db,
+            originals[0],  # type: ignore[arg-type]
+            justification="key compromise",
+            decided_by=t.admin_id,
+        )
+        assert twice.id == again[0].id and again[0].issuance_seq == 2
+        live = db.get(m.Credential, fresh.credential_id)
+        assert live is not None
+        with pytest.raises(decisions.DecisionError, match="revoke it first"):
+            decisions.reissue(
+                db,
+                db.get(m.AwardDecision, live.award_decision_id),  # type: ignore[arg-type]
+                justification="not allowed while live",
+                decided_by=t.admin_id,
+            )
+        new_ids = [d.id for d in again]
+    for did in new_ids:
+        replacement = _issue(t, signer, did)
+        _publish(t, signer, replacement.status_list_id)
+        vc = _signed(t, replacement.credential_id)
+        assert _verifier(signer).verify(vc).result == Outcome.verified
+        assert vc["proof"]["verificationMethod"].endswith(str(out.replacement_key_id))
+
 
 # ---- HTTP surface -----------------------------------------------------------------------
 

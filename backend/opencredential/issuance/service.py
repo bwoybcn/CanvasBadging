@@ -200,6 +200,13 @@ def _prepare(
             Credential.superseded_by_id.is_(None),
         )
     )
+    cred_id = uuid7()
+    if live is not None and decision.issuance_seq > 1:
+        # Explicit reissue (decisions.reissue checked that the original is revoked): the old
+        # credential stays immutable except for the supersession pointer.
+        live.superseded_by_id = cred_id
+        db.flush()
+        live = None
     if live is not None:
         # Another decision (say a manual award) already produced this learner's credential.
         decision.status = "rejected"
@@ -229,7 +236,6 @@ def _prepare(
 
     sl, index = status_service.allocate(db, issuer)
     salt = ob3.new_salt()
-    cred_id = uuid7()
     cred = Credential(
         id=cred_id,
         institution_id=decision.institution_id,

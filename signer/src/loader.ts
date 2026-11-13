@@ -54,6 +54,9 @@ export function makeLoader(didDocuments: DidDocuments = {}) {
       if (doc && doc.id === did) {
         const document = url.includes("#") ? fragmentOf(doc, url) : doc;
         if (document) return { contextUrl: null, documentUrl: url, document };
+        // The issuer's DID resolved, but it no longer lists this key (e.g. revoked after a
+        // compromise): that is a verification failure, not missing infrastructure.
+        throw new Error(`Verification method ${url} is not published by ${did}`);
       }
     }
     throw new UnresolvableDocument(url);

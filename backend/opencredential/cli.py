@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Operator CLI: ``oc migrate | seed | issue-demo | verify | worker | api | openapi``."""
+"""Operator CLI (``oc --help``): migrate, seed, issue-demo, verify, revoke, reissue, worker, api."""
 
 from __future__ import annotations
 
@@ -60,6 +60,99 @@ def verify(path: Path) -> None:
         signer.close()
     typer.echo(json.dumps(result.to_dict(), indent=2))
     raise typer.Exit(0 if result.result == "verified" else 1)
+
+
+@app.command("revoke")
+def revoke(
+    credential_id: str,
+    reason_code: str = typer.Option(..., help="One of the status reason codes"),
+    reason_text: str = typer.Option(None, help="Free-text reason, kept with the status record"),
+) -> None:
+    """Operator revocation (break-glass): record a reason and republish the status list now.
+
+    Day-to-day revocation goes through the API, which checks the revoker policy. This command is
+    for operators (for example during a key-compromise response) and is audited as ``system``.
+    """
+    import uuid
+
+    from sqlalchemy import select
+
+    from opencredential.db.models import Credential
+    from opencredential.db.session import owner_session, tenant_session
+    from opencredential.settings import get_settings
+    from opencredential.signer_client import SignerClient
+    from opencredential.status import service as status_service
+
+    cid = uuid.UUID(credential_id)
+    with owner_session() as db:
+        iid = db.scalar(select(Credential.institution_id).where(Credential.id == cid))
+    if iid is None:
+        typer.echo(f"no credential {cid}", err=True)
+        raise typer.Exit(1)
+    settings = get_settings()
+    signer = SignerClient(settings)
+    try:
+        with tenant_session(iid) as db:
+            result = status_service.revoke(
+                db, cid, reason_code=reason_code, reason_text=reason_text, actor_user_id=None
+            )
+            if result.status_list_id is not None:
+                status_service.publish(db, result.status_list_id, signer, settings)
+    except status_service.StatusError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    finally:
+        signer.close()
+    typer.echo(json.dumps({"credential_id": str(cid), "changed": result.changed}))
+
+
+@app.command("reissue")
+def reissue(
+    credential_ids: list[str],
+    justification: str = typer.Option(..., help="Why (kept on the new award decision)"),
+) -> None:
+    """Issue replacement credentials for revoked ones (for example after a key compromise)."""
+    import uuid
+
+    from sqlalchemy import select
+
+    from opencredential.db.models import AwardDecision, Credential
+    from opencredential.db.session import owner_session, tenant_session
+    from opencredential.issuance import decisions
+    from opencredential.issuance.service import issue
+    from opencredential.settings import get_settings
+    from opencredential.signer_client import SignerClient
+
+    settings = get_settings()
+    signer = SignerClient(settings)
+    failed = False
+    try:
+        for raw in credential_ids:
+            cid = uuid.UUID(raw)
+            with owner_session() as db:
+                iid = db.scalar(select(Credential.institution_id).where(Credential.id == cid))
+            if iid is None:
+                typer.echo(f"{cid}: no such credential", err=True)
+                failed = True
+                continue
+            try:
+                with tenant_session(iid) as db:
+                    cred = db.get(Credential, cid)
+                    original = db.get(AwardDecision, cred.award_decision_id) if cred else None
+                    assert original is not None
+                    new = decisions.reissue(
+                        db, original, justification=justification, decided_by=None
+                    )
+                    new_id = new.id
+            except decisions.DecisionError as exc:
+                typer.echo(f"{cid}: {exc}", err=True)
+                failed = True
+                continue
+            result = issue(iid, new_id, signer=signer, settings=settings)
+            typer.echo(json.dumps({"revoked": str(cid), "replacement": str(result.credential_id)}))
+    finally:
+        signer.close()
+    raise typer.Exit(1 if failed else 0)
 
 
 @app.command()

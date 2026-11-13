@@ -18,7 +18,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from opencredential import audit
-from opencredential.db.models import AchievementDefinition, AchievementVersion, AwardDecision
+from opencredential.db.models import (
+    AchievementDefinition,
+    AchievementVersion,
+    AwardDecision,
+    Credential,
+    CredentialStatus,
+)
 from opencredential.ids import uuid7
 
 KINDS = ("automatic", "confirmed", "manual")
@@ -104,3 +110,43 @@ def decide(
             data={"kind": kind, "version_id": str(version_id), "issuance_seq": issuance_seq},
         )
     return decision, bool(inserted)
+
+
+def reissue(
+    db: Session,
+    original: AwardDecision,
+    *,
+    justification: str,
+    decided_by: uuid.UUID | None,
+    now: datetime | None = None,
+) -> AwardDecision:
+    """Explicit reissue: a new ``ready`` decision for the same learner, version and basis.
+
+    Used after a revocation that was not the learner's fault (for example ``key_compromise``).
+    The original credential must already be revoked, so a learner never holds two live copies.
+    The new decision has the next ``issuance_seq``, so it gets its own idempotency key and a
+    fresh credential that supersedes the old one; calling this twice for the same original
+    returns the same new decision.
+    """
+    if not justification:
+        raise DecisionError("a reissue needs a justification")
+    revoked = db.scalar(
+        select(CredentialStatus.id)
+        .join(Credential, Credential.id == CredentialStatus.credential_id)
+        .where(Credential.award_decision_id == original.id, CredentialStatus.state == "revoked")
+    )
+    if revoked is None:
+        raise DecisionError("only a revoked credential can be reissued; revoke it first")
+    decision, _ = decide(
+        db,
+        institution_id=original.institution_id,
+        user_id=original.user_id,
+        version_id=original.version_id,
+        kind=original.kind,
+        evaluation_id=original.evaluation_id,
+        justification=f"reissue of {original.id}: {justification}",
+        decided_by=decided_by,
+        issuance_seq=original.issuance_seq + 1,
+        now=now,
+    )
+    return decision
