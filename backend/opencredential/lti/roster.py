@@ -64,6 +64,7 @@ def sync_roster(
             integration.id,
             sub=m.sub,
             canvas_user_id=m.canvas_user_id,
+            sis_user_id=m.sis_user_id,
             name=m.name,
             given_name=m.given_name,
             family_name=m.family_name,

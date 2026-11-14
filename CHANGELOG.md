@@ -13,6 +13,10 @@ All notable changes to this project are documented here. The format follows
   named colleagues; a list of badges published without review. Badges claiming assessed
   proficiency or using credit wording always need review. The institution can stop areas
   relaxing its settings.
+- Award a badge to a list of student ID numbers or emails, with a preview of who matches before
+  anything is awarded (`POST /api/v1/awards/bulk`). Student ID numbers are read from launches
+  (`canvas_user_sis_id=$Person.sourcedId` custom field or `lis.person_sourcedid`) and the
+  Names and Roles roster.
 
 ### Security
 - Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):

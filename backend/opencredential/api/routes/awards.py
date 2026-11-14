@@ -21,6 +21,7 @@ from opencredential.db.models import (
     EligibilityEvaluation,
     User,
 )
+from opencredential.eligibility import bulk
 from opencredential.eligibility import service as eligibility
 from opencredential.errors import Conflict, Invalid, NotFound
 
@@ -94,6 +95,37 @@ class ManualAwardIn(BaseModel):
     user_id: uuid.UUID
     justification: str = Field(max_length=4000)
     evidence: list[Evidence] = Field(default_factory=list, max_length=10)
+
+
+class BulkAwardIn(BaseModel):
+    definition_id: uuid.UUID
+    identifiers: list[str] = Field(
+        min_length=1,
+        max_length=bulk.MAX_IDENTIFIERS,
+        description="Student ID numbers (SIS user ids) or university emails. Each item may also "
+        "hold several, separated by new lines, commas, semicolons or tabs.",
+    )
+    justification: str = Field(max_length=4000)
+    evidence: list[Evidence] = Field(default_factory=list, max_length=10)
+    confirm: bool = Field(default=False, description="false: preview only. true: make the awards.")
+
+
+class BulkRowOut(BaseModel):
+    identifier: str
+    status: str = Field(
+        description="will_award, awarded, awaiting_confirmation, already_awarded, "
+        "pending_confirmation, not_in_course, not_found, duplicate or failed"
+    )
+    user_id: uuid.UUID | None = None
+    learner_name: str | None = None
+    decision_id: uuid.UUID | None = None
+    message: str | None = None
+
+
+class BulkAwardOut(BaseModel):
+    committed: bool
+    counts: dict[str, int]
+    rows: list[BulkRowOut]
 
 
 def _decision_out(db: TenantDb, d: AwardDecision, with_eligibility: bool = False) -> DecisionOut:
@@ -318,3 +350,24 @@ def manual_award(
         request_id=rid,
     )
     return _decision_out(db, decision)
+
+
+@router.post("/awards/bulk", response_model=BulkAwardOut)
+def bulk_award(body: BulkAwardIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep) -> BulkAwardOut:
+    """Award a published badge to a list of learners in its course, previewing first."""
+    d = authoring.get_definition(db, body.definition_id)
+    result = bulk.award_list(
+        db,
+        actor,
+        d,
+        identifiers=body.identifiers,
+        justification=body.justification,
+        evidence=[e.model_dump() for e in body.evidence],
+        confirm=body.confirm,
+        request_id=rid,
+    )
+    return BulkAwardOut(
+        committed=result.committed,
+        counts=result.counts(),
+        rows=[BulkRowOut(**r.__dict__) for r in result.rows],
+    )

@@ -243,6 +243,7 @@ def test_roster_sync_provisions_and_revokes(setup: dict[str, Any]) -> None:
         _member("sub-s1", "Sam Student", [LEARNER], "4"),
         _member("sub-s2", "Sasha Student", [LEARNER], None),
     ]
+    members[1]["lis_person_sourcedid"] = "201234567"  # student ID number, for list awards
     with tenant_session(setup["iid"]) as db:
         integ = db.get(m.CanvasIntegration, setup["integ"])
         course = db.get(m.Course, setup["course"])
@@ -273,6 +274,7 @@ def test_roster_sync_provisions_and_revokes(setup: dict[str, Any]) -> None:
             )
         }
     assert ("canvas_user_id", "4") in ids and ("lti_sub", "sub-s2") in ids
+    assert ("sis_user_id", "201234567") in ids
 
     # Sam drops the course, Sasha becomes inactive.
     members2 = [

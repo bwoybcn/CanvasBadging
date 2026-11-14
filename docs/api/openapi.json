@@ -443,6 +443,145 @@
         "title": "Branding",
         "type": "object"
       },
+      "BulkAwardIn": {
+        "properties": {
+          "confirm": {
+            "default": false,
+            "description": "false: preview only. true: make the awards.",
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "definition_id": {
+            "format": "uuid",
+            "title": "Definition Id",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "maxItems": 10,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "identifiers": {
+            "description": "Student ID numbers (SIS user ids) or university emails. Each item may also hold several, separated by new lines, commas, semicolons or tabs.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Identifiers",
+            "type": "array"
+          },
+          "justification": {
+            "maxLength": 4000,
+            "title": "Justification",
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition_id",
+          "identifiers",
+          "justification"
+        ],
+        "title": "BulkAwardIn",
+        "type": "object"
+      },
+      "BulkAwardOut": {
+        "properties": {
+          "committed": {
+            "title": "Committed",
+            "type": "boolean"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/BulkRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "committed",
+          "counts",
+          "rows"
+        ],
+        "title": "BulkAwardOut",
+        "type": "object"
+      },
+      "BulkRowOut": {
+        "properties": {
+          "decision_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Id"
+          },
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          },
+          "learner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learner Name"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "status": {
+            "description": "will_award, awarded, awaiting_confirmation, already_awarded, pending_confirmation, not_in_course, not_found, duplicate or failed",
+            "title": "Status",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "identifier",
+          "status"
+        ],
+        "title": "BulkRowOut",
+        "type": "object"
+      },
       "CheckOut": {
         "properties": {
           "detail": {
@@ -7421,6 +7560,48 @@
           }
         },
         "summary": "List Awards",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/awards/bulk": {
+      "post": {
+        "description": "Award a published badge to a list of learners in its course, previewing first.",
+        "operationId": "bulk_award_api_v1_awards_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAwardIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkAwardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bulk Award",
         "tags": [
           "eligibility and awards"
         ]

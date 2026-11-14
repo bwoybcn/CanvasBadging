@@ -107,6 +107,7 @@ class NrpsMember:
     email: str | None
     canvas_user_id: str | None
     lti11_user_id: str | None
+    sis_user_id: str | None = None
 
 
 def _member(raw: dict[str, Any]) -> NrpsMember:
@@ -115,6 +116,8 @@ def _member(raw: dict[str, Any]) -> NrpsMember:
         custom.update(message.get("https://purl.imsglobal.org/spec/lti/claim/custom") or {})
     cid = custom.get("canvas_user_id")
     cid = None if cid is None or str(cid).startswith("$") else str(cid)
+    sis = custom.get("canvas_user_sis_id") or raw.get("lis_person_sourcedid")
+    sis = None if sis is None or not str(sis).strip() or str(sis).startswith("$") else str(sis)
     return NrpsMember(
         sub=str(raw["user_id"]),
         roles=tuple(str(r) for r in raw.get("roles") or []),
@@ -125,6 +128,7 @@ def _member(raw: dict[str, Any]) -> NrpsMember:
         email=raw.get("email"),
         canvas_user_id=cid,
         lti11_user_id=raw.get("lti11_legacy_user_id"),
+        sis_user_id=sis.strip() if sis else None,
     )
 
 

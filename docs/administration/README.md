@@ -117,7 +117,15 @@ starting a badge and can change anything before review. Archive a template to st
 ## 6. Manual awards
 
 Lecturers make manual awards with a written justification from **Awards to confirm**; with the
-second-approval policy on, a different member of staff confirms them there. Administrators see
+second-approval policy on, a different member of staff confirms them there.
+
+**Award a badge to a list** handles evidence kept outside Canvas (volunteering hours, workshop
+registers). Staff paste student ID numbers or university emails; OpenCredential shows who
+matches a student in the badge's course, who is not enrolled, who already has the badge and
+which entries match nobody, then makes one manual award per learner with the same
+justification. Second approval applies as for single awards. The audit log records one
+`award.bulk` event with the counts, never the list itself. Learners must be enrolled in the
+course first (self-enrolment link or SIS feed), so a list cannot reach anyone outside it. Administrators see
 every award kind in records and reports (`/api/v1/awards?kind=manual`).
 
 ## 7. Issued credentials and revocation

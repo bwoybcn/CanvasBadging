@@ -182,6 +182,7 @@ def test_first_launch_follows_the_institution_activation_policy(
             resource_link_id="rl",
             canvas_course_id=f"new-{uuid.uuid4().hex[:6]}",
             canvas_user_id=None,
+            sis_user_id=None,
             name=None,
             given_name=None,
             family_name=None,

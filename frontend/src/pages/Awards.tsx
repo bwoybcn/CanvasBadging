@@ -16,7 +16,15 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiFetch, apiSend, type CourseProgress, type Decision, type DefinitionSummary } from "../api";
+import {
+  apiFetch,
+  apiSend,
+  type BulkAwardResult,
+  type BulkRow,
+  type CourseProgress,
+  type Decision,
+  type DefinitionSummary,
+} from "../api";
 import { useAuth } from "../auth";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
@@ -165,6 +173,138 @@ function ManualAward() {
   );
 }
 
+export const BULK_STATUS: Record<BulkRow["status"], string> = {
+  will_award: "Will be awarded",
+  awarded: "Awarded",
+  awaiting_confirmation: "Recorded; a second member of staff must confirm",
+  already_awarded: "Already has this badge",
+  pending_confirmation: "Already waiting for confirmation",
+  not_in_course: "Not a student in this badge's course",
+  not_found: "No student with this ID or email",
+  duplicate: "Listed more than once",
+  failed: "Could not be awarded",
+};
+
+/** Award one badge to a list of student ID numbers or emails, e.g. a volunteering log or a
+ * workshop register kept outside Canvas. Always previews before awarding. */
+function BulkAward() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const [badge, setBadge] = useState("");
+  const [list, setList] = useState("");
+  const [justification, setJustification] = useState("");
+  const [preview, setPreview] = useState<BulkAwardResult | null>(null);
+  const badges = useQuery({
+    queryKey: ["achievements", "published"],
+    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?state=published", token),
+  });
+  const run = useMutation({
+    mutationFn: (confirm: boolean) =>
+      apiSend<BulkAwardResult>("/api/v1/awards/bulk", token, "POST", {
+        definition_id: badge,
+        identifiers: [list],
+        justification,
+        confirm,
+      }),
+    onSuccess: (res) => {
+      setPreview(res);
+      if (res.committed) qc.invalidateQueries({ queryKey: ["awards"] });
+    },
+  });
+  const reset = () => setPreview(null);
+  const ok = badge && list.trim() && justification.trim().length >= 20;
+  const toAward = preview && !preview.committed ? (preview.counts.will_award ?? 0) : 0;
+  return (
+    <View as="section" aria-labelledby="bulk-h" display="block" margin="large 0 0">
+      <Heading level="h2" id="bulk-h">
+        Award a badge to a list
+      </Heading>
+      <Text as="p">
+        For evidence kept outside Canvas, such as a volunteering log or a workshop register. Paste student ID numbers
+        or university emails, one per line or separated by commas. Only students enrolled in the badge's course can
+        receive it. You will see who matches before anything is awarded.
+      </Text>
+      <SimpleSelect
+        renderLabel="Badge to award"
+        value={badge || undefined}
+        placeholder="Choose a published badge"
+        onChange={(_e, { value }) => {
+          setBadge(String(value));
+          reset();
+        }}
+      >
+        {(badges.data?.items ?? []).map((b) => (
+          <SimpleSelect.Option key={b.id} id={`bb-${b.id}`} value={b.id}>
+            {b.title}
+          </SimpleSelect.Option>
+        ))}
+      </SimpleSelect>
+      <TextArea
+        label="Student ID numbers or emails"
+        height="8rem"
+        value={list}
+        onChange={(e) => {
+          setList(e.target.value);
+          reset();
+        }}
+      />
+      <TextArea
+        label="Justification for everyone on the list (at least 20 characters)"
+        value={justification}
+        onChange={(e) => {
+          setJustification(e.target.value);
+          reset();
+        }}
+      />
+      {run.isError && <ErrorAlert error={run.error} />}
+      <Flex gap="small" margin="small 0">
+        <Button interaction={ok && !run.isPending ? "enabled" : "disabled"} onClick={() => run.mutate(false)}>
+          Check the list
+        </Button>
+        {toAward > 0 && (
+          <Button color="primary" interaction={run.isPending ? "disabled" : "enabled"} onClick={() => run.mutate(true)}>
+            {`Award to ${toAward} ${toAward === 1 ? "learner" : "learners"}`}
+          </Button>
+        )}
+      </Flex>
+      {preview && (
+        <>
+          <Alert variant={preview.committed ? "success" : "info"} margin="small 0">
+            {preview.committed
+              ? `Done: ${preview.counts.awarded ?? 0} awarded, ${preview.counts.awaiting_confirmation ?? 0} waiting for a second member of staff.`
+              : toAward
+                ? `${toAward} of ${preview.rows.length} entries will be awarded. Check the rest below.`
+                : "Nobody on this list can be awarded. Check the entries below."}
+          </Alert>
+          <TableScroll>
+            <Table caption={preview.committed ? "List award results" : "List award preview"}>
+              <Table.Head>
+                <Table.Row>
+                  <Table.ColHeader id="b-id">Entry</Table.ColHeader>
+                  <Table.ColHeader id="b-who">Learner</Table.ColHeader>
+                  <Table.ColHeader id="b-st">Result</Table.ColHeader>
+                </Table.Row>
+              </Table.Head>
+              <Table.Body>
+                {preview.rows.map((r, i) => (
+                  <Table.Row key={`${r.identifier}-${i}`}>
+                    <Table.RowHeader>{r.identifier}</Table.RowHeader>
+                    <Table.Cell>{r.learner_name ?? ""}</Table.Cell>
+                    <Table.Cell>
+                      {BULK_STATUS[r.status]}
+                      {r.message ? `: ${r.message}` : ""}
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table>
+          </TableScroll>
+        </>
+      )}
+    </View>
+  );
+}
+
 export function Awards() {
   const { token } = useAuth();
   const q = useQuery({
@@ -200,6 +340,7 @@ export function Awards() {
         </TableScroll>
       )}
       <ManualAward />
+      <BulkAward />
     </Page>
   );
 }

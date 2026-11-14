@@ -1,0 +1,202 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Award a badge to a list of learners (extracurricular badges, PR 2 of 4).
+
+Providers often hold the evidence outside Canvas: a volunteering log, a workshop register, an
+events system. Staff paste or upload the list of student ID numbers or university emails; we
+match each one to a student enrolled in the badge's course, show a preview, and on confirmation
+make one manual award per learner with the same written justification.
+
+* Learners must be students in the badge's course. Enrolment stays Canvas's job (self-enrol link,
+  SIS feed), so a list cannot reach anyone outside the course.
+* Student ID numbers match the SIS user id Canvas sends at launch or in the roster; emails match
+  the address Canvas holds for the learner, ignoring case.
+* Each award goes through :func:`eligibility.service.manual_award`, so second approval, audit and
+  issuance behave exactly as for a single manual award.
+* Identifiers are never written to the audit log: one ``award.bulk`` event records the counts.
+"""
+
+from __future__ import annotations
+
+import uuid
+from dataclasses import dataclass, field
+from typing import Any
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from opencredential import audit
+from opencredential.authz import policy as authz
+from opencredential.db.models import (
+    AchievementDefinition,
+    Course,
+    ExternalIdentity,
+    User,
+)
+from opencredential.eligibility import service as eligibility
+from opencredential.errors import DomainError, Invalid
+
+MAX_IDENTIFIERS = 1000
+
+#: Row statuses, in the order the preview lists them.
+WILL_AWARD = "will_award"
+AWARDED = "awarded"
+AWAITING_CONFIRMATION = "awaiting_confirmation"
+ALREADY_AWARDED = "already_awarded"
+PENDING = "pending_confirmation"
+NOT_IN_COURSE = "not_in_course"
+NOT_FOUND = "not_found"
+DUPLICATE = "duplicate"
+FAILED = "failed"
+
+
+@dataclass
+class Row:
+    identifier: str
+    status: str
+    user_id: uuid.UUID | None = None
+    learner_name: str | None = None
+    decision_id: uuid.UUID | None = None
+    message: str | None = None
+
+
+@dataclass
+class BulkResult:
+    rows: list[Row] = field(default_factory=list)
+    committed: bool = False
+
+    def counts(self) -> dict[str, int]:
+        out: dict[str, int] = {}
+        for r in self.rows:
+            out[r.status] = out.get(r.status, 0) + 1
+        return out
+
+
+def parse_identifiers(raw: list[str]) -> list[str]:
+    """Split pasted text (lines, commas, semicolons, tabs), trim, drop blanks and header-like
+    cells, keep order. Duplicates are kept so the preview can point them out."""
+    out: list[str] = []
+    for item in raw:
+        for part in str(item).replace(";", "\n").replace(",", "\n").replace("\t", "\n").split():
+            value = part.strip().strip('"').strip("'")
+            if value and value.lower() not in ("email", "student_id", "id", "sis_user_id"):
+                out.append(value)
+    if not out:
+        raise Invalid("LIST_EMPTY", "Paste at least one student ID number or email.")
+    if len(out) > MAX_IDENTIFIERS:
+        raise Invalid(
+            "LIST_TOO_LONG",
+            f"Award to at most {MAX_IDENTIFIERS} learners at a time. Split the list.",
+        )
+    return out
+
+
+def _match(db: Session, course: Course, identifiers: list[str]) -> dict[str, uuid.UUID]:
+    """Map each identifier to a user id, where one matches (any enrolment)."""
+    emails = {i.lower() for i in identifiers if "@" in i}
+    ids = {i for i in identifiers if "@" not in i}
+    found: dict[str, uuid.UUID] = {}
+    if emails:
+        for uid, email in db.execute(
+            select(User.id, func.lower(User.email)).where(
+                func.lower(User.email).in_(emails), User.status == "active"
+            )
+        ):
+            # Two accounts with one email: refuse to guess (treated as not found).
+            found[email] = uid if email not in found else uuid.UUID(int=0)
+    if ids:
+        for uid, value in db.execute(
+            select(ExternalIdentity.user_id, ExternalIdentity.value).where(
+                ExternalIdentity.canvas_integration_id == course.canvas_integration_id,
+                ExternalIdentity.kind == "sis_user_id",
+                ExternalIdentity.value.in_(ids),
+            )
+        ):
+            found[value] = uid
+    return {k: v for k, v in found.items() if v.int != 0}
+
+
+def award_list(
+    db: Session,
+    actor: authz.Actor,
+    definition: AchievementDefinition,
+    *,
+    identifiers: list[str],
+    justification: str,
+    evidence: list[dict[str, Any]] | None = None,
+    confirm: bool = False,
+    request_id: str | None = None,
+) -> BulkResult:
+    """Preview (``confirm=False``) or make (``confirm=True``) manual awards for a list."""
+    eligibility.require_award_staff(db, actor, definition)
+    course = db.get(Course, definition.course_id) if definition.course_id else None
+    if course is None:
+        raise Invalid(
+            "COURSE_REQUIRED",
+            "Awarding to a list needs a badge that belongs to a Canvas course.",
+        )
+    target = eligibility.live_target(db, definition)
+    if target is None:
+        raise Invalid("NOT_LIVE", "Only published badges can be awarded.")
+    justification = (justification or "").strip()
+    if len(justification) < eligibility.MIN_JUSTIFICATION:
+        raise Invalid(
+            "JUSTIFICATION_REQUIRED",
+            "Explain why this badge is awarded "
+            f"(at least {eligibility.MIN_JUSTIFICATION} characters).",
+        )
+    items = parse_identifiers(identifiers)
+    matches = _match(db, course, items)
+    students = set(eligibility.course_students(db, course.id))
+    result = BulkResult(committed=confirm)
+    seen: set[uuid.UUID] = set()
+    for ident in items:
+        key = ident.lower() if "@" in ident else ident
+        uid = matches.get(key)
+        if uid is None:
+            result.rows.append(Row(ident, NOT_FOUND))
+            continue
+        user = db.get(User, uid)
+        name = user.display_name if user else None
+        if uid not in students:
+            result.rows.append(Row(ident, NOT_IN_COURSE, uid, name))
+            continue
+        if uid in seen:
+            result.rows.append(Row(ident, DUPLICATE, uid, name))
+            continue
+        seen.add(uid)
+        existing = eligibility.existing_live_decision(db, target.version.id, uid)
+        if existing is not None:
+            status = PENDING if existing.status == "awaiting_confirmation" else ALREADY_AWARDED
+            result.rows.append(Row(ident, status, uid, name, existing.id))
+            continue
+        if not confirm:
+            result.rows.append(Row(ident, WILL_AWARD, uid, name))
+            continue
+        try:
+            with db.begin_nested():
+                decision, _ = eligibility.manual_award(
+                    db,
+                    actor,
+                    definition,
+                    user_id=uid,
+                    justification=justification,
+                    evidence=evidence,
+                    request_id=request_id,
+                )
+        except DomainError as exc:
+            result.rows.append(Row(ident, FAILED, uid, name, message=exc.title))
+            continue
+        status = AWAITING_CONFIRMATION if decision.status == "awaiting_confirmation" else AWARDED
+        result.rows.append(Row(ident, status, uid, name, decision.id))
+    if confirm:
+        audit.record(
+            db,
+            action="award.bulk",
+            resource_type="achievement_definition",
+            resource_id=definition.id,
+            institution_id=actor.institution_id,
+            actor_user_id=actor.user_id,
+            request_id=request_id,
+            data={"version_id": str(target.version.id), "counts": result.counts()},
+        )
+    return result

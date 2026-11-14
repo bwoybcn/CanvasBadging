@@ -239,6 +239,35 @@ describe("awards and progress", () => {
     await waitFor(() => expect(calls.some((c) => c.url === "/api/v1/awards/dec-1/confirm")).toBe(true));
   });
 
+  it("previews a list award before awarding", async () => {
+    const preview = {
+      committed: false,
+      counts: { will_award: 1, not_found: 1 },
+      rows: [
+        { identifier: "201111111", status: "will_award", user_id: "u-s1", learner_name: "Sam Student", decision_id: null, message: null },
+        { identifier: "123", status: "not_found", user_id: null, learner_name: null, decision_id: null, message: null },
+      ],
+    };
+    const calls = stubApi({
+      "GET /api/v1/awards?status=awaiting_confirmation": [],
+      "GET /api/v1/achievements?state=published": {
+        items: [{ id: "d-9", state: "published", course_id: "c-1", title: "WP Volunteer", category: "Participation", version_no: 1, live_version_id: "v-9", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z" }],
+      },
+      "POST /api/v1/awards/bulk": preview,
+    });
+    renderAt("/awards");
+    await userEvent.click(await screen.findByLabelText("Badge to award"));
+    await userEvent.click(await screen.findByRole("option", { name: "WP Volunteer" }));
+    await userEvent.type(screen.getByLabelText("Student ID numbers or emails"), "201111111{enter}123");
+    await userEvent.type(screen.getByLabelText(/Justification for everyone/), "Logged ten hours of volunteering.");
+    await userEvent.click(screen.getByRole("button", { name: "Check the list" }));
+    expect(await screen.findByText("No student with this ID or email")).toBeInTheDocument();
+    const body = calls.find((c) => c.url === "/api/v1/awards/bulk")!.body as { confirm: boolean; identifiers: string[] };
+    expect(body.confirm).toBe(false);
+    expect(body.identifiers).toEqual(["201111111\n123"]);
+    expect(screen.getByRole("button", { name: "Award to 1 learner" })).toBeInTheDocument();
+  });
+
   it("shows a student what is confirmed and what is pending", async () => {
     stubApi({
       "GET /api/v1/learners/me": { ...STAFF_ME, memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" }] },

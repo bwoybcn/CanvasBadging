@@ -100,6 +100,7 @@ class LaunchData:
     resource_link_id: str
     canvas_course_id: str | None
     canvas_user_id: str | None
+    sis_user_id: str | None
     name: str | None
     given_name: str | None
     family_name: str | None
@@ -146,6 +147,8 @@ def launch_from_claims(claims: dict[str, Any], client_id: str) -> LaunchData:
         resource_link_id=str((claims.get(CLAIM_RESOURCE_LINK) or {}).get("id")),
         canvas_course_id=custom_id("canvas_course_id"),
         canvas_user_id=custom_id("canvas_user_id"),
+        sis_user_id=custom_id("canvas_user_sis_id")
+        or _str((claims.get(CLAIM_LIS) or {}).get("person_sourcedid")),
         name=_str(claims.get("name")),
         given_name=_str(claims.get("given_name")),
         family_name=_str(claims.get("family_name")),
