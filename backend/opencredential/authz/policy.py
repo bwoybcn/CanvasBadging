@@ -508,7 +508,7 @@ def review_settings(
     """
     policy = institution_policy(db, institution_id)
     base = institution_review_settings(policy)
-    may_relax = bool(policy.get("areas_may_relax_review", True))
+    may_relax = bool(policy.get("areas_may_relax_review", False))
     out: dict[str, Any] = dict(base)
     sources: dict[str, uuid.UUID | None] = dict.fromkeys(AREA_REVIEW_KEYS)
     for uid in reversed(_org_chain(db, org_unit_id)):

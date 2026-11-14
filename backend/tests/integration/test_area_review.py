@@ -41,6 +41,11 @@ def client(database: None, tmp_path: Path) -> Iterator[TestClient]:
 def world(client: TestClient) -> Iterator[World]:
     w = build_world(client)
     with registry.override(w.lms):
+        # Relaxing review per area is off by default; most tests here are about areas that do.
+        r = w.patch(
+            "admin", "/api/v1/institutions/current/policy", {"areas_may_relax_review": True}
+        )
+        assert r.status_code == 200, r.text
         yield w
 
 
@@ -174,6 +179,16 @@ def test_areas_inherit_and_nearest_setting_wins(world: World) -> None:
     r = _set_area(world, lib, definition_review=None)
     assert r.json()["review_policy"] == {}
     assert _badge(world)["review"]["mode"] == "author_decides"
+
+
+def test_areas_cannot_relax_review_by_default(client: TestClient) -> None:
+    """Gary's decision, 14 Nov 2026: institutions opt in to letting areas relax review."""
+    w = build_world(client)
+    with registry.override(w.lms):
+        policy = w.get("admin", "/api/v1/institutions/current/policy").json()
+        assert policy["areas_may_relax_review"] is False
+        r = _set_area(w, _library(w), definition_review="not_required")
+        assert r.status_code == 403 and r.json()["code"] == "REVIEW_RELAX_NOT_ALLOWED"
 
 
 def test_institution_can_stop_areas_relaxing_review(world: World) -> None:

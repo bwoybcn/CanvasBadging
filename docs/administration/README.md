@@ -116,7 +116,7 @@ full sync on the next run.
 | Setting | Default |
 | --- | --- |
 | Colleague review of new and changed badges | Required (other modes: author decides, not required) |
-| Areas may set review less strictly | On |
+| Areas may set review less strictly | Off (institutions opt in) |
 | Who approves definitions | Department and institution administrators, plus named badge reviewers |
 | Authors may approve their own badges | Off |
 | Default for badges that use marks | A lecturer confirms each award (per-badge choice allowed) |
@@ -140,8 +140,10 @@ badge. Set them under **Departments and roles → Colleague review by area**:
 - **Not required**: badges can be published straight away. The automatic approval is recorded.
 
 A unit inherits from the unit above it, then from the institution, until it sets its own; the
-nearest setting wins. Department administrators can set their own units. If **Areas may set
-review less strictly** is off, a unit can only be stricter than the institution.
+nearest setting wins. Department administrators can set their own units. **Areas may set
+review less strictly** is off by default, so a unit can only be stricter than the institution
+until an institution administrator switches it on (Policy page), for example to let the Library
+switch review off for workshop badges.
 
 Two kinds of badge always need review, whatever the area says: badges that claim **assessed
 proficiency**, and badges whose wording refers to credit or a qualification. The wording check
