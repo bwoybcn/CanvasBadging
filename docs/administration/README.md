@@ -65,7 +65,7 @@ hand, an institution administrator can link the sub-accounts that matter:
    opened from it join that area straight away, and new courses join on their first launch, from
    the nearest linked sub-account above them.
 
-Sub-accounts nobody ticks, such as sandboxes or terms, are ignored. A course already in an area is
+Sub-accounts nobody ticks, such as sandboxes or terms, are ignored. Canvas's internal **Site Admin** account is never listed. A course already in an area is
 never moved, so a manual placement always wins. **Unlink** stops placing new courses but keeps the
 area and its courses. Read the tree again after sub-accounts change in Canvas; ones that
 disappear are forgotten unless linked. The launch sends the course's sub-account through the

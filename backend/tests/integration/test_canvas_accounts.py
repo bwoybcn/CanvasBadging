@@ -34,6 +34,8 @@ TREE = [
     AccountRecord("3", "Chemistry", "2"),
     AccountRecord("4", "University Library", "1"),
     AccountRecord("5", "Sandboxes", "1"),
+    # Canvas's internal account: never offered.
+    AccountRecord("9", "Site Admin", None),
 ]
 
 
