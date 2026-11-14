@@ -320,7 +320,7 @@ describe("awards and progress", () => {
     await userEvent.type(screen.getByLabelText("Student ID numbers or emails"), "201111111{enter}123");
     await userEvent.type(screen.getByLabelText(/Justification for everyone/), "Logged ten hours of volunteering.");
     await userEvent.click(screen.getByRole("button", { name: "Check the list" }));
-    expect(await screen.findByText("No student with this ID or email")).toBeInTheDocument();
+    expect(await screen.findByText("No student in this badge's course has this ID or email")).toBeInTheDocument();
     const body = calls.find((c) => c.url === "/api/v1/awards/bulk")!.body as { confirm: boolean; identifiers: string[] };
     expect(body.confirm).toBe(false);
     expect(body.identifiers).toEqual(["201111111\n123"]);

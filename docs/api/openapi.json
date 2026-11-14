@@ -571,7 +571,7 @@
             "title": "Message"
           },
           "status": {
-            "description": "will_award, awarded, awaiting_confirmation, already_awarded, pending_confirmation, not_in_course, not_found, duplicate or failed",
+            "description": "will_award, awarded, awaiting_confirmation, already_awarded, pending_confirmation, not_found (no student in the badge's course matches), duplicate or failed",
             "title": "Status",
             "type": "string"
           },

@@ -39,6 +39,12 @@ All notable changes to this project are documented here. The format follows
   (`GET /api/v1/admin/canvas-accounts`, `POST …/refresh`, `POST …/link`, `DELETE …/{id}/link`).
 
 ### Changed
+- "Badges published without review" uses each live version's latest approval, and includes
+  live badges with a new draft in progress.
+- An author's explicit request for a colleague's review is honoured where review is not required.
+- List awards check staff rights, the live version and second approval once per list rather than
+  once per learner.
+- A student number linked by a roster sync at the same moment no longer fails a launch.
 - Staff wording is neutral, so it suits librarians and service staff as well as lecturers: the
   course role shows as **Course staff**, and requirements read "Confirmation by course staff".
 - The switch-on text explains that staff-awarded courses only refresh their class list every
@@ -47,6 +53,19 @@ All notable changes to this project are documented here. The format follows
 - The data freshness list leaves out courses that are switched off.
 
 ### Security
+- Fixes from the 14 Nov 2026 review of the extracurricular features
+  (https://claude.ai/artifact/M8kJDBBuTNBtJyzs4PDUeF):
+  - Award to a list matches entries only against the badge's course's students. Anyone else
+    reads as "not found", with no name or id, so the preview can no longer be used to look up
+    who an email or student number belongs to across the institution.
+  - Badge teams also govern revoking and revocation requests: in a course with teams on, course
+    staff act only on credentials of badges whose team they are on.
+  - With badge teams on, a badge's owner needs to still be staff in the course to award it.
+  - The awards queue applies the badge-team rule in SQL, so other teams' awards no longer use up
+    the page.
+  - Retiring or destroying a key in the signer is retried while the signer is unreachable
+    (previously the job gave up at once, so a compromised key could survive a signer outage).
+
 - Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):
   - The signer checks its shared secret on the route it matched, so percent-encoded or
     absolute-form paths (`/%761/sign`) no longer skip authentication (S1).

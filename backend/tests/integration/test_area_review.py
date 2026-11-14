@@ -305,3 +305,48 @@ def test_institution_review_mode_and_old_switch_stay_in_step(world: World) -> No
     p = world.patch("admin", path, {"definitions_require_approval": False}).json()
     assert (p["definition_review"], p["definitions_require_approval"]) == ("not_required", False)
     assert world.patch("reviewer", path, {"definition_review": "required"}).status_code == 403
+
+
+# ---- review 14 Nov 2026: findings 6 and 9 ---------------------------------------------------
+
+UNREVIEWED = "/api/v1/admin/review/published-without-review"
+
+
+def test_unreviewed_list_uses_the_latest_approval_and_live_drafts(world: World) -> None:
+    lib = _library(world)
+    _set_area(world, lib, definition_review="not_required")
+    checked = _badge(world, title="Volunteering: checked later")
+    assert _submit(world, checked["id"]).json()["state"] == "approved"
+    # A reviewer sends the auto-approved badge back; it is then reviewed properly.
+    r = world.post(
+        "reviewer", f"/api/v1/achievements/{checked['id']}/reject", {"comment": "Add the hours"}
+    )
+    assert r.status_code == 200, r.text
+    _set_area(world, lib, definition_review="required")
+    assert _submit(world, checked["id"]).json()["state"] == "in_review"
+    r = world.post(
+        "reviewer", f"/api/v1/achievements/{checked['id']}/approve", {"checklist": CHECKLIST}
+    )
+    assert r.status_code == 200, r.text
+    assert (
+        world.post("lecturer", f"/api/v1/achievements/{checked['id']}/publish").status_code == 200
+    )
+
+    _set_area(world, lib, definition_review="not_required")
+    live = _badge(world, title="Volunteering: never checked")
+    _submit(world, live["id"])
+    assert world.post("lecturer", f"/api/v1/achievements/{live['id']}/publish").status_code == 200
+    # Starting a new draft leaves the unreviewed version live, so it stays on the list.
+    assert (
+        world.post("lecturer", f"/api/v1/achievements/{live['id']}/new-version").status_code == 200
+    )
+
+    rows = world.get("reviewer", UNREVIEWED).json()
+    assert [x["id"] for x in rows] == [live["id"]]
+
+
+def test_asking_for_review_is_honoured_where_none_is_needed(world: World) -> None:
+    _set_area(world, _library(world), definition_review="not_required")
+    d = _badge(world)
+    r = _submit(world, d["id"], "colleague")
+    assert r.status_code == 200 and r.json()["state"] == "in_review"

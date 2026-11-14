@@ -86,7 +86,8 @@ institution may require a second member of staff to confirm manual awards.
 To award one badge to many people at once, for example everyone on a volunteering log or a
 workshop register, use **Award a badge to a list**: choose the badge, paste student ID numbers or
 university emails, write one justification, and select **Check the list**. You see who will get
-it, who is not enrolled in the course, who already has it and which entries match nobody. Then
+it, who already has it and which entries match no student in the course (a typo, or someone who
+has not enrolled yet). Then
 select **Award to N learners**.
 
 ## If something goes wrong
