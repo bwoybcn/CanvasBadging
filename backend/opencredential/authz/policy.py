@@ -153,13 +153,19 @@ def _team_allows(
 
 
 def can_edit_definition(db: Session, actor: Actor, definition: AchievementDefinition) -> bool:
-    if actor.user_id == definition.owner_user_id or actor.is_inst_admin:
+    """Course badges: course staff (or the badge's team when badge teams are on) and admins over
+    the course. Owning a course badge gives no rights of its own: an owner who loses their staff
+    role in the course loses access like anyone else. Badges without a course: their owner and
+    department administrators over the issuer."""
+    if actor.is_inst_admin:
         return True
     course = definition_course(db, definition)
     if course is not None:
         if course.badge_teams:
             return _team_allows(db, actor, definition, course, {"editor"})
         return is_course_staff(db, actor, course)
+    if actor.user_id == definition.owner_user_id:
+        return True
     issuer = db.get(Issuer, definition.issuer_id)
     return is_dept_admin_over(db, actor, issuer.org_unit_id if issuer else None)
 
