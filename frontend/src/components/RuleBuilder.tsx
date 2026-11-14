@@ -27,7 +27,7 @@ export const RULE_TYPES: { value: LeafRule["type"]; label: string; hint: string 
     label: "Reach a score on an assignment",
     hint: "Only released (posted) marks count. Missing, excused or unreleased marks stay pending.",
   },
-  { value: "manual_approval", label: "Staff confirm", hint: "A member of staff records that the learner met this." },
+  { value: "manual_approval", label: "Staff confirm", hint: "A member of staff records that the student met this." },
 ];
 
 export function blankRule(type: LeafRule["type"]): LeafRule {
@@ -190,7 +190,7 @@ export function RuleBuilder({
       )}
       <RadioInputGroup
         name="rule-mode"
-        description="A learner earns this badge when they meet"
+        description="A student earns this badge when they meet"
         value={value.mode}
         layout="columns"
         onChange={(_e, v) => onChange({ ...value, mode: v as RuleSet["mode"] })}

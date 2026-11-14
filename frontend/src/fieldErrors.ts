@@ -20,7 +20,7 @@ export interface FieldError {
 
 /** Field names as the screens show them. Anything missing is spelled out from its name. */
 const LABELS: Record<string, string> = {
-  achievement_type: "Credential type",
+  achievement_type: "Badge type",
   alt_text: "Alternative text",
   asset_id: "Artwork",
   assignment_id: "Assignment",
@@ -53,7 +53,8 @@ const LABELS: Record<string, string> = {
   threshold_percent: "Minimum score",
   url: "Web address",
   user_id: "Person",
-  user_ids: "Learners",
+  user_ids: "Students",
+  learner: "Student name",
   validity_days: "Validity in days",
   website_url: "Official website",
 };

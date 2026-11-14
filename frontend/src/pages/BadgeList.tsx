@@ -54,7 +54,7 @@ export function BadgeList() {
       title="Badges"
       actions={
         <Button color="primary" onClick={() => navigate("/badges/new")}>
-          Create micro-credential
+          Create a badge
         </Button>
       }
     >

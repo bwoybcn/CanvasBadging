@@ -89,7 +89,7 @@ def parse_identifiers(raw: list[str]) -> list[str]:
     if len(out) > MAX_IDENTIFIERS:
         raise Invalid(
             "LIST_TOO_LONG",
-            f"Award to at most {MAX_IDENTIFIERS} learners at a time. Split the list.",
+            f"Award to at most {MAX_IDENTIFIERS} students at a time. Split the list.",
         )
     return out
 

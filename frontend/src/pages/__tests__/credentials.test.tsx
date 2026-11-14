@@ -90,10 +90,10 @@ describe("student collection", () => {
     // AppLink renders InstUI Link with a click handler, which InstUI exposes as role "button".
     // A navigation item is a link, never a "button" (W6 screen-reader finding), and marks the
     // page you are on.
-    const nav = await screen.findByRole("link", { name: "My credentials" });
+    const nav = await screen.findByRole("link", { name: "My badges" });
     expect(nav).toHaveAttribute("href", "/me/credentials");
     expect(nav).toHaveAttribute("aria-current", "page");
-    expect(screen.queryByRole("button", { name: "My credentials" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "My badges" })).toBeNull();
   });
 });
 
@@ -111,7 +111,7 @@ describe("credential detail", () => {
     });
     const user = userEvent.setup();
     renderAt("/me/credentials/cr-1");
-    expect(await screen.findByText(/This credential is private/)).toBeInTheDocument();
+    expect(await screen.findByText(/This badge is private/)).toBeInTheDocument();
     expect(screen.getByText(/Verification: Verified/)).toBeInTheDocument();
     expect(await screen.findByText("Not shown")).toBeInTheDocument();
     expect(screen.getByText("Your email address and Canvas login")).toBeInTheDocument();
@@ -124,11 +124,11 @@ describe("credential detail", () => {
     await user.click(screen.getByRole("checkbox", { name: "Show my name on the page" }));
     await user.click(screen.getByRole("button", { name: "Turn on public link" }));
 
-    await waitFor(() => expect(screen.getByText(/This credential is shared/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/This badge is shared/)).toBeInTheDocument());
     const put = calls.find((c) => c.method === "PUT");
     expect(put?.body).toEqual({ show_name: false, show_evidence: false });
     expect(screen.getByRole("link", { name: SHARED.url! })).toBeInTheDocument();
-    expect(screen.getByText(/does not revoke your credential/)).toBeInTheDocument();
+    expect(screen.getByText(/does not revoke your badge/)).toBeInTheDocument();
     const li = screen.getByRole("region", { name: "Add to LinkedIn" });
     expect(within(li).getByRole("link", { name: /Add certification form/ })).toHaveAttribute(
       "href",
@@ -152,7 +152,7 @@ describe("credential detail", () => {
     const user = userEvent.setup();
     renderAt("/me/credentials/cr-1");
     await user.click(await screen.findByRole("button", { name: "Stop sharing" }));
-    await waitFor(() => expect(screen.getByText(/This credential is private/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/This badge is private/)).toBeInTheDocument());
     expect(calls.some((c) => c.method === "DELETE")).toBe(true);
     expect(calls.some((c) => c.url.includes("/revoke"))).toBe(false);
   });

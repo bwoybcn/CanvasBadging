@@ -71,8 +71,8 @@ function PersonalData() {
           </DownloadButton>
           <Alert variant="info" margin="small 0">
             Erasing removes the person's name, email, Canvas identifiers, roles, Canvas progress and eligibility history,
-            cancels awards not yet issued and takes down their public share pages. It does not revoke credentials already
-            issued (they contain no name and the learner may still rely on them). Do that separately if it is also
+            cancels awards not yet issued and takes down their public share pages. It does not revoke badges already
+            issued (they contain no name and the student may still rely on them). Do that separately if it is also
             requested.
           </Alert>
           <TextInput renderLabel="Type ERASE to confirm" value={confirm} onChange={(_e, v) => setConfirm(v)} width="12rem" />
@@ -82,7 +82,7 @@ function PersonalData() {
           {erase.isError && <ErrorAlert error={erase.error} />}
           {erase.data && (
             <Alert variant="success" margin="small 0">
-              Erased. {erase.data.credentials_kept} issued credentials kept; {erase.data.share_links_withdrawn} public share
+              Erased. {erase.data.credentials_kept} issued badges kept; {erase.data.share_links_withdrawn} public share
               links taken down; {erase.data.awards_cancelled} pending awards cancelled.
             </Alert>
           )}
@@ -114,8 +114,8 @@ function RetentionSettings() {
         Retention
       </Heading>
       <Text as="p">
-        Issued credentials, their revocation status and award records are never purged: they are needed for as long as
-        anyone may verify a credential. Retention runs every night.
+        Issued badges, their revocation status and award records are never purged: they are needed for as long as
+        anyone may check a badge. Retention runs every night.
       </Text>
       {(Object.keys(RETENTION_LABELS) as (keyof Retention)[]).map((k) => (
         <NumberInput

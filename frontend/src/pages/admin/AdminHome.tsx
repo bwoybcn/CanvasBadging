@@ -33,7 +33,7 @@ export function AdminHome() {
       {q.data && (
         <>
           <Heading level="h2" margin="0 0 small">
-            Credentials
+            Badges
           </Heading>
           <Flex wrap="wrap">
             <Stat label="Issued" value={q.data.issued} to="/admin/credentials" />

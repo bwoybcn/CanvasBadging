@@ -156,7 +156,7 @@ def set_verification_host(
         raise Conflict(
             "VERIFICATION_HOST_IN_USE",
             "Issuers already sign with did:web identifiers on the current host.",
-            "Changing the host would break verification of credentials already issued. "
+            "Changing the host would break verification of badges already issued. "
             "Plan a migration (new issuers on the new host) instead.",
         )
     previous = inst.verification_host

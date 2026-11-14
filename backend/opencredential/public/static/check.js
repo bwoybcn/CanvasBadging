@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// "Check a credential" page: posts the chosen file to /api/v1/verify and shows the result.
+// "Check a credential file" page: posts the chosen file to /api/v1/verify and shows the result.
 (function () {
   "use strict";
   var form = document.getElementById("check-form");

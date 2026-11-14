@@ -46,8 +46,8 @@ export function Nav() {
     <View as="nav" aria-label="OpenCredential" display="block" padding="small 0" borderWidth="0 0 small 0" margin="0 0 medium">
       <Flex wrap="wrap">
         <NavLink to="/">Home</NavLink>
-        {f.isStudent && <NavLink to="/me/progress">My badges</NavLink>}
-        {f.isStudent && <NavLink to="/me/credentials">My credentials</NavLink>}
+        {f.isStudent && <NavLink to="/me/progress">Badges in my courses</NavLink>}
+        {f.isStudent && <NavLink to="/me/credentials">My badges</NavLink>}
         {f.isStaff && <NavLink to="/badges">Badges</NavLink>}
         {f.isStaff && <NavLink to="/awards">Award badges</NavLink>}
         {f.isReviewer && <NavLink to="/reviews">Review queue</NavLink>}

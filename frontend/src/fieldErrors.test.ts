@@ -18,7 +18,7 @@ describe("naming the field in a refused form", () => {
     expect(fieldLabel("body.primary_colour")).toBe("Main colour");
     expect(fieldLabel("body.alt_text")).toBe("Alternative text");
     expect(fieldLabel("body.justification")).toBe("Justification");
-    expect(fieldLabel("query.learner")).toBe("Learner");
+    expect(fieldLabel("query.learner")).toBe("Student name");
     expect(fieldLabel("body.issuer_id")).toBe("Issuer");
     expect(fieldLabel("body")).toBe("This form");
   });

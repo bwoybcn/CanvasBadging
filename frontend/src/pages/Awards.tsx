@@ -132,7 +132,7 @@ function ManualAward() {
       </Heading>
       <Text as="p">
         Use this when a student has met the outcomes in a way Canvas cannot show. Your justification is kept in the
-        audit record; only evidence you mark as public appears on the credential.
+        audit record; only evidence you mark as public appears on the badge.
       </Text>
       <SimpleSelect renderLabel="Badge" value={badge || undefined} placeholder="Choose a published badge" onChange={(_e, { value }) => { setBadge(String(value)); setLearner(""); }}>
         {(badges.data?.items ?? []).map((b) => (
@@ -162,13 +162,13 @@ function ManualAward() {
         ))}
       </SimpleSelect>
       <LimitedTextArea maxLength={2000} label="Evidence description (optional)" value={narrative} onChange={(e) => setNarrative(e.target.value)} />
-      <Checkbox label="Show this evidence on the public credential" checked={pub} onChange={(e) => setPub(e.target.checked)} />
+      <Checkbox label="Show this evidence on the public badge" checked={pub} onChange={(e) => setPub(e.target.checked)} />
       {award.isError && <ErrorAlert error={award.error} />}
       {award.isSuccess && (
         <Alert variant="success" margin="small 0">
           {award.data.status === "awaiting_confirmation"
             ? "Recorded. A second member of staff must confirm it before it is issued."
-            : "Awarded. The credential will be issued shortly."}
+            : "Awarded. The badge will be issued shortly."}
         </Alert>
       )}
       <Button color="primary" margin="small 0" interaction={ok && !award.isPending ? "enabled" : "disabled"} onClick={() => award.mutate()}>

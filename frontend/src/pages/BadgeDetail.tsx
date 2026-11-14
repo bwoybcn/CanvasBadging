@@ -85,7 +85,7 @@ function PreviewPanel({ id }: { id: string }) {
   return (
     <View as="section" aria-label="Preview" display="block">
       <Alert variant="warning" margin="0 0 medium">
-        <Text weight="bold">{p.data.notice}</Text>. This is how the badge would look. It is not a credential and
+        <Text weight="bold">{p.data.notice}</Text>. This is how the badge would look. It is not a real badge and
         cannot be verified.
       </Alert>
       <Flex gap="medium" alignItems="start">
@@ -417,12 +417,12 @@ export function BadgeDetail() {
           publish:
             def?.effective_award_policy === "manual"
               ? "Published. Award it from Award badges, to one student or to a list of student ID numbers or emails."
-              : "Published. Learners who meet the requirements will be evaluated shortly.",
+              : "Published. Students who meet the requirements will be checked shortly.",
           archive:
-            "Archived. No new awards will be made; credentials already issued stay valid. You can restore the badge from this page.",
+            "Archived. No new awards will be made; badges already issued stay valid. You can restore the badge from this page.",
           restore:
             def?.state === "published"
-              ? "Restored. The badge is live again, and learners who meet the requirements will be evaluated shortly."
+              ? "Restored. The badge is live again, and students who meet the requirements will be checked shortly."
               : "Restored. The published version is live again, and the newer version you were working on is back as a draft.",
           "new-version": "A new draft version was created. The published version stays live until you publish this one.",
         }[kind as "submit"] ?? null,
@@ -461,7 +461,7 @@ export function BadgeDetail() {
       {action.isError && <ErrorAlert error={action.error} />}
       {def.state === "archived" && !notice && (
         <Alert variant="info" margin="0 0 small">
-          This badge is archived: no new awards are made, and credentials already issued stay valid.
+          This badge is archived: no new awards are made, and badges already issued stay valid.
           {def.can_edit || def.can_review ? " Restore it to start awarding again." : ""}
         </Alert>
       )}
@@ -498,7 +498,7 @@ export function BadgeDetail() {
             <ConfirmButton
               label="Archive"
               color="danger"
-              consequence="Archive this badge? No new awards will be made and learners stop seeing it as something to earn. Credentials already issued stay valid. You can restore it later from this page."
+              consequence="Archive this badge? No new awards will be made and students stop seeing it as something to earn. Badges already issued stay valid. You can restore it later from this page."
               confirmLabel="Archive this badge"
               cancelLabel="Keep it live"
               busy={action.isPending}
@@ -516,7 +516,7 @@ export function BadgeDetail() {
           </Button>
         )}
         {def.course_id && def.live_version_id && (
-          <AppLink to={`/courses/${def.course_id}/progress`}>Learner progress for this course</AppLink>
+          <AppLink to={`/courses/${def.course_id}/progress`}>Student progress for this course</AppLink>
         )}
       </Flex>
 
@@ -535,8 +535,8 @@ export function BadgeDetail() {
           <Heading level="h3">Requirements</Heading>
           {def.rules ? (
             <Text as="p">
-              {def.rules.rules.length} requirement(s); learners must meet {def.rules.mode === "ALL" ? "all" : "any one"}{" "}
-              of them. See the preview for the wording learners will see.
+              {def.rules.rules.length} requirement(s); students must meet {def.rules.mode === "ALL" ? "all" : "any one"}{" "}
+              of them. See the preview for the wording students will see.
             </Text>
           ) : (
             <Text as="p">No requirements yet.</Text>

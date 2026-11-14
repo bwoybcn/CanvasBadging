@@ -54,6 +54,15 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- One vocabulary on every screen, message and user guide: **badge** for what a student earns
+  (no more "micro-credential" or "credential"), **student** (no more "learner"), and
+  **credential file** only for the signed file that is downloaded or checked. Renamed with it:
+  **My credentials** is now **My badges**, the progress page **My badges** is now **Badges in
+  my courses**, **Create micro-credential** is **Create a badge**, **Issued credentials** is
+  **Issued badges**, **May issue credentials** is **May issue badges**, the public page
+  **Check a credential** is **Check a credential file**, and the audit category "Credential
+  definitions" is "Badge definitions". The Canvas menu item keeps the name it was registered
+  with (**Micro-Credentials** by default). API paths, codes and fields are unchanged.
 - "Awards to confirm" is now **Award badges**, with three tabs: **Waiting to confirm** (with a
   count), **One student** and **A list of students**. The tab is kept in the address
   (`/awards?tab=student`, `?tab=list`), and what is typed on one tab survives a look at another.

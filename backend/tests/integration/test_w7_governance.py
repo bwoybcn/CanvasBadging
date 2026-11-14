@@ -521,7 +521,7 @@ def test_scenario_8_authorised_admin_revokes(world: World, signer_available: boo
     cats = {e["category"] for e in log}
     assert {
         "Issuer creation and authority",
-        "Credential definitions",
+        "Badge definitions",
         "Definition approval",
         "Publication",
         "Manual awards",

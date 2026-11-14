@@ -739,7 +739,7 @@ export const REVOCATION_REASONS: Record<string, string> = {
   issued_in_error: "Issued in error",
   academic_misconduct: "Academic misconduct",
   requirements_not_met: "Requirements not actually met",
-  learner_request: "The learner asked for it",
+  learner_request: "The student asked for it",
   other: "Other",
 };
 

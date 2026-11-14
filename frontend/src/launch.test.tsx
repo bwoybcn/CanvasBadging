@@ -75,7 +75,7 @@ describe("LTI launch hand-over", () => {
     );
     const ctx = await screen.findByTestId("course-context");
     expect(ctx).toHaveTextContent("Your role: Student");
-    expect(ctx).toHaveTextContent("My badges and progress");
+    expect(ctx).toHaveTextContent("Badges in my courses and my progress");
     expect(ctx).not.toHaveTextContent("Course progress");
   });
 });

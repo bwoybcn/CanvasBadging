@@ -400,12 +400,12 @@ def require_issuing_allowed(db: Session, issuer: Issuer, course: Course | None) 
     if not org_unit_may_issue(db, issuer.org_unit_id):
         raise Forbidden(
             "ISSUING_NOT_ALLOWED",
-            "This issuer belongs to a department that is not allowed to issue credentials.",
+            "This issuer belongs to a department that is not allowed to issue badges.",
         )
     if course is not None and not org_unit_may_issue(db, course.org_unit_id):
         raise Forbidden(
             "ISSUING_NOT_ALLOWED",
-            "This course belongs to a department that is not allowed to issue credentials.",
+            "This course belongs to a department that is not allowed to issue badges.",
         )
 
 

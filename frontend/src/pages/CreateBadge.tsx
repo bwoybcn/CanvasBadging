@@ -500,7 +500,7 @@ export function CreateBadge() {
   const score = hasScoreRule(s.rules);
 
   return (
-    <Page title={editing ? "Edit micro-credential" : "Create micro-credential"}>
+    <Page title={editing ? "Edit badge" : "Create a badge"}>
       <nav aria-label="Steps">
         <List isUnstyled delimiter="none" margin="0 0 medium">
           {STEPS.map((name, i) => (
@@ -641,7 +641,7 @@ export function CreateBadge() {
             ))}
           </RadioInputGroup>
           <SimpleSelect
-            renderLabel="Credential type"
+            renderLabel="Badge type"
             value={f.achievement_type}
             onChange={(_e, { value }) => setF({ achievement_type: String(value) })}
           >
@@ -686,12 +686,12 @@ export function CreateBadge() {
             Add outcome
           </Button>
           <LimitedTextArea maxLength={4000}
-            label="Criteria: what a learner must do, in plain words"
+            label="Criteria: what a student must do, in plain words"
             value={f.criteria_narrative ?? ""}
             onChange={(e) => setF({ criteria_narrative: e.target.value })}
           />
           <LimitedTextArea maxLength={2000}
-            label="Evidence: what the credential records as evidence (optional)"
+            label="Evidence: what the badge records as evidence (optional)"
             value={f.evidence_description}
             onChange={(e) => setF({ evidence_description: e.target.value })}
           />
@@ -769,7 +769,7 @@ export function CreateBadge() {
       {step === 5 && (
         <RadioInputGroup
           name="award-policy"
-          description="When a learner meets the requirements"
+          description="When a student meets the requirements"
           value={f.award_policy}
           onChange={(_e, v) => setF({ award_policy: v })}
         >

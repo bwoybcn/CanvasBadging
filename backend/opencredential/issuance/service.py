@@ -235,7 +235,9 @@ def _prepare(
     if not version.frozen:
         raise IssuanceError("the achievement version is not published")
     if not user.email:
-        raise IssuanceError("the learner has no email address to identify them in the credential")
+        raise IssuanceError(
+            "the student has no email address to identify them in the credential file"
+        )
     base_url(institution, settings)  # raises for unusable verification hosts in production
 
     sl, index = status_service.allocate(db, issuer)

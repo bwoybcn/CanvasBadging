@@ -44,7 +44,7 @@ export function Home() {
       {user.launch_course && <CourseContext course={user.launch_course} />}
       {user.institution.is_demo && (
         <Alert variant="info" margin="small 0">
-          You are using demonstration data. Nothing here is a real credential.
+          You are using demonstration data. Nothing here is a real badge.
         </Alert>
       )}
       <Heading level="h2" margin="medium 0 small">
@@ -59,8 +59,8 @@ export function Home() {
         ))}
       </List>
       <Text as="p">
-        Use the links above to see your badges and credentials, create and review micro-credentials, or confirm
-        awards. Students can download, share and add their credentials to LinkedIn from "My credentials".
+        Use the links above to see badges and progress, create and review badges, or award them. Students can
+        download, share and add their badges to LinkedIn from "My badges".
       </Text>
       {user.session_method === "dev" && (
         <Button margin="medium 0 0" onClick={() => setToken(null)}>
@@ -97,7 +97,7 @@ function CourseContext({ course }: { course: NonNullable<Me["launch_course"]> })
           <ActivateCourse courseId={course.id} />
         ) : (
           <Alert variant="info" margin="small 0">
-            Course staff have not switched on micro-credentials for this course yet.
+            Course staff have not switched on badges for this course yet.
           </Alert>
         ))}
       {course.view === "lecturer" && course.status === "active" && <BadgeTeamsToggle courseId={course.id} />}
@@ -109,7 +109,7 @@ function CourseContext({ course }: { course: NonNullable<Me["launch_course"]> })
         </Text>
       ) : (
         <Text as="p">
-          <AppLink to="/me/progress">My badges and progress</AppLink>
+          <AppLink to="/me/progress">Badges in my courses and my progress</AppLink>
         </Text>
       )}
     </View>
@@ -127,13 +127,13 @@ function ActivateCourse({ courseId }: { courseId: string }) {
   return (
     <Alert variant="info" margin="small 0">
       <Text as="p">
-        Micro-credentials are not switched on for this course yet. Switch them on to read students&apos; progress from
+        Badges are not switched on for this course yet. Switch them on to read students&apos; progress from
         Canvas now and then regularly (every 30 minutes for badges based on Canvas activity; badges that staff award
-        only need the class list, refreshed every 6 hours). You can switch them off again at any time; issued credentials are not
+        only need the class list, refreshed every 6 hours). You can switch them off again at any time; issued badges are not
         affected.
       </Text>
       <Button color="primary" onClick={() => activate.mutate()} interaction={activate.isPending ? "disabled" : "enabled"}>
-        Switch on micro-credentials for this course
+        Switch on badges for this course
       </Button>
       {activate.isError && (
         <Text as="p" color="danger">

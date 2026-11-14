@@ -22,7 +22,7 @@ from opencredential.db.models import AuditEvent, Membership, User
 #: Spec §10.6 categories → the action names that implement them.
 CATEGORIES: dict[str, tuple[str, ...]] = {
     "Issuer creation and authority": ("issuer.",),
-    "Credential definitions": (
+    "Badge definitions": (
         "achievement.create",
         "achievement.edit",
         "achievement.submit",

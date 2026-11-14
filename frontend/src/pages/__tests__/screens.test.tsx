@@ -81,7 +81,7 @@ describe("Create Micro-Credential wizard", () => {
   it("blocks a step until its problems are fixed", async () => {
     stubApi(COURSE_ROUTES);
     renderAt("/badges/new");
-    expect(await screen.findByRole("heading", { name: "Create micro-credential" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Create a badge" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Step 1 of 7: Course and issuer/ })).toBeInTheDocument();
     // Single course and single issuer are preselected, so step 1 passes.
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -132,7 +132,7 @@ describe("Create Micro-Credential wizard", () => {
       "PUT /api/v1/achievements/d-1/rules": definition(),
     });
     renderAt("/badges/d-1/edit");
-    expect(await screen.findByRole("heading", { name: "Edit micro-credential" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Edit badge" })).toBeInTheDocument();
     await screen.findByDisplayValue("Academic Writing Foundations").catch(() => null);
     for (let i = 0; i < 6; i++) {
       await userEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -334,7 +334,7 @@ describe("Create Micro-Credential wizard", () => {
       "PATCH /api/v1/achievements/d-1": definition(),
     });
     const view = renderAt("/badges/d-1/edit");
-    await screen.findByRole("heading", { name: "Edit micro-credential" });
+    await screen.findByRole("heading", { name: "Edit badge" });
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     const title = await screen.findByLabelText("Title");
     await userEvent.type(title, " (2027)");
@@ -349,7 +349,7 @@ describe("Create Micro-Credential wizard", () => {
   it("does not touch a draft that was opened and left unchanged", async () => {
     const calls = stubApi({ ...COURSE_ROUTES, "GET /api/v1/achievements/d-1": definition() });
     const view = renderAt("/badges/d-1/edit");
-    await screen.findByRole("heading", { name: "Edit micro-credential" });
+    await screen.findByRole("heading", { name: "Edit badge" });
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     await screen.findByRole("heading", { name: /Step 2 of 7/ });
     view.unmount();
@@ -407,7 +407,7 @@ describe("badge page", () => {
     renderAt("/badges/d-1");
     await userEvent.click(await screen.findByRole("button", { name: "Archive" }));
     // The first press only explains: nothing is archived yet.
-    expect(screen.getByRole("alert")).toHaveTextContent(/No new awards will be made .* Credentials already issued stay valid/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/No new awards will be made .* Badges already issued stay valid/);
     expect(posts()).toEqual([]);
     await userEvent.click(screen.getByRole("button", { name: "Keep it live" }));
     expect(posts()).toEqual([]);
@@ -782,7 +782,7 @@ describe("awards and progress", () => {
 });
 
 describe("course activation", () => {
-  it("lets a lecturer switch micro-credentials on from the launch page", async () => {
+  it("lets a lecturer switch badges on from the launch page", async () => {
     let status = "inactive";
     const launchCourse = () => ({
       id: "c-1",
@@ -801,11 +801,11 @@ describe("course activation", () => {
       },
     });
     renderAt("/");
-    const button = await screen.findByRole("button", { name: "Switch on micro-credentials for this course" });
+    const button = await screen.findByRole("button", { name: "Switch on badges for this course" });
     await userEvent.click(button);
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/activate"))).toBe(true));
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Switch on micro-credentials for this course" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Switch on badges for this course" })).toBeNull(),
     );
   });
 });
@@ -851,7 +851,7 @@ describe("course progress: history and revocation requests", () => {
       "POST /api/v1/credentials/cred-1/revocation-requests": { id: "rr-1", status: "pending" },
     });
     renderAt("/courses/c-1/progress");
-    const history = await screen.findByRole("table", { name: /Credentials issued in Study Skills 101/ });
+    const history = await screen.findByRole("table", { name: /Badges issued in Study Skills 101/ });
     expect(within(history).getByText("Seminar Skills (version 1)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Download as CSV" })).toBeTruthy();
     await userEvent.click(await screen.findByRole("button", { name: "Request revocation for Sam Student" }));

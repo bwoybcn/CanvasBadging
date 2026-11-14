@@ -232,7 +232,7 @@ def authorise(
     if not authz.org_unit_may_issue(db, issuer.org_unit_id):
         raise Conflict(
             "ISSUING_NOT_ALLOWED",
-            "This issuer's department is not allowed to issue credentials. Change that first.",
+            "This issuer's department is not allowed to issue badges. Change that first.",
         )
     if issuer.status == "active":
         raise Conflict("INVALID_STATE", "This issuer is already authorised.")

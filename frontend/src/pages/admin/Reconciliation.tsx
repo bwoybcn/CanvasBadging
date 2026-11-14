@@ -35,13 +35,13 @@ export function Reconciliation() {
             Awards not yet issued
           </Heading>
           {q.data.awards_not_issued.length === 0 ? (
-            <Text as="p">Nothing is stuck. Every award older than ten minutes has its credential.</Text>
+            <Text as="p">Nothing is stuck. Every award older than ten minutes has been issued.</Text>
           ) : (
             <TableScroll>
             <Table caption="Awards not yet issued">
               <Table.Head>
                 <Table.Row>
-                  <Table.ColHeader id="r-who">Learner</Table.ColHeader>
+                  <Table.ColHeader id="r-who">Student</Table.ColHeader>
                   <Table.ColHeader id="r-badge">Badge</Table.ColHeader>
                   <Table.ColHeader id="r-when">Awarded</Table.ColHeader>
                   <Table.ColHeader id="r-prob">Problem</Table.ColHeader>
@@ -99,7 +99,7 @@ function AwardRow({ a, onDone }: { a: Recon["awards_not_issued"][number]; onDone
   const { token } = useAuth();
   const [reason, setReason] = useState("");
   const [cancelling, setCancelling] = useState(false);
-  const who = a.learner_name ?? "Learner";
+  const who = a.learner_name ?? "Student";
   const act = useMutation({
     mutationFn: (kind: "requeue" | "cancel") =>
       apiSend(`/api/v1/admin/reconciliation/awards/${a.decision_id}/${kind}`, token, "POST", kind === "cancel" ? { reason } : undefined),

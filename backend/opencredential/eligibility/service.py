@@ -330,7 +330,7 @@ def require_award_staff(db: Session, actor: authz.Actor, definition: Achievement
 def _require_learner(db: Session, definition: AchievementDefinition, user_id: uuid.UUID) -> User:
     user = db.get(User, user_id)
     if user is None or user.status != "active":
-        raise NotFound("LEARNER_NOT_FOUND", "No such learner.")
+        raise NotFound("LEARNER_NOT_FOUND", "No such student.")
     if definition.course_id is not None and user_id not in course_students(
         db, definition.course_id
     ):
@@ -432,7 +432,7 @@ def confirm_award(
         if record.outcome != MET:
             raise Conflict(
                 "ELIGIBILITY_CHANGED",
-                "The learner no longer meets the requirements on current Canvas data.",
+                "The student no longer meets the requirements on current Canvas data.",
                 "; ".join(
                     r["message"] for r in record.detail.get("rules", []) if r["outcome"] != MET
                 ),
@@ -547,9 +547,9 @@ def make_manual_award(
         if existing.status == "awaiting_confirmation":
             raise Conflict(
                 "AWARD_PENDING_CONFIRMATION",
-                "This learner already has an award waiting for confirmation. Confirm that instead.",
+                "This student already has an award waiting for confirmation. Confirm that instead.",
             )
-        raise Conflict("ALREADY_AWARDED", "This learner already has this badge.")
+        raise Conflict("ALREADY_AWARDED", "This student already has this badge.")
     # Each earlier rejected manual award is an earlier attempt: a corrected award after a
     # rejection needs a key of its own, or it would collide with the rejected one.
     rejected = (
@@ -583,7 +583,7 @@ def make_manual_award(
     if not created:
         if decision.kind == "manual" and decision.justification == justification:
             return decision, False  # a concurrent replay of the same request won the race
-        raise Conflict("ALREADY_AWARDED", "This learner already has this badge.")
+        raise Conflict("ALREADY_AWARDED", "This student already has this badge.")
     audit.record(
         db,
         action="award.manual",

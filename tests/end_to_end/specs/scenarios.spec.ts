@@ -51,7 +51,7 @@ async function verifyFileAnonymously(page: Page, json: string): Promise<string> 
   const p = await ctx.newPage();
   await p.goto("/verify");
   await p.locator('input[type="file"]').setInputFiles({ name: "credential.json", mimeType: "application/json", buffer: Buffer.from(json) });
-  await p.getByRole("button", { name: "Check credential" }).click();
+  await p.getByRole("button", { name: "Check the file" }).click();
   const out = p.getByRole("status");
   await expect(out.getByRole("heading", { name: /^Result:/ })).toBeVisible({ timeout: 20_000 });
   const text = await out.getByRole("heading", { name: /^Result:/ }).innerText();
@@ -299,7 +299,7 @@ test("E10 unauthorised access: another learner's credential is not disclosed", a
   const intruder = others[others.length - 1];
   await signIn(page, intruder);
   await page.goto(`/app/me/credentials/${state.credentialId}`);
-  await expect(page.getByText(/no such credential|not found/i).first()).toBeVisible();
+  await expect(page.getByText(/no such badge|not found/i).first()).toBeVisible();
   await expect(page.locator("body")).not.toContainText(state.student!);
   const api = await Api.as(page.request, intruder);
   for (const path of [`/api/v1/credentials/${state.credentialId}`, `/api/v1/credentials/${state.credentialId}/export`]) {
