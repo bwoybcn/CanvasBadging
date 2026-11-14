@@ -40,6 +40,10 @@ PUBLIC_API = {
 # refresh of their progress from Canvas (spec §4.4). Answers 202 or 429, never more.
 STUDENT_OWN_COURSE = {("POST", "/api/v1/courses/{course_id}/sync")}
 
+# Anyone signed in may swap their own valid session token for a fresh one. It changes nothing
+# but their own session (limits are covered in test_w8_session_renewal.py).
+OWN_SESSION = {("POST", "/api/v1/session/renew")}
+
 # Mutating routes a student may legitimately call. With another learner's ids they must still
 # answer 404 (checked below); with their own they succeed.
 STUDENT_MAY_CALL = {
@@ -162,6 +166,9 @@ def test_student_cannot_change_anything_that_is_not_theirs(two_worlds: dict[str,
         if method not in MUTATING or (method, path) == ("POST", "/api/v1/verify"):
             continue
         r = _call(a.client, method, _fill(path, ids), a.h("s1"))
+        if (method, path) in OWN_SESSION:
+            assert r.status_code == 200, (path, r.status_code)
+            continue
         if (method, path) in STUDENT_OWN_COURSE:
             assert r.status_code in (202, 429), (path, r.status_code)
             continue

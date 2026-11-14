@@ -9,7 +9,7 @@ design reasoning is in the [threat model](threat-model.md). The reporting policy
 
 | Control (spec §15.3) | How | Evidence |
 |---|---|---|
-| Authentication | LTI 1.3 launch only (development login is absent in production). The result is a 30-minute bearer token kept in the tab's `sessionStorage`, with no cookies, so it works with third-party cookies blocked. | `test_w3_lti_launch.py`, `unit/test_sessions.py`, `test_dev_login_routes_absent_in_production` |
+| Authentication | LTI 1.3 launch only (development login is absent in production). The result is a 30-minute bearer token kept in the tab's `sessionStorage`, with no cookies, so it works with third-party cookies blocked. While the person is working the token is renewed, for at most 8 hours from the launch; an idle tab signs out after 30 minutes, and an erased or deactivated account cannot renew. | `test_w3_lti_launch.py`, `unit/test_sessions.py`, `test_w8_session_renewal.py`, `test_dev_login_routes_absent_in_production` |
 | CSRF | There is no cookie-based API session, so a forged cross-site request carries no credentials. The LTI login and OAuth flows use single-use `state`. | `test_w3_lti_launch.py`, `test_forged_oauth_state_is_refused` |
 | XSS | React escapes output. Server-rendered public pages escape all user text. The SPA has a strict CSP (`script-src 'self'`, `object-src 'none'`). | `test_script_in_badge_text_is_escaped_on_public_pages`, `test_security_headers` |
 | SQL injection | Only SQLAlchemy bound parameters are used. | `test_injection_strings_in_queries_are_inert` |

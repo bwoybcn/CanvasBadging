@@ -57,7 +57,10 @@ staff routes directly.
 
 **Controls.** Roles come only from the validated LTI roles claim and from delegated memberships
 stored on the server. Request bodies never carry authority. Session tokens are HS256 JWTs signed
-with `OC_SECRET_KEY`. They expire after 30 minutes and are checked on every request. Every
+with `OC_SECRET_KEY`. They expire after 30 minutes and are checked on every request. A valid
+token can be exchanged for a fresh one (`POST /api/v1/session/renew`) for up to 8 hours after
+the Canvas launch (`OC_SESSION_MAX_MINUTES`); the launch time travels in the token and cannot
+be moved, and renewal re-checks that the account is still active. Every
 route declares its permission check in `authz/policy.py`. Delegation cannot grant a role above
 the granter's own scope (`can_grant`). Expired memberships stop counting.
 
@@ -70,7 +73,10 @@ the granter's own scope (`can_grant`). Expired memberships stop counting.
 `test_tampered_session_token_is_refused`, `test_student_cannot_change_anything_that_is_not_theirs`
 (every mutating route as a student) and `test_student_reads_only_their_own_records`.
 
-**Residual risk.** A stolen session token is valid until it expires (at most 30 minutes). The
+**Residual risk.** A stolen session token is valid until it expires (at most 30 minutes), and
+whoever holds it can renew it until the session limit (8 hours from the launch by default).
+Renewal does not cancel the earlier token, which runs out on its own time. Set
+`OC_SESSION_MAX_MINUTES` to the session lifetime to switch renewal off. The
 token sits in `sessionStorage`, so an XSS bug could read it. The CSP and output escaping
 (threat 9) are the defence there.
 

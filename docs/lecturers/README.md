@@ -21,6 +21,12 @@ OpenCredential only reads Canvas. It never changes marks, submissions or modules
 Choose **Badges → Create micro-credential**. The wizard has seven steps. You cannot move on
 from a step until its problems are fixed, and each problem is explained.
 
+Your work is saved as a draft as you go: from step 2 onwards, each time you choose **Next** or
+**Back**, and when you leave the wizard. A line under the buttons says when it was last saved.
+If you are interrupted, or your session ends, open **Badges**, choose the draft and then
+**Edit draft** to carry on. Once the draft is saved its course and issuer are fixed; to change
+them, delete the draft and start again.
+
 | Step | What you enter | Tips |
 |---|---|---|
 | 1. Course and issuer | The course and the issuer | Only issuers delegated to your course appear |
@@ -29,7 +35,7 @@ from a step until its problems are fixed, and each problem is explained.
 | 4. Artwork | Upload a PNG or SVG, or build one from a template, and write its alt text | Unsafe SVG content is removed. Alt text is required. |
 | 5. Requirements | What a student must do: complete a module, complete several modules, submit an assignment, reach a minimum score, or have a lecturer confirm. Combine them with **all** or **any**. | Modules and assignments are picked from your Canvas course. A score counts only once the mark is **released** in Canvas. |
 | 6. Awarding | Automatic, or a lecturer confirms each award | Your institution may require confirmation for badges that use marks |
-| 7. Check and save | A summary of everything | **Save draft** keeps it; you can come back later |
+| 7. Check and save | A summary of everything | **Save draft** keeps your last changes and opens the badge page |
 
 ### Preview
 

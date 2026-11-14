@@ -32,7 +32,7 @@ Gary's answers of 13 Nov 2026 are recorded as decided. Everything else has a wor
 | Q13 | Who can revoke | inst_admin always; dept_admin within scope if policy allows; lecturers request only | UoL |
 | Q14 | Manual award second approval | Off by default, institution toggle | UoL |
 | Q15 | Course activation | Required (placement `default: disabled` + app activation by lecturer) | UoL |
-| Q16 | Session lifetime inside Canvas | 30 min idle, 8 h max, renewed by relaunch | — |
+| Q16 | Session lifetime inside Canvas | 30 min idle, 8 h max; renewed while the person is active, then by relaunch | — |
 | Q17 | Public page indexing | `noindex` always in MVP, even when shared (sharing ≠ discoverable) | Gary |
 | Q18 | Share link expiry | No expiry. The student can revoke at any time | — |
 | Q19 | Retention defaults | Audit 7 y; LMS snapshots 1 y after course end; launch state 10 min; failed jobs 90 d; credentials kept for as long as verification is offered | UoL records management |

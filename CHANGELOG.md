@@ -44,6 +44,16 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- The create-badge wizard saves as it goes. The draft is created when the author leaves step 2
+  ("About the badge") and saved again on each **Next** or **Back** and on leaving the wizard,
+  so a time-out or a closed tab costs at most the step in hand. A line under the buttons says
+  when the draft was last saved. Once the draft exists its course, issuer and template are
+  fixed.
+- Sessions stay alive while someone is working. A session still ends after 30 idle minutes
+  (`OC_SESSION_TTL_MINUTES`), but typing or clicking renews it
+  (`POST /api/v1/session/renew`) for up to 8 hours after the Canvas launch
+  (`OC_SESSION_MAX_MINUTES`, new). When a session does end, every screen now says so in plain
+  words and says to open the tool from Canvas again.
 - "Areas may set review less strictly" (`areas_may_relax_review`) is now off by default:
   faculties, departments and services can only make review stricter until an institution
   administrator opts in. Institutions that already saved the setting keep their choice.

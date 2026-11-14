@@ -149,6 +149,137 @@ describe("Create Micro-Credential wizard", () => {
     expect(put.mode).toBe("ALL");
     expect(put.rules[0].module_id).toBe("m1");
   });
+
+  /** Fills "About the badge" on a new badge and leaves the wizard on that step. */
+  async function startNewBadge() {
+    renderAt("/badges/new");
+    await screen.findByRole("heading", { name: /Step 1 of 7/ });
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 2 of 7/ });
+    await userEvent.type(screen.getByLabelText("Title"), "Lab Safety");
+    await userEvent.type(screen.getByLabelText(/Short description/), "Works safely in a teaching lab.");
+    await userEvent.click(screen.getByLabelText("Category"));
+    await userEvent.click(await screen.findByRole("option", { name: "Completion" }));
+  }
+  const writes = (calls: { method: string; url: string }[]) =>
+    calls.filter((c) => c.method !== "GET").map((c) => `${c.method} ${c.url}`);
+
+  it("saves a new badge as a draft from step 2 and keeps saving on each Next", async () => {
+    const draft = definition({ id: "d-new" });
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "POST /api/v1/achievements": draft,
+      "PATCH /api/v1/achievements/d-new": draft,
+    });
+    await startNewBadge();
+    // Nothing is saved for step 1 alone: there is nothing worth keeping yet.
+    expect(writes(calls)).toEqual([]);
+    expect(screen.getByTestId("draft-status")).toHaveTextContent(/saved as a draft each time you choose Next/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 3 of 7/ });
+    expect(writes(calls)).toEqual(["POST /api/v1/achievements"]);
+    const created = calls.find((c) => c.method === "POST")!.body as {
+      issuer_id: string;
+      course_id: string;
+      rules: unknown;
+      fields: Record<string, unknown>;
+    };
+    expect(created.issuer_id).toBe("iss-1");
+    expect(created.course_id).toBe("c-1");
+    expect(created.rules).toBeNull();
+    expect(created.fields.title).toBe("Lab Safety");
+    expect(screen.getByTestId("draft-status")).toHaveTextContent(/Draft saved at .* come back to it from Badges/);
+
+    await userEvent.type(screen.getByLabelText("Learning outcome 1"), "Handle reagents safely");
+    await userEvent.type(screen.getByLabelText(/Criteria/), "Pass the lab induction.");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 4 of 7/ });
+    expect(writes(calls)).toEqual(["POST /api/v1/achievements", "PATCH /api/v1/achievements/d-new"]);
+    const patch = calls.find((c) => c.method === "PATCH")!.body as Record<string, unknown>;
+    expect(patch.learning_outcomes).toEqual(["Handle reagents safely"]);
+    expect(patch.criteria_narrative).toBe("Pass the lab induction.");
+
+    // A step with no changes is not saved again, and going back does not create a second draft.
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 5 of 7/ });
+    for (let back = 4; back >= 1; back--) {
+      await userEvent.click(screen.getByRole("button", { name: "Back" }));
+      await screen.findByRole("heading", { name: new RegExp(`Step ${back} of 7`) });
+    }
+    expect(writes(calls)).toHaveLength(2);
+    // The draft belongs to its course and issuer now, so step 1 can no longer change them.
+    expect(screen.getByText(/course, issuer and template are fixed now that your draft is saved/)).toBeInTheDocument();
+  });
+
+  it("stays on the step and says why when the draft cannot be saved", async () => {
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "POST /api/v1/achievements": () =>
+        new Response(
+          JSON.stringify({ status: 403, code: "FORBIDDEN", title: "Forbidden", detail: "You cannot create badges for this issuer." }),
+          { status: 403, headers: { "content-type": "application/problem+json" } },
+        ),
+    });
+    await startNewBadge();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("You cannot create badges for this issuer.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Step 2 of 7/ })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Lab Safety")).toBeInTheDocument();
+    expect(writes(calls)).toEqual(["POST /api/v1/achievements"]);
+  });
+
+  it("tells the author their draft is safe when the session ends part-way through", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "POST /api/v1/achievements": definition({ id: "d-new" }),
+      "PATCH /api/v1/achievements/d-new": () =>
+        new Response(JSON.stringify({ status: 401, code: "SESSION_INVALID", title: "Your session has expired or is invalid" }), {
+          status: 401,
+          headers: { "content-type": "application/problem+json" },
+        }),
+    });
+    await startNewBadge();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 3 of 7/ });
+    await userEvent.type(screen.getByLabelText("Learning outcome 1"), "Handle reagents safely");
+    await userEvent.type(screen.getByLabelText(/Criteria/), "Pass the lab induction.");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    const alert = await screen.findByText(/Your session has ended/);
+    expect(alert).toHaveTextContent(/Open Micro-Credentials from the Canvas course menu again/);
+    expect(alert).toHaveTextContent(/saved as a draft: you will find it under Badges/);
+    expect(screen.getByRole("heading", { name: /Step 3 of 7/ })).toBeInTheDocument();
+  });
+
+  it("keeps the step in hand when the author leaves the wizard", async () => {
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition(),
+      "PATCH /api/v1/achievements/d-1": definition(),
+    });
+    const view = renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit micro-credential" });
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    const title = await screen.findByLabelText("Title");
+    await userEvent.type(title, " (2027)");
+    expect(writes(calls)).toEqual([]);
+    view.unmount();
+    await waitFor(() => expect(writes(calls)).toEqual(["PATCH /api/v1/achievements/d-1"]));
+    expect((calls.find((c) => c.method === "PATCH")!.body as { title: string }).title).toBe(
+      "Academic Writing Foundations (2027)",
+    );
+  });
+
+  it("does not touch a draft that was opened and left unchanged", async () => {
+    const calls = stubApi({ ...COURSE_ROUTES, "GET /api/v1/achievements/d-1": definition() });
+    const view = renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit micro-credential" });
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 2 of 7/ });
+    view.unmount();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(writes(calls)).toEqual([]);
+  });
 });
 
 describe("badge page", () => {

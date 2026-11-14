@@ -40,6 +40,9 @@ class Settings(BaseSettings):
 
     secret_key: SecretStr = SecretStr(DEV_SECRET_KEY)
     session_ttl_minutes: int = Field(default=30, ge=5, le=240)
+    #: The longest a session may be kept alive by renewal, counted from the Canvas launch. A
+    #: value at or below ``session_ttl_minutes`` switches renewal off.
+    session_max_minutes: int = Field(default=480, ge=5, le=1440)
 
     signer_url: str = "http://localhost:8790"
     signer_shared_secret: SecretStr = SecretStr(DEV_SIGNER_SHARED_SECRET)
