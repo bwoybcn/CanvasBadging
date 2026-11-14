@@ -102,7 +102,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           <RadioInput value="automatic" label="Award automatically when the released mark meets the threshold" />
         </RadioInputGroup>
         <Checkbox
-          label="Always require lecturer confirmation for score-based badges, even if the lecturer chose automatic"
+          label="Always require staff confirmation for score-based badges, even if the badge author chose automatic"
           checked={p.score_rules_force_confirmation}
           onChange={(e) => set({ score_rules_force_confirmation: e.target.checked })}
         />
@@ -151,7 +151,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           onChange={(e) => set({ dept_admins_may_delegate: e.target.checked })}
         />
         <Checkbox
-          label="Courses take part only after a lecturer switches micro-credentials on"
+          label="Courses take part only after course staff switch micro-credentials on"
           checked={p.course_activation_required}
           onChange={(e) => set({ course_activation_required: e.target.checked })}
         />

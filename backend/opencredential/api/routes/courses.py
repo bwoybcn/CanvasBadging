@@ -196,7 +196,7 @@ def _activation_course(db: TenantDb, actor: authz.Actor, course_id: uuid.UUID) -
         or actor.is_inst_admin
         or authz.is_dept_admin_over(db, actor, course.org_unit_id)
     ):
-        raise Forbidden("FORBIDDEN", "Only a lecturer or an administrator can change this.")
+        raise Forbidden("FORBIDDEN", "Only course staff or an administrator can change this.")
     return course
 
 

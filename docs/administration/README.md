@@ -55,6 +55,9 @@ course in its department so department administrators and templates apply to it.
 Badges that are not tied to a module (volunteering, library workshops, CPD) live in a Canvas
 "recognition course" per provider or scheme, for example **Library Skills** or **WP
 Volunteers**, placed in the provider's sub-account so its issuer and review settings apply.
+Create the provider as an org unit of kind **service** (or faculty for a faculty's own
+scheme) and put the course in it. Authors pick **Start from a badge template** on the first
+step of the create wizard to use one of the ready-made templates.
 Students join through a self-enrolment link or an SIS feed.
 
 Many staff often share such a course. Switch on **Badge teams** (course home page in

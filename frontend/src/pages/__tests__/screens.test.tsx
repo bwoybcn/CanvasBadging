@@ -92,6 +92,38 @@ describe("Create Micro-Credential wizard", () => {
     expect(screen.getByRole("heading", { name: /Step 2 of 7/ })).toBeInTheDocument();
   });
 
+  it("starts from a badge template and asks the author to replace its placeholders", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/templates?course_id=c-1": [
+        {
+          id: "t-vol",
+          name: "Volunteering hours",
+          description: "Recognises volunteering hours.",
+          org_unit_id: null,
+          org_unit_name: null,
+          status: "active",
+          defaults: {
+            title: "[Scheme name] Volunteer: [10] hours",
+            short_description: "Completed [10] hours of volunteering.",
+            category: "Completion",
+            achievement_type: "Badge",
+            demonstration_kind: "completing",
+            award_policy: "manual",
+          },
+        },
+      ],
+    });
+    renderAt("/badges/new");
+    await userEvent.click(await screen.findByLabelText("Start from a badge template (optional)"));
+    await userEvent.click(await screen.findByRole("option", { name: "Volunteering hours" }));
+    expect(await screen.findByText(/Replace anything in \[square brackets\]/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByDisplayValue("[Scheme name] Volunteer: [10] hours")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText("Replace the template text in [square brackets] with your own details.")).toBeInTheDocument();
+  });
+
   it("edits a draft through every step and saves fields and rules", async () => {
     const calls = stubApi({
       ...COURSE_ROUTES,

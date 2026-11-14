@@ -167,7 +167,7 @@ def describe(rule: Any, names: dict[str, str] | None = None) -> str:
         pct = f"{rule.threshold_percent:g}"
         return f"Score at least {pct}% in “{n(rule.assignment_id, 'assignment')}” (released mark)"
     if isinstance(rule, ManualApproval):
-        return "Confirmation by your lecturer" + (
+        return "Confirmation by course staff" + (
             f": {rule.instructions}" if rule.instructions else ""
         )
     if isinstance(rule, Group):

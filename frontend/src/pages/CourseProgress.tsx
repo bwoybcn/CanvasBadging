@@ -45,10 +45,10 @@ export function cellText(outcome: string | null, decision: string | null, codes:
 function manualRules(rules: Rule[]): { id: string; text: string }[] {
   const out: { id: string; text: string }[] = [];
   for (const r of rules) {
-    if (r.type === "manual_approval" && r.id) out.push({ id: r.id, text: r.instructions || "Lecturer confirms" });
+    if (r.type === "manual_approval" && r.id) out.push({ id: r.id, text: r.instructions || "Staff confirm" });
     if (r.type === "group")
       for (const c of r.rules)
-        if (c.type === "manual_approval" && c.id) out.push({ id: c.id, text: c.instructions || "Lecturer confirms" });
+        if (c.type === "manual_approval" && c.id) out.push({ id: c.id, text: c.instructions || "Staff confirm" });
   }
   return out;
 }
@@ -93,7 +93,7 @@ function ApprovalModal({
     <Modal open={open} onDismiss={onClose} label={`Confirm requirement for ${learner}`} size="small">
       <Modal.Body>
         {rules.isPending && <Loading what="requirements" />}
-        {items.length === 0 && !rules.isPending && <Text>This badge has no lecturer-confirmed requirements.</Text>}
+        {items.length === 0 && !rules.isPending && <Text>This badge has no staff-confirmed requirements.</Text>}
         <TextInput renderLabel="Note (optional)" value={note} onChange={(_e, v) => setNote(v)} />
         {items.map((r) => (
           <View key={r.id} as="div" margin="small 0" display="block">
@@ -167,7 +167,7 @@ function RevocationRequestModal({ credentialId, learner, badge, onClose }: { cre
   );
 }
 
-const KIND_LABELS: Record<string, string> = { automatic: "Automatic", confirmed: "Lecturer-confirmed", manual: "Manual" };
+const KIND_LABELS: Record<string, string> = { automatic: "Automatic", confirmed: "Staff-confirmed", manual: "Manual" };
 
 /** Award history for course staff (spec §2.2): what was issued here, and a CSV of it. */
 function IssuedInCourse({ courseId, title }: { courseId: string; title: string }) {

@@ -27,6 +27,7 @@ import {
   problemText,
   type ArtworkTemplate,
   type Asset,
+  type BadgeTemplate,
   type CanvasAssignment,
   type CanvasModule,
   type Catalogue,
@@ -56,6 +57,7 @@ const STAFF_COURSE_ROLES = new Set(["lecturer", "course_admin", "admin"]);
 interface FormState {
   course_id: string;
   issuer_id: string;
+  template_id?: string; // unset or "" = start from scratch
   fields: Required<Pick<DraftFields, "title" | "short_description" | "description" | "criteria_narrative">> & {
     category: string;
     achievement_type: string;
@@ -73,6 +75,7 @@ interface FormState {
 const EMPTY: FormState = {
   course_id: "",
   issuer_id: "",
+  template_id: "",
   fields: {
     title: "",
     short_description: "",
@@ -96,6 +99,7 @@ function fromDefinition(d: Definition): FormState {
   return {
     course_id: d.course_id ?? "",
     issuer_id: d.issuer.id ?? "",
+    template_id: "",
     fields: {
       title: v.title,
       short_description: v.short_description,
@@ -112,6 +116,32 @@ function fromDefinition(d: Definition): FormState {
       award_policy: v.award_policy ?? "",
     },
     rules: d.rules ?? { mode: "ALL", rules: [] },
+  };
+}
+
+/** Fills the form from a badge template's defaults, so the author sees (and replaces) its wording. */
+export function fromTemplate(t: BadgeTemplate, current: FormState): FormState {
+  const d = t.defaults as Partial<DraftFields> & Record<string, unknown>;
+  const str = (k: keyof FormState["fields"], v: unknown) => (typeof v === "string" ? { [k]: v } : {});
+  return {
+    ...current,
+    template_id: t.id,
+    fields: {
+      ...EMPTY.fields,
+      ...str("title", d.title),
+      ...str("short_description", d.short_description),
+      ...str("description", d.description),
+      ...str("criteria_narrative", d.criteria_narrative),
+      ...str("category", d.category),
+      ...str("achievement_type", d.achievement_type),
+      ...str("demonstration_kind", d.demonstration_kind),
+      ...str("evidence_description", d.evidence_description),
+      ...str("award_policy", d.award_policy),
+      validity_days: typeof d.validity_days === "number" ? String(d.validity_days) : "",
+      learning_outcomes: Array.isArray(d.learning_outcomes) && d.learning_outcomes.length ? d.learning_outcomes : [""],
+      skills: Array.isArray(d.skills) ? d.skills : [],
+      asset_id: current.fields.asset_id,
+    },
   };
 }
 
@@ -135,7 +165,10 @@ export function toDraftFields(f: FormState["fields"]): DraftFields {
   };
 }
 
-/** Per-step checks so the lecturer fixes problems where they are, not at the end. */
+/** Template wording such as "[Scheme name]" that the author has not replaced yet. */
+export const hasPlaceholder = (x: string | null | undefined) => /\[[^\]]+\]/.test(x ?? "");
+
+/** Per-step checks so the author fixes problems where they are, not at the end. */
 export function stepProblems(step: number, s: FormState, catalogue?: Catalogue): string[] {
   const f = s.fields;
   const out: string[] = [];
@@ -144,6 +177,8 @@ export function stepProblems(step: number, s: FormState, catalogue?: Catalogue):
     if (!f.title?.trim()) out.push("Give the badge a title.");
     if (!f.short_description?.trim()) out.push("Add a short description.");
     if (!f.category) out.push("Choose a category.");
+    if ([f.title, f.short_description, f.description].some(hasPlaceholder))
+      out.push("Replace the template text in [square brackets] with your own details.");
     const competency = catalogue?.competency_categories.includes(f.category);
     if (competency && !["demonstrating", "assessed"].includes(f.demonstration_kind))
       out.push(
@@ -153,6 +188,8 @@ export function stepProblems(step: number, s: FormState, catalogue?: Catalogue):
   if (step === 2) {
     if (!f.learning_outcomes.some((o) => o.trim())) out.push("Add at least one learning outcome.");
     if (!f.criteria_narrative?.trim()) out.push("Describe the criteria in words.");
+    if ([f.criteria_narrative, f.evidence_description, ...f.learning_outcomes].some(hasPlaceholder))
+      out.push("Replace the template text in [square brackets] with your own details.");
   }
   if (step === 4) out.push(...ruleProblems(s.rules));
   return out;
@@ -338,6 +375,11 @@ export function CreateBadge() {
   });
   const issuerId = s.issuer_id || (!editing && issuers.data?.length === 1 ? issuers.data[0].id : "");
   const st: FormState = { ...s, course_id: courseId, issuer_id: issuerId };
+  const badgeTemplates = useQuery({
+    queryKey: ["badge-templates", courseId],
+    enabled: !!courseId && !editing,
+    queryFn: () => apiFetch<BadgeTemplate[]>(`/api/v1/templates?course_id=${courseId}`, token),
+  });
   const modules = useQuery({
     queryKey: ["modules", st.course_id],
     enabled: !!st.course_id,
@@ -362,6 +404,7 @@ export function CreateBadge() {
       return apiSend<Definition>("/api/v1/achievements", token, "POST", {
         issuer_id: st.issuer_id,
         course_id: st.course_id || null,
+        template_id: st.template_id || null,
         fields,
         rules,
       });
@@ -433,7 +476,7 @@ export function CreateBadge() {
             value={st.course_id || undefined}
             placeholder="Choose a course"
             interaction={editing ? "readonly" : "enabled"}
-            onChange={(_e, { value }) => setS((p) => ({ ...p, course_id: String(value), issuer_id: "" }))}
+            onChange={(_e, { value }) => setS((p) => ({ ...p, course_id: String(value), issuer_id: "", template_id: "" }))}
           >
             {staffCourses.map((c) => (
               <SimpleSelect.Option key={c.id} id={`course-${c.id}`} value={c.id}>
@@ -461,6 +504,33 @@ export function CreateBadge() {
               </Alert>
             )}
           </View>
+          {!editing && (badgeTemplates.data?.length ?? 0) > 0 && (
+            <View as="div" margin="small 0" display="block">
+              <SimpleSelect
+                renderLabel="Start from a badge template (optional)"
+                value={st.template_id}
+                onChange={(_e, { value }) => {
+                  const t = badgeTemplates.data?.find((x) => x.id === value);
+                  setS((p) => (t ? fromTemplate(t, p) : { ...p, template_id: "", fields: { ...EMPTY.fields, asset_id: p.fields.asset_id } }));
+                }}
+              >
+                <SimpleSelect.Option id="tpl-none" value="">
+                  No template: start from scratch
+                </SimpleSelect.Option>
+                {(badgeTemplates.data ?? []).map((t) => (
+                  <SimpleSelect.Option key={t.id} id={`tpl-${t.id}`} value={t.id}>
+                    {t.name}
+                  </SimpleSelect.Option>
+                ))}
+              </SimpleSelect>
+              {st.template_id ? (
+                <Text as="p" size="small">
+                  {badgeTemplates.data?.find((x) => x.id === st.template_id)?.description ?? ""} The next steps are filled in from
+                  the template. Replace anything in [square brackets] with your own details.
+                </Text>
+              ) : null}
+            </View>
+          )}
         </View>
       )}
 
@@ -609,7 +679,7 @@ export function CreateBadge() {
         <View as="div" display="block">
           {!st.course_id ? (
             <Alert variant="info" margin="0 0 small">
-              This badge is not tied to a course, so it can only be awarded by lecturer confirmation.
+              This badge is not tied to a course, so it can only be awarded by staff confirmation.
             </Alert>
           ) : (
             <Text as="p">

@@ -25,6 +25,29 @@ const EMPTY = {
   artwork_guidance: "",
 };
 
+/** Plain names for the draft fields a template fills in. */
+export const FIELD_NAMES: Record<string, string> = {
+  title: "title",
+  short_description: "short description",
+  description: "description",
+  learning_outcomes: "learning outcomes",
+  criteria_narrative: "criteria",
+  category: "category",
+  achievement_type: "type of achievement",
+  demonstration_kind: "how it is demonstrated",
+  evidence_description: "evidence",
+  validity_days: "validity period",
+  skills: "skills",
+  asset_id: "artwork",
+  award_policy: "how it is awarded",
+  artwork: "artwork conventions",
+};
+
+export function prefills(defaults: Record<string, unknown>): string {
+  const names = Object.keys(defaults).map((k) => FIELD_NAMES[k] ?? k.replace(/_/g, " "));
+  return names.length ? names.join(", ") : "nothing yet";
+}
+
 export function Templates() {
   const { token } = useAuth();
   const qc = useQueryClient();
@@ -92,7 +115,7 @@ export function Templates() {
             {t.description ? ` · ${t.description}` : ""}
           </Text>
           <Text as="p" size="small">
-            Pre-fills: {Object.keys(t.defaults).join(", ") || "nothing yet"}
+            Pre-fills: {prefills(t.defaults)}
           </Text>
           <Button size="small" onClick={() => archive.mutate(t)}>
             {t.status === "active" ? `Archive ${t.name}` : `Restore ${t.name}`}

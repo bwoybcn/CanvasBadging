@@ -308,7 +308,7 @@ def test_scenario_3_duplicate_events_create_nothing_new(world: World, owner_conn
         (
             {"workflow_state": "graded", "excused": True, "submitted_at": None},
             "EXCUSED",
-            "Excused: your lecturer will decide",
+            "Excused: course staff will decide",
         ),
     ],
 )
@@ -517,7 +517,7 @@ def test_lecturer_confirms_a_requirement_rule_e(world: World) -> None:
     world.sync_and_evaluate()
     assert world.evaluations("s3")[-1].outcome == "unknown"
     (badge,) = world.get("s3", "/api/v1/learners/me/achievements").json()
-    assert badge["requirements"][1]["label"] == "Awaiting lecturer confirmation"
+    assert badge["requirements"][1]["label"] == "Awaiting confirmation by course staff"
     r = world.post(
         "lecturer",
         f"/api/v1/achievements/{body['id']}/approvals",

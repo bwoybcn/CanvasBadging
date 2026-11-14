@@ -2886,6 +2886,7 @@
               "faculty",
               "department",
               "programme",
+              "service",
               "other"
             ],
             "title": "Kind",
@@ -2925,6 +2926,7 @@
                   "faculty",
                   "department",
                   "programme",
+                  "service",
                   "other"
                 ],
                 "type": "string"

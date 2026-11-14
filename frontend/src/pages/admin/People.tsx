@@ -98,7 +98,7 @@ function OrgUnits() {
       <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0 0">
         <TextInput renderLabel="New unit name" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} width="16rem" />
         <SimpleSelect renderLabel="Kind" value={v.kind} onChange={(_e, { value }) => setV({ ...v, kind: String(value) })} width="10rem">
-          {["faculty", "department", "programme", "other"].map((k) => (
+          {["faculty", "department", "programme", "service", "other"].map((k) => (
             <SimpleSelect.Option key={k} id={`kind-${k}`} value={k}>
               {k}
             </SimpleSelect.Option>

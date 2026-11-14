@@ -134,3 +134,24 @@ def test_ready_made_templates(client: TestClient) -> None:
     d = w.draft(MANUAL_RULES, **fields)
     detail = w.get("lecturer", f"/api/v1/achievements/{d['id']}").json()
     assert detail["review"]["forced_by"] is None
+
+
+def test_a_library_is_a_service_and_switched_off_courses_are_never_stale(
+    client: TestClient,
+    owner_conn,  # type: ignore[no-untyped-def]
+) -> None:
+    w = build_world(client)
+    r = w.post(
+        "admin", "/api/v1/admin/org-units", {"name": "University Library", "kind": "service"}
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["kind"] == "service"
+
+    w.publish(MODULE_RULES)
+    assert _freshness(w)["stale"] is True
+    with tenant_session(w.iid) as db:
+        course = db.get(m.Course, w.course_id)
+        assert course is not None
+        course.status = "inactive"
+    rows = w.get("admin", "/api/v1/admin/data-freshness").json()
+    assert str(w.course_id) not in [r["course_id"] for r in rows]

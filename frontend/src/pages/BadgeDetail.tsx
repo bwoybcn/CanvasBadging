@@ -253,7 +253,7 @@ function TeamPanel({ id }: { id: string }) {
       <Text as="p">
         {t.enabled
           ? "Badge teams are on for this course: only these people (and administrators) can edit or award this badge."
-          : "Badge teams are off for this course, so every lecturer in it can edit and award this badge. You can still name a team now; it applies if badge teams are switched on."}
+          : "Badge teams are off for this course, so all course staff can edit and award this badge. You can still name a team now; it applies if badge teams are switched on."}
       </Text>
       <List>
         {t.members.map((mb) => (
@@ -336,7 +336,10 @@ export function BadgeDetail() {
             def?.state === "approved"
               ? "Ready to publish: this badge does not need a colleague's review. You can publish it."
               : "Submitted for review.",
-          publish: "Published. Learners who meet the requirements will be evaluated shortly.",
+          publish:
+            def?.effective_award_policy === "manual"
+              ? "Published. Award it from the Awards page, to one learner or to a list of student ID numbers or emails."
+              : "Published. Learners who meet the requirements will be evaluated shortly.",
           archive: "Archived. No new awards will be made; credentials already issued stay valid.",
           "new-version": "A new draft version was created. The published version stays live until you publish this one.",
         }[kind as "submit"] ?? null,

@@ -26,6 +26,19 @@ All notable changes to this project are documented here. The format follows
 - Ready-made templates for badges outside modules (volunteering hours, workshop attendance,
   event participation, CPD activity): **Add ready-made templates** on the templates page
   (`POST /api/v1/admin/templates/starters`).
+- Authors can start a badge from a badge template in the create wizard ("Start from a badge
+  template"). The template fills in the steps, and the wizard asks the author to replace any
+  placeholder text in [square brackets] before moving on.
+- Org units can be a **service** (a library, careers service), alongside faculty, department and
+  programme (migration 0011).
+
+### Changed
+- Staff wording is neutral, so it suits librarians and service staff as well as lecturers: the
+  course role shows as **Course staff**, and requirements read "Confirmation by course staff".
+- The switch-on text explains that staff-awarded courses only refresh their class list every
+  six hours; publishing a manual badge points to the Awards page; the templates page names
+  the fields a template fills in plain words.
+- The data freshness list leaves out courses that are switched off.
 
 ### Security
 - Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):

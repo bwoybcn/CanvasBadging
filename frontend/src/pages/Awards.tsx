@@ -30,7 +30,7 @@ import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
 
 export const EVIDENCE_KINDS: Record<string, string> = {
-  lecturer_confirmation: "Lecturer confirmation",
+  lecturer_confirmation: "Staff confirmation",
   assessment_result: "Assessment result",
   completion_record: "Completion record",
   evaluation_statement: "Evaluation statement",
@@ -314,7 +314,7 @@ export function Awards() {
   return (
     <Page title="Awards to confirm">
       <Text as="p">
-        These learners meet the requirements of badges that need a lecturer's confirmation. Confirming re-checks the
+        These learners meet the requirements of badges that need confirmation by staff. Confirming re-checks the
         latest Canvas data first.
       </Text>
       {q.isPending && <Loading what="awards" />}

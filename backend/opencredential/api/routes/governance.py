@@ -122,13 +122,13 @@ def run_retention(db: TenantDb, actor: ActorDep) -> dict[str, Any]:
 
 class OrgUnitIn(BaseModel):
     name: str = Field(max_length=200)
-    kind: Literal["faculty", "department", "programme", "other"]
+    kind: Literal["faculty", "department", "programme", "service", "other"]
     parent_id: uuid.UUID | None = None
 
 
 class OrgUnitPatch(BaseModel):
     name: str | None = Field(default=None, max_length=200)
-    kind: Literal["faculty", "department", "programme", "other"] | None = None
+    kind: Literal["faculty", "department", "programme", "service", "other"] | None = None
     parent_id: uuid.UUID | None = None
     may_issue: bool | None = None
     status: Literal["active", "archived"] | None = None
