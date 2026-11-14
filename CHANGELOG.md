@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Colleague review set per faculty, department or service and per badge (migration 0009):
+  review modes "required", "author decides" and "not required", inherited down the org tree;
+  self-approval and second approval of manual awards per area; a **Badge reviewer** role for
+  named colleagues; a list of badges published without review. Badges claiming assessed
+  proficiency or using credit wording always need review. The institution can stop areas
+  relaxing its settings.
+
 ### Security
 - Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):
   - The signer checks its shared secret on the route it matched, so percent-encoded or

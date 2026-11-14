@@ -8,6 +8,7 @@ working immediately. Scopes:
 * ``dept_admin`` (org unit): review, awards and progress for courses and issuers in that org
   unit or any org unit below it.
 * ``lecturer`` / ``course_admin`` (course): author, award and view progress in that course.
+* ``reviewer`` (org unit): review badge definitions in that org unit or any below it.
 * ``student`` (course): own progress only.
 """
 
@@ -145,11 +146,15 @@ def can_review(
     roles = set(policy.get("approver_roles") or ["dept_admin", "inst_admin"])
     if "inst_admin" in roles and actor.is_inst_admin:
         return True
+    course = definition_course(db, definition)
+    issuer = db.get(Issuer, definition.issuer_id)
+    candidates = (course.org_unit_id if course else None, issuer.org_unit_id if issuer else None)
+    units = [u for u in candidates if u]
+    # Named reviewers for an area (a senior librarian, a programme lead) always count.
+    if any(is_area_reviewer(db, actor, u) for u in units):
+        return True
     if "dept_admin" in roles:
-        course = definition_course(db, definition)
-        issuer = db.get(Issuer, definition.issuer_id)
-        units = [course.org_unit_id if course else None, issuer.org_unit_id if issuer else None]
-        if any(is_dept_admin_over(db, actor, u) for u in units if u):
+        if any(is_dept_admin_over(db, actor, u) for u in units):
             return True
     if "lecturer" in roles:
         return can_edit_definition(db, actor, definition)
@@ -161,10 +166,10 @@ def require_review(
 ) -> None:
     if not can_review(db, actor, definition, policy):
         raise Forbidden("FORBIDDEN", "You are not an approver for this badge.")
-    if actor.user_id == definition.owner_user_id and not policy.get("self_approval_allowed"):
+    if actor.user_id == definition.owner_user_id and not may_approve_own(db, definition):
         raise Forbidden(
             "SELF_APPROVAL_NOT_ALLOWED",
-            "Your institution requires someone else to approve badges you created.",
+            "Your area requires someone else to approve badges you created.",
         )
 
 
@@ -228,7 +233,7 @@ def require_inst_admin(actor: Actor) -> None:
 APPROVER_ROLES = ("lecturer", "dept_admin", "inst_admin")
 REVOKER_ROLES = ("lecturer", "issuer_manager", "dept_admin", "inst_admin")
 #: Roles a department administrator may delegate inside their own org units (spec §2.3).
-DEPT_GRANTABLE = ("lecturer", "course_admin", "issuer_manager", "dept_admin")
+DEPT_GRANTABLE = ("lecturer", "course_admin", "issuer_manager", "reviewer", "dept_admin")
 #: Roles granted in OpenCredential itself. Students come from Canvas enrolments only.
 GRANTABLE = (*DEPT_GRANTABLE, "inst_admin")
 
@@ -378,3 +383,98 @@ def can_revoke(
     return bool(
         "lecturer" in roles and course is not None and actor.course_roles(course.id) & COURSE_STAFF
     )
+
+
+# ---- colleague review per area (extracurricular badges, migration 0009) ---------------------
+
+#: How a badge definition is reviewed before it can go live.
+REVIEW_MODES = ("required", "author_decides", "not_required")
+_REVIEW_STRICTNESS = {"not_required": 0, "author_decides": 1, "required": 2}
+#: Settings a faculty, department or service may override for itself and the units below it.
+AREA_REVIEW_KEYS = (
+    "definition_review",
+    "self_approval_allowed",
+    "manual_awards_require_second_approval",
+)
+
+
+def institution_review_mode(policy: dict[str, Any]) -> str:
+    """The institution's default review mode, reading the older on/off switch if unset."""
+    mode = policy.get("definition_review")
+    if mode in REVIEW_MODES:
+        return str(mode)
+    return "required" if policy.get("definitions_require_approval", True) else "not_required"
+
+
+def relaxes(key: str, value: Any, baseline: Any) -> bool:
+    """Whether ``value`` for ``key`` is less strict than ``baseline``."""
+    if key == "definition_review":
+        return _REVIEW_STRICTNESS[str(value)] < _REVIEW_STRICTNESS[str(baseline)]
+    if key == "self_approval_allowed":
+        return bool(value) and not bool(baseline)
+    if key == "manual_awards_require_second_approval":
+        return not bool(value) and bool(baseline)
+    return False
+
+
+def institution_review_settings(policy: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "definition_review": institution_review_mode(policy),
+        "self_approval_allowed": bool(policy.get("self_approval_allowed")),
+        "manual_awards_require_second_approval": bool(
+            policy.get("manual_awards_require_second_approval")
+        ),
+    }
+
+
+def review_settings(
+    db: Session, institution_id: uuid.UUID, org_unit_id: uuid.UUID | None
+) -> dict[str, Any]:
+    """Effective review settings for an area: the institution's, then each unit's overrides from
+    the top of the tree down to ``org_unit_id`` (the nearest setting wins).
+
+    When the institution does not let areas relax its settings, an override that is less strict
+    than the institution's is ignored. Returns the settings plus ``sources``: for each key, the
+    org unit it came from (``None`` = the institution).
+    """
+    policy = institution_policy(db, institution_id)
+    base = institution_review_settings(policy)
+    may_relax = bool(policy.get("areas_may_relax_review", True))
+    out: dict[str, Any] = dict(base)
+    sources: dict[str, uuid.UUID | None] = dict.fromkeys(AREA_REVIEW_KEYS)
+    for uid in reversed(_org_chain(db, org_unit_id)):
+        unit = db.get(OrgUnit, uid)
+        overrides = (unit.review_policy if unit else None) or {}
+        for key in AREA_REVIEW_KEYS:
+            if key not in overrides or overrides[key] is None:
+                continue
+            value = overrides[key]
+            if key == "definition_review" and value not in REVIEW_MODES:
+                continue
+            if not may_relax and relaxes(key, value, base[key]):
+                continue
+            out[key] = value
+            sources[key] = uid
+    out["sources"] = sources
+    return out
+
+
+def definition_area(db: Session, definition: AchievementDefinition) -> uuid.UUID | None:
+    """The org unit whose review settings govern a badge: its course's, else its issuer's."""
+    course = definition_course(db, definition)
+    if course is not None and course.org_unit_id is not None:
+        return course.org_unit_id
+    issuer = db.get(Issuer, definition.issuer_id)
+    return issuer.org_unit_id if issuer else None
+
+
+def definition_review_settings(db: Session, definition: AchievementDefinition) -> dict[str, Any]:
+    return review_settings(db, definition.institution_id, definition_area(db, definition))
+
+
+def may_approve_own(db: Session, definition: AchievementDefinition) -> bool:
+    return bool(definition_review_settings(db, definition)["self_approval_allowed"])
+
+
+def is_area_reviewer(db: Session, actor: Actor, org_unit_id: uuid.UUID | None) -> bool:
+    return any(actor.has("reviewer", "org_unit", ou) for ou in _org_chain(db, org_unit_id))

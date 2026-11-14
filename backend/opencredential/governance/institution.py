@@ -214,6 +214,15 @@ def validate_policy_changes(changes: dict[str, Any]) -> dict[str, Any]:
         if "inst_admin" not in roles:
             roles.append("inst_admin")  # an institution administrator can always act
         out[key] = roles
+    # Keep the review mode and the older on/off switch in step (migration 0009).
+    if "definition_review" in out:
+        if out["definition_review"] not in authz.REVIEW_MODES:
+            raise Invalid("POLICY_INVALID", "Choose a review mode.")
+        out["definitions_require_approval"] = out["definition_review"] != "not_required"
+    elif "definitions_require_approval" in out:
+        out["definition_review"] = (
+            "required" if out["definitions_require_approval"] else "not_required"
+        )
     if "max_snapshot_age_minutes" in out and not 15 <= int(out["max_snapshot_age_minutes"]) <= 1440:
         raise Invalid("POLICY_INVALID", "Maximum data age must be between 15 and 1440 minutes.")
     return out

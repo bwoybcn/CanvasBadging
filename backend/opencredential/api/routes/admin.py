@@ -29,6 +29,10 @@ class AwardPolicyIn(BaseModel):
     score_rules_default_policy: Literal["automatic", "lecturer_confirmed"] | None = None
     score_rules_force_confirmation: bool | None = None
     definitions_require_approval: bool | None = None
+    # Migration 0009: the institution's review mode and whether faculties, departments and
+    # services may set a less strict one for themselves.
+    definition_review: Literal["required", "author_decides", "not_required"] | None = None
+    areas_may_relax_review: bool | None = None
     self_approval_allowed: bool | None = None
     manual_awards_require_second_approval: bool | None = None
     max_snapshot_age_minutes: int | None = None
@@ -46,8 +50,14 @@ POLICY_KEYS = tuple(AwardPolicyIn.model_fields)
 
 @router.get("/institutions/current/policy")
 def get_policy(db: TenantDb, actor: ActorDep) -> dict[str, Any]:
+    return _policy_out(db, actor)
+
+
+def _policy_out(db: TenantDb, actor: authz.Actor) -> dict[str, Any]:
     policy = authz.institution_policy(db, actor.institution_id)
-    return {k: policy.get(k) for k in POLICY_KEYS}
+    out = {k: policy.get(k) for k in POLICY_KEYS}
+    out["definition_review"] = authz.institution_review_mode(policy)
+    return out
 
 
 @router.patch("/institutions/current/policy")
@@ -71,8 +81,7 @@ def update_policy(
         request_id=rid,
         data={"changes": changes},
     )
-    policy = authz.institution_policy(db, actor.institution_id)
-    return {k: policy.get(k) for k in POLICY_KEYS}
+    return _policy_out(db, actor)
 
 
 @router.get("/admin/jobs")

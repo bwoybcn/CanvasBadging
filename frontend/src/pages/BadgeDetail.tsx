@@ -4,6 +4,8 @@ import {
   Alert,
   Button,
   Checkbox,
+  RadioInput,
+  RadioInputGroup,
   Flex,
   Heading,
   Img,
@@ -22,6 +24,7 @@ import {
   apiFetch,
   apiSend,
   POLICY_LABELS,
+  type ReviewRequirement,
   STATE_LABELS,
   type Catalogue,
   type Definition,
@@ -179,6 +182,48 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
   );
 }
 
+const FORCED_REASON: Record<string, string> = {
+  assessed: "Badges that claim assessed proficiency always need a colleague's review.",
+  credit: "The wording refers to credit or a qualification, so a colleague must review it.",
+};
+
+/** How this badge will be reviewed, and the author's choice where their area lets them decide. */
+function ReviewChoice({
+  review,
+  value,
+  onChange,
+}: {
+  review: ReviewRequirement;
+  value: "colleague" | "skip";
+  onChange: (v: "colleague" | "skip") => void;
+}) {
+  if (review.mode === "author_decides")
+    return (
+      <View as="div" margin="0 0 medium" maxWidth="40rem">
+        <RadioInputGroup
+          name="review-choice"
+          description="Colleague review"
+          value={value}
+          onChange={(_e, v) => onChange(v as "colleague" | "skip")}
+        >
+          <RadioInput value="colleague" label="Ask a colleague to review it first (recommended)" />
+          <RadioInput value="skip" label="Publish without review. Administrators can see badges published this way." />
+        </RadioInputGroup>
+      </View>
+    );
+  const text =
+    review.mode === "not_required"
+      ? "Your area does not require a colleague's review for this badge."
+      : review.forced_by
+        ? FORCED_REASON[review.forced_by]
+        : "Your area requires a colleague to review this badge before it can be published.";
+  return (
+    <Text as="p" size="small">
+      {text}
+    </Text>
+  );
+}
+
 export function BadgeDetail() {
   const { id = "" } = useParams();
   const { token } = useAuth();
@@ -186,6 +231,7 @@ export function BadgeDetail() {
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reviewChoice, setReviewChoice] = useState<"colleague" | "skip">("colleague");
   const d = useQuery({
     queryKey: ["achievement", id],
     queryFn: () => apiFetch<Definition>(`/api/v1/achievements/${id}`, token),
@@ -201,7 +247,8 @@ export function BadgeDetail() {
         });
         return { kind, def: null };
       }
-      const res = await apiSend<unknown>(`/api/v1/achievements/${id}/${kind}`, token, "POST");
+      const body = kind === "submit" && d.data?.review.mode === "author_decides" ? { review: reviewChoice } : undefined;
+      const res = await apiSend<unknown>(`/api/v1/achievements/${id}/${kind}`, token, "POST", body);
       const def = await apiFetch<Definition>(`/api/v1/achievements/${id}`, token);
       return { kind, def, res };
     },
@@ -212,7 +259,10 @@ export function BadgeDetail() {
       qc.setQueryData(["achievement", id], def);
       setNotice(
         {
-          submit: def?.state === "approved" ? "Approved: no review is needed here. You can publish it." : "Submitted for review.",
+          submit:
+            def?.state === "approved"
+              ? "Ready to publish: this badge does not need a colleague's review. You can publish it."
+              : "Submitted for review.",
           publish: "Published. Learners who meet the requirements will be evaluated shortly.",
           archive: "Archived. No new awards will be made; credentials already issued stay valid.",
           "new-version": "A new draft version was created. The published version stays live until you publish this one.",
@@ -256,7 +306,9 @@ export function BadgeDetail() {
           <>
             <Button onClick={() => navigate(`/badges/${id}/edit`)}>Edit draft</Button>
             <Button color="primary" interaction={blocking ? "disabled" : "enabled"} onClick={() => action.mutate("submit")}>
-              Submit for review
+              {def.review.mode === "not_required" || (def.review.mode === "author_decides" && reviewChoice === "skip")
+                ? "Mark ready to publish"
+                : "Submit for review"}
             </Button>
             {v.version_no === 1 && <Button onClick={() => action.mutate("delete")}>Delete draft</Button>}
           </>
@@ -279,6 +331,9 @@ export function BadgeDetail() {
         )}
       </Flex>
 
+      {def.can_edit && def.state === "draft" && (
+        <ReviewChoice review={def.review} value={reviewChoice} onChange={setReviewChoice} />
+      )}
       {def.can_edit && def.state === "draft" && <Readiness issues={def.readiness} />}
       {def.state === "in_review" && def.can_review && cat.data && (
         <ReviewPanel d={def} checklistKeys={cat.data.review_checklist} />
@@ -304,7 +359,10 @@ export function BadgeDetail() {
             <List>
               {def.reviews.map((r) => (
                 <List.Item key={r.id}>
-                  {r.decision === "approve" ? "Approved" : "Returned"} by {r.reviewer ?? "a reviewer"} on{" "}
+                  {r.without_review
+                    ? "Published without a colleague's review"
+                    : `${r.decision === "approve" ? "Approved" : "Returned"} by ${r.reviewer ?? "a reviewer"}`}{" "}
+                  on{" "}
                   {new Date(r.created_at).toLocaleDateString()}
                   {r.comment ? `: ${r.comment}` : ""}
                 </List.Item>

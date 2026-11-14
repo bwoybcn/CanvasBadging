@@ -177,6 +177,18 @@ export interface Review {
   checklist: Record<string, boolean>;
   comment: string | null;
   created_at: string;
+  without_review?: boolean;
+}
+
+export type ReviewMode = "required" | "author_decides" | "not_required";
+
+/** How the working version would be reviewed if submitted now (set per area and per badge). */
+export interface ReviewRequirement {
+  mode: ReviewMode;
+  area_mode: ReviewMode;
+  forced_by: "assessed" | "credit" | null;
+  set_by_org_unit_id: string | null;
+  self_approval_allowed: boolean;
 }
 
 export interface Definition {
@@ -194,6 +206,7 @@ export interface Definition {
   can_edit: boolean;
   can_review: boolean;
   effective_award_policy: AwardPolicy | null;
+  review: ReviewRequirement;
 }
 
 export interface DefinitionSummary {
@@ -517,6 +530,26 @@ export interface OrgUnit {
   effective_may_issue: boolean;
   status: "active" | "archived";
   manageable: boolean;
+  /** This unit's own review overrides; a missing key inherits from above. */
+  review_policy: AreaReviewPolicy;
+  effective_review: Required<AreaReviewPolicy> & { sources: Record<keyof AreaReviewPolicy, string | null> };
+}
+
+export interface AreaReviewPolicy {
+  definition_review?: ReviewMode;
+  self_approval_allowed?: boolean;
+  manual_awards_require_second_approval?: boolean;
+}
+
+export interface UnreviewedBadge {
+  id: string;
+  title: string;
+  version_no: number;
+  area: string | null;
+  author: string | null;
+  approved_at: string;
+  reason: string | null;
+  review_now: ReviewMode;
 }
 
 export interface AdminIssuer {
@@ -657,6 +690,7 @@ export const ROLE_LABELS: Record<string, string> = {
   inst_admin: "Institution administrator",
   dept_admin: "Department administrator",
   issuer_manager: "Issuer manager",
+  reviewer: "Badge reviewer",
   lecturer: "Lecturer",
   course_admin: "Course administrator",
   student: "Student",

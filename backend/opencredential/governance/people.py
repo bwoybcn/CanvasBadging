@@ -38,7 +38,53 @@ def org_unit_out(db: Session, unit: OrgUnit) -> dict[str, Any]:
         "may_issue": unit.may_issue,
         "effective_may_issue": authz.org_unit_may_issue(db, unit.id),
         "status": unit.status,
+        "review_policy": dict(unit.review_policy or {}),
+        "effective_review": _effective_review_out(db, unit),
     }
+
+
+def _effective_review_out(db: Session, unit: OrgUnit) -> dict[str, Any]:
+    eff = authz.review_settings(db, unit.institution_id, unit.id)
+    return {
+        **{k: eff[k] for k in authz.AREA_REVIEW_KEYS},
+        "sources": {k: str(v) if v else None for k, v in eff["sources"].items()},
+    }
+
+
+def _clean_review_policy(
+    db: Session, actor: authz.Actor, unit: OrgUnit, value: Any
+) -> dict[str, Any]:
+    """Merge a partial review-policy change into ``unit``'s overrides. ``None`` clears a key
+    (inherit again). Refuses less strict settings when the institution does not allow them."""
+    if not isinstance(value, dict):
+        raise Invalid("REVIEW_POLICY_INVALID", "Review settings must be an object.")
+    unknown = set(value) - set(authz.AREA_REVIEW_KEYS)
+    if unknown:
+        raise Invalid(
+            "REVIEW_POLICY_INVALID", "Unknown review setting: " + ", ".join(sorted(unknown)) + "."
+        )
+    policy = authz.institution_policy(db, actor.institution_id)
+    base = authz.institution_review_settings(policy)
+    merged = dict(unit.review_policy or {})
+    for key, v in value.items():
+        if v is None:
+            merged.pop(key, None)
+            continue
+        if key == "definition_review":
+            if v not in authz.REVIEW_MODES:
+                raise Invalid(
+                    "REVIEW_POLICY_INVALID",
+                    "Review must be one of: " + ", ".join(authz.REVIEW_MODES) + ".",
+                )
+        elif not isinstance(v, bool):
+            raise Invalid("REVIEW_POLICY_INVALID", f"{key} must be true or false.")
+        if not policy.get("areas_may_relax_review", True) and authz.relaxes(key, v, base[key]):
+            raise Forbidden(
+                "REVIEW_RELAX_NOT_ALLOWED",
+                "Your institution does not let areas set review less strictly than its own policy.",
+            )
+        merged[key] = v
+    return merged
 
 
 def list_org_units(db: Session, actor: authz.Actor) -> list[dict[str, Any]]:
@@ -123,6 +169,11 @@ def update_org_unit(
         if changes["status"] not in ("active", "archived"):
             raise Invalid("STATUS_INVALID", "Status must be active or archived.")
         unit.status = changes["status"]
+    review_change: dict[str, Any] | None = None
+    if "review_policy" in changes:
+        before = dict(unit.review_policy or {})
+        unit.review_policy = _clean_review_policy(db, actor, unit, changes["review_policy"] or {})
+        review_change = {"from": before, "to": dict(unit.review_policy)}
     audit.record(
         db,
         action="org_unit.update",
@@ -134,6 +185,7 @@ def update_org_unit(
         data={
             "fields": sorted(changes),
             **({"may_issue": unit.may_issue} if "may_issue" in changes else {}),
+            **({"review_policy": review_change} if review_change is not None else {}),
         },
     )
     return unit
@@ -218,6 +270,7 @@ VALID_SCOPES = {
     "inst_admin": ("institution",),
     "dept_admin": ("org_unit",),
     "issuer_manager": ("issuer",),
+    "reviewer": ("org_unit",),
     "lecturer": ("course",),
     "course_admin": ("course",),
 }

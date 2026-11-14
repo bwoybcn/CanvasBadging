@@ -272,6 +272,17 @@
             ],
             "title": "Approver Roles"
           },
+          "areas_may_relax_review": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Areas May Relax Review"
+          },
           "course_activation_required": {
             "anyOf": [
               {
@@ -282,6 +293,22 @@
               }
             ],
             "title": "Course Activation Required"
+          },
+          "definition_review": {
+            "anyOf": [
+              {
+                "enum": [
+                  "required",
+                  "author_decides",
+                  "not_required"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Definition Review"
           },
           "definitions_require_approval": {
             "anyOf": [
@@ -1192,6 +1219,9 @@
             "title": "Readiness",
             "type": "array"
           },
+          "review": {
+            "$ref": "#/components/schemas/ReviewRequirement"
+          },
           "reviews": {
             "items": {
               "$ref": "#/components/schemas/ReviewOut"
@@ -1233,7 +1263,8 @@
           "reviews",
           "can_edit",
           "can_review",
-          "effective_award_policy"
+          "effective_award_policy",
+          "review"
         ],
         "title": "DefinitionOut",
         "type": "object"
@@ -1739,6 +1770,7 @@
               "lecturer",
               "course_admin",
               "issuer_manager",
+              "reviewer",
               "dept_admin",
               "inst_admin"
             ],
@@ -2776,6 +2808,18 @@
             ],
             "title": "Parent Id"
           },
+          "review_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Policy"
+          },
           "status": {
             "anyOf": [
               {
@@ -2943,6 +2987,11 @@
             "format": "uuid",
             "title": "Version Id",
             "type": "string"
+          },
+          "without_review": {
+            "default": false,
+            "title": "Without Review",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2955,6 +3004,68 @@
           "created_at"
         ],
         "title": "ReviewOut",
+        "type": "object"
+      },
+      "ReviewRequirement": {
+        "description": "How the working version would be reviewed if submitted now.",
+        "properties": {
+          "area_mode": {
+            "enum": [
+              "required",
+              "author_decides",
+              "not_required"
+            ],
+            "title": "Area Mode",
+            "type": "string"
+          },
+          "forced_by": {
+            "anyOf": [
+              {
+                "enum": [
+                  "assessed",
+                  "credit"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The safeguard that makes review required, if any",
+            "title": "Forced By"
+          },
+          "mode": {
+            "enum": [
+              "required",
+              "author_decides",
+              "not_required"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "self_approval_allowed": {
+            "title": "Self Approval Allowed",
+            "type": "boolean"
+          },
+          "set_by_org_unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The area whose setting applies (null: the institution)",
+            "title": "Set By Org Unit Id"
+          }
+        },
+        "required": [
+          "mode",
+          "area_mode",
+          "self_approval_allowed"
+        ],
+        "title": "ReviewRequirement",
         "type": "object"
       },
       "RevocationRequestIn": {
@@ -3303,6 +3414,28 @@
           "name"
         ],
         "title": "Skill",
+        "type": "object"
+      },
+      "SubmitIn": {
+        "properties": {
+          "review": {
+            "anyOf": [
+              {
+                "enum": [
+                  "colleague",
+                  "skip"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the area lets the author decide: ask a colleague (default) or skip",
+            "title": "Review"
+          }
+        },
+        "title": "SubmitIn",
         "type": "object"
       },
       "SubmitOut": {
@@ -4825,6 +4958,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SubmitIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -6624,6 +6774,33 @@
           }
         },
         "summary": "Run Retention",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/review/published-without-review": {
+      "get": {
+        "description": "Live badges nobody else reviewed, so admins can check them after tightening review.",
+        "operationId": "published_without_review_api_v1_admin_review_published_without_review_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Published Without Review Api V1 Admin Review Published Without Review Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Published Without Review",
         "tags": [
           "institutional administration"
         ]

@@ -51,6 +51,13 @@ function definition(over: Record<string, unknown> = {}) {
     can_edit: true,
     can_review: false,
     effective_award_policy: "automatic",
+    review: {
+      mode: "required",
+      area_mode: "required",
+      forced_by: null,
+      set_by_org_unit_id: null,
+      self_approval_allowed: false,
+    },
     ...over,
   };
 }
@@ -145,6 +152,45 @@ describe("badge page", () => {
     await userEvent.click(screen.getByRole("tab", { name: "Preview" }));
     expect(await screen.findByText("PREVIEW: NOT ISSUED AND NOT VERIFIABLE")).toBeInTheDocument();
     expect(screen.getByText(/Writing Foundations/, { selector: "li" })).toBeInTheDocument();
+  });
+
+  it("lets the author skip review where their area allows it", async () => {
+    const authorDecides = {
+      mode: "author_decides",
+      area_mode: "author_decides",
+      forced_by: null,
+      set_by_org_unit_id: "ou-1",
+      self_approval_allowed: false,
+    };
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({ review: authorDecides }),
+      "POST /api/v1/achievements/d-1/submit": { state: "approved", warnings: [] },
+    });
+    renderAt("/badges/d-1");
+    expect(await screen.findByRole("button", { name: "Submit for review" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: /Publish without review/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Mark ready to publish" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/submit"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/submit"))!.body).toEqual({ review: "skip" });
+  });
+
+  it("explains why review cannot be skipped", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({
+        review: {
+          mode: "required",
+          area_mode: "not_required",
+          forced_by: "assessed",
+          set_by_org_unit_id: null,
+          self_approval_allowed: false,
+        },
+      }),
+    });
+    renderAt("/badges/d-1");
+    expect(await screen.findByText(/assessed proficiency always need a colleague/)).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
   it("lets a reviewer approve only after every checklist point", async () => {

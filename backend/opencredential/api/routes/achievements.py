@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Query, Response
 from pydantic import BaseModel, Field
@@ -60,6 +60,7 @@ class ReviewOut(BaseModel):
     checklist: dict[str, Any]
     comment: str | None
     created_at: datetime
+    without_review: bool = False
 
 
 class Issue(BaseModel):
@@ -67,6 +68,20 @@ class Issue(BaseModel):
     code: str
     message: str
     severity: str
+
+
+class ReviewRequirement(BaseModel):
+    """How the working version would be reviewed if submitted now."""
+
+    mode: Literal["required", "author_decides", "not_required"]
+    area_mode: Literal["required", "author_decides", "not_required"]
+    forced_by: Literal["assessed", "credit"] | None = Field(
+        default=None, description="The safeguard that makes review required, if any"
+    )
+    set_by_org_unit_id: str | None = Field(
+        default=None, description="The area whose setting applies (null: the institution)"
+    )
+    self_approval_allowed: bool
 
 
 class DefinitionOut(BaseModel):
@@ -86,6 +101,7 @@ class DefinitionOut(BaseModel):
     effective_award_policy: str | None = Field(
         description="What publication would resolve the awarding method to right now"
     )
+    review: ReviewRequirement
 
 
 class DefinitionSummary(BaseModel):
@@ -122,6 +138,13 @@ class ReviewIn(BaseModel):
 class RejectIn(BaseModel):
     comment: str = Field(min_length=5, max_length=4000)
     checklist: dict[str, bool] | None = None
+
+
+class SubmitIn(BaseModel):
+    review: Literal["colleague", "skip"] | None = Field(
+        default=None,
+        description="Where the area lets the author decide: ask a colleague (default) or skip",
+    )
 
 
 class SubmitOut(BaseModel):
@@ -170,13 +193,15 @@ def _out(db: TenantDb, actor: authz.Actor, d: AchievementDefinition) -> Definiti
                 checklist=r.checklist,
                 comment=r.comment,
                 created_at=r.created_at,
+                without_review=r.without_review,
             )
             for r in reviews
         ],
         can_edit=authz.can_edit_definition(db, actor, d),
         can_review=authz.can_review(db, actor, d, policy)
-        and (actor.user_id != d.owner_user_id or bool(policy.get("self_approval_allowed"))),
+        and (actor.user_id != d.owner_user_id or authz.may_approve_own(db, d)),
         effective_award_policy=effective,
+        review=ReviewRequirement(**authoring.review_requirement(db, d, v)),
     )
 
 
@@ -224,7 +249,7 @@ def list_achievements(
     for d in db.scalars(q.order_by(AchievementDefinition.updated_at.desc()).limit(limit * 3)):
         if review_queue:
             if not authz.can_review(db, actor, d, policy) or (
-                d.owner_user_id == actor.user_id and not policy.get("self_approval_allowed")
+                d.owner_user_id == actor.user_id and not authz.may_approve_own(db, d)
             ):
                 continue
         elif not (
@@ -302,9 +327,15 @@ def put_rules(
 
 
 @router.post("/achievements/{definition_id}/submit", response_model=SubmitOut)
-def submit(definition_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep) -> SubmitOut:
+def submit(
+    definition_id: uuid.UUID,
+    db: TenantDb,
+    actor: ActorDep,
+    rid: RequestIdDep,
+    body: SubmitIn | None = None,
+) -> SubmitOut:
     d = _get(db, actor, definition_id)
-    issues = authoring.submit(db, actor, d, request_id=rid)
+    issues = authoring.submit(db, actor, d, request_id=rid, review=body.review if body else None)
     return SubmitOut(state=d.state, warnings=[Issue(**i) for i in issues])
 
 

@@ -132,6 +132,8 @@ class OrgUnitPatch(BaseModel):
     parent_id: uuid.UUID | None = None
     may_issue: bool | None = None
     status: Literal["active", "archived"] | None = None
+    #: Partial colleague-review overrides; a key set to null inherits again.
+    review_policy: dict[str, Any] | None = None
 
 
 @router.get("/admin/org-units")
@@ -159,6 +161,14 @@ def update_org_unit(
     return people.org_unit_out(db, unit)
 
 
+@router.get("/admin/review/published-without-review")
+def published_without_review(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
+    """Live badges nobody else reviewed, so admins can check them after tightening review."""
+    from opencredential.governance import review
+
+    return review.published_without_review(db, actor)
+
+
 @router.get("/admin/courses")
 def list_courses(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
     return people.list_courses(db, actor)
@@ -183,7 +193,9 @@ def list_memberships(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
 
 class GrantIn(BaseModel):
     user_id: uuid.UUID
-    role: Literal["lecturer", "course_admin", "issuer_manager", "dept_admin", "inst_admin"]
+    role: Literal[
+        "lecturer", "course_admin", "issuer_manager", "reviewer", "dept_admin", "inst_admin"
+    ]
     scope_type: Literal["institution", "org_unit", "issuer", "course"]
     scope_id: uuid.UUID | None = None
     expires_at: datetime | None = None
