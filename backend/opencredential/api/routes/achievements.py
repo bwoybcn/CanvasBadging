@@ -404,6 +404,16 @@ def archive(
     return _out(db, actor, d)
 
 
+@router.post("/achievements/{definition_id}/restore", response_model=DefinitionOut)
+def restore(
+    definition_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> DefinitionOut:
+    """Bring an archived badge back as it was published (undoes ``archive``)."""
+    d = _get(db, actor, definition_id)
+    authoring.restore(db, actor, d, request_id=rid)
+    return _out(db, actor, d)
+
+
 @router.post("/achievements/{definition_id}/new-version", response_model=DefinitionOut)
 def new_version(
     definition_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep

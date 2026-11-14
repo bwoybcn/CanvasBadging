@@ -6,6 +6,7 @@ import { useState } from "react";
 import { apiFetch, apiSend, problemText, type Course, type Me } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
+import { ConfirmButton } from "../components/ConfirmButton";
 import { Nav, roleFlags, useMe } from "../components/Page";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -176,9 +177,14 @@ function BadgeTeamsToggle({ courseId }: { courseId: string }) {
         <Button onClick={() => setConfirming(true)}>Switch badge teams on</Button>
       )}
       {on && isAdmin && (
-        <Button interaction={set.isPending ? "disabled" : "enabled"} onClick={() => set.mutate(false)}>
-          Switch badge teams off
-        </Button>
+        <ConfirmButton
+          label="Switch badge teams off"
+          consequence="Switch badge teams off? Every member of staff in this course will be able to edit and award every badge again. The teams stay named, and apply again if badge teams are switched back on."
+          confirmLabel="Switch off"
+          cancelLabel="Keep badge teams on"
+          busy={set.isPending}
+          onConfirm={() => set.mutate(false)}
+        />
       )}
       {on && !isAdmin && <Text as="p" size="small">Ask an administrator if badge teams need switching off.</Text>}
       {confirming && (

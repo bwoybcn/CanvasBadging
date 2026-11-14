@@ -36,7 +36,7 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 | GET/POST | `/issuers/{id}/keys` | `keys.manage` | `POST` generates a key in the signer. `POST /issuers/{id}/keys/{kid}/activate`, `/retire`, `/revoke {reason}` |
 | GET/POST/PATCH | `/issuers/{id}/delegations` | `issuer.delegate` | |
 | GET/POST/PATCH/DELETE | `/achievements` | `achievement.create` / `.edit` (draft only) | filters: `course_id`, `state`, `issuer_id`. The body carries the draft version fields and `award_policy` |
-| POST | `/achievements/{id}/submit` · `/approve` · `/reject` · `/publish` · `/archive` | lifecycle permissions | state-machine guarded. `approve` and `reject` take a review checklist and comment |
+| POST | `/achievements/{id}/submit` · `/approve` · `/reject` · `/publish` · `/archive` · `/restore` | lifecycle permissions | state-machine guarded. `approve` and `reject` take a review checklist and comment |
 | POST | `/achievements/{id}/new-version` | `achievement.edit` | copies the published version into a new draft |
 | GET | `/achievements/{id}/preview` | `achievement.read` | unsigned sample credential and page data, `"preview": true`, no proof |
 | GET | `/achievement-versions/{id}` | `achievement.read` | immutable snapshot |

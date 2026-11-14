@@ -5282,6 +5282,50 @@
         ]
       }
     },
+    "/api/v1/achievements/{definition_id}/restore": {
+      "post": {
+        "description": "Bring an archived badge back as it was published (undoes ``archive``).",
+        "operationId": "restore_api_v1_achievements__definition_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
     "/api/v1/achievements/{definition_id}/rules": {
       "put": {
         "operationId": "put_rules_api_v1_achievements__definition_id__rules_put",

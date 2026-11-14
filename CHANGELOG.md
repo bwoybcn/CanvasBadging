@@ -7,6 +7,10 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- An archived badge can be restored (`POST /api/v1/achievements/{id}/restore`, **Restore this
+  badge** on the badge page). The published version goes live again as it was, so nothing is
+  reviewed again; a newer version that was in progress comes back as a draft. Archiving used to
+  be permanent.
 - Colleague review set per faculty, department or service and per badge (migration 0009):
   review modes "required", "author decides" and "not required", inherited down the org tree;
   self-approval and second approval of manual awards per area; a **Badge reviewer** role for
@@ -44,6 +48,9 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- Actions that cannot simply be undone now ask first and say what will happen: archiving a
+  badge, deleting a draft, removing someone's role, unlinking a Canvas sub-account, removing an
+  issuer delegation and switching badge teams off from a course. The first press changes nothing, and focus lands on the way out.
 - Form errors name the field and say what to change ("Short description is too long: use up
   to 280 characters") instead of "Request validation failed". A 422's `errors` entries now
   carry the limit that was broken in `limits`.

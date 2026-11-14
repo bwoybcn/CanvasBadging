@@ -28,6 +28,7 @@ CATEGORIES: dict[str, tuple[str, ...]] = {
         "achievement.submit",
         "achievement.new_version",
         "achievement.archive",
+        "achievement.restore",
         "achievement.delete_draft",
     ),
     "Definition approval": ("achievement.approve", "achievement.reject"),

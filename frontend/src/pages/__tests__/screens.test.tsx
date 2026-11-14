@@ -393,6 +393,64 @@ describe("badge page", () => {
     expect(screen.getByText(/Writing Foundations/, { selector: "li" })).toBeInTheDocument();
   });
 
+  it("asks before archiving, and an archived badge can be restored", async () => {
+    const live = definition({ state: "published", live_version_id: "v-1" });
+    const archived = definition({ state: "archived", live_version_id: null });
+    let current = live;
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": () => current,
+      "POST /api/v1/achievements/d-1/archive": () => (current = archived),
+      "POST /api/v1/achievements/d-1/restore": () => (current = live),
+    });
+    const posts = () => calls.filter((c) => c.method === "POST").map((c) => c.url);
+    renderAt("/badges/d-1");
+    await userEvent.click(await screen.findByRole("button", { name: "Archive" }));
+    // The first press only explains: nothing is archived yet.
+    expect(screen.getByRole("alert")).toHaveTextContent(/No new awards will be made .* Credentials already issued stay valid/);
+    expect(posts()).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "Keep it live" }));
+    expect(posts()).toEqual([]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Archive" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive this badge" }));
+    expect((await screen.findAllByText(/Archived\. No new awards will be made/)).length).toBeGreaterThan(0);
+    expect(posts()).toEqual(["/api/v1/achievements/d-1/archive"]);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Restore this badge" }));
+    expect((await screen.findAllByText(/Restored\. The badge is live again/)).length).toBeGreaterThan(0);
+    expect(posts()).toEqual(["/api/v1/achievements/d-1/archive", "/api/v1/achievements/d-1/restore"]);
+    expect(await screen.findByRole("button", { name: "Archive" })).toBeInTheDocument();
+  });
+
+  it("says an archived badge can be restored when it is opened later", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({ state: "archived", live_version_id: null }),
+    });
+    renderAt("/badges/d-1");
+    expect(await screen.findByText(/This badge is archived: no new awards are made/)).toHaveTextContent(
+      /Restore it to start awarding again/,
+    );
+    expect(screen.getByRole("button", { name: "Restore this badge" })).toBeInTheDocument();
+  });
+
+  it("asks before deleting a draft", async () => {
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition(),
+      "GET /api/v1/achievements": { items: [] },
+      "DELETE /api/v1/achievements/d-1": new Response(null, { status: 204 }),
+    });
+    renderAt("/badges/d-1");
+    await userEvent.click(await screen.findByRole("button", { name: "Delete draft" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/cannot be brought back/);
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Delete this draft" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
+    expect(await screen.findByRole("heading", { name: "Badges" })).toBeInTheDocument();
+  });
+
   it("lets the author skip review where their area allows it", async () => {
     const authorDecides = {
       mode: "author_decides",
