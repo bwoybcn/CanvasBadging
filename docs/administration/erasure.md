@@ -5,17 +5,22 @@ interact with immutable credential records and public verification. This is that
 
 | Operation | Who | What changes | What does not |
 | --- | --- | --- | --- |
-| **Erase personal data** | Institution administrator, on the person's request | Name, email and Canvas identifiers removed; staff roles ended; Canvas progress and submission snapshots deleted; eligibility history deleted (or emptied where an award relies on it); notes on requirement approvals cleared; awards not yet issued cancelled; the account marked deleted | Credentials already issued, their revocation status, share links |
+| **Erase personal data** | Institution administrator, on the person's request | Name, email and Canvas identifiers removed; staff roles ended; Canvas progress and submission snapshots deleted; eligibility history deleted (or emptied where an award relies on it); notes on requirement approvals cleared; awards not yet issued cancelled; the account marked deleted; existing sessions ended; public share pages taken down | Credentials already issued and their revocation status |
 | **Revoke a credential** | A revoker under the institution policy | The credential's bit in the revocation list; verifiers report it revoked, including downloaded copies | The learner's personal data; the signed credential (immutable) |
-| **Withdraw public sharing** | The learner (W6) | The public share page stops working | The credential and its status |
+| **Withdraw public sharing** | The learner (W6), and automatically on erasure | The public share page stops working | The credential and its status |
 
 ## Signing in after erasure
 
 Erasure takes effect at once. Any session the person already had stops working on its next
 request (it is refused with `ACCOUNT_INACTIVE`), rather than lasting until it expires, so they
 cannot view their collection, change sharing settings or export data afterwards. A new launch
-from Canvas is refused too. Public share pages and public verification do not need a session and
-carry on as described below.
+from Canvas is refused too. Public verification does not need a session and keeps working.
+
+## Public share pages
+
+Erasure takes down the person's public share pages, because afterwards they can no longer sign
+in to do it themselves and no one else can. Their credentials are not revoked: a copy they
+downloaded, or one held in a wallet, still verifies.
 
 ## Why erasure does not revoke
 

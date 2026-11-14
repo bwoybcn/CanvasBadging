@@ -231,10 +231,14 @@ def erase(
 
     creds = list(db.scalars(select(Credential.id).where(Credential.user_id == user_id)))
     counts["credentials_kept"] = len(creds)
-    counts["active_share_links"] = int(
-        db.query(ShareGrant)
-        .filter(ShareGrant.credential_id.in_(creds), ShareGrant.revoked_at.is_(None))
-        .count()
+    # Public share pages are withdrawn: after erasure the person can no longer sign in to do it
+    # themselves. The credentials stay valid and downloaded copies still verify.
+    counts["share_links_withdrawn"] = _n(
+        db.execute(
+            update(ShareGrant)
+            .where(ShareGrant.credential_id.in_(creds), ShareGrant.revoked_at.is_(None))
+            .values(revoked_at=now)
+        )
     )
     audit.record(
         db,

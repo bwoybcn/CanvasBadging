@@ -665,7 +665,7 @@ def test_personal_data_export_and_erasure_are_separate_from_revocation(
     r = world.post("admin", path, {"confirm": "ERASE"})
     assert r.status_code == 200, r.text
     counts = r.json()
-    assert counts["credentials_kept"] == 1 and counts["active_share_links"] == 1
+    assert counts["credentials_kept"] == 1 and counts["share_links_withdrawn"] == 1
     assert counts["identities_deleted"] == 1 and counts["roles_ended"] == 1
     assert world.post("admin", path, {"confirm": "ERASE"}).status_code == 409
 
@@ -680,7 +680,7 @@ def test_personal_data_export_and_erasure_are_separate_from_revocation(
         )
         assert status is None or status.state == "active"
         share = db.scalar(select(m.ShareGrant).where(m.ShareGrant.credential_id == cred.id))
-        assert share is not None and share.revoked_at is None  # sharing is withdrawn separately
+        assert share is not None and share.revoked_at is not None  # public page taken down
     rows = world.get("admin", "/api/v1/admin/credentials").json()
     assert rows[0]["learner_name"] is None
     assert "privacy.erase" in _actions(world)
@@ -698,6 +698,11 @@ def test_session_stops_working_once_the_account_is_erased(
     assert world.get("s1", "/api/v1/learners/me/credentials").status_code == 200
     r = world.put("s1", share, {"show_name": False, "show_evidence": False})
     assert r.status_code == 200, r.text
+    with world.db() as db:
+        share_id = db.scalar(
+            select(m.ShareGrant.share_id).where(m.ShareGrant.credential_id == uuid.UUID(cred_id))
+        )
+    assert world.client.get(f"/verify/{share_id}").status_code == 200
 
     r = world.post("admin", f"/api/v1/admin/people/{world.users['s1']}/erase", {"confirm": "ERASE"})
     assert r.status_code == 200, r.text
@@ -720,6 +725,8 @@ def test_session_stops_working_once_the_account_is_erased(
             select(m.ShareGrant).where(m.ShareGrant.credential_id == uuid.UUID(cred_id))
         )
         assert grant is not None and grant.show_name is False  # the PUT above changed nothing
+        assert grant.revoked_at is not None  # erasure took the public page down
+    assert world.client.get(f"/verify/{share_id}").status_code == 404
     # Other people are unaffected.
     assert world.get("s2", "/api/v1/learners/me/credentials").status_code == 200
     assert world.get("admin", "/api/v1/admin/credentials").status_code == 200

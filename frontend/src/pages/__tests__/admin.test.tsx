@@ -246,7 +246,7 @@ describe("administration", () => {
         audit_event_years: 7,
       },
       "POST /api/v1/admin/people/u-s1/erase": () =>
-        json({ credentials_kept: 1, active_share_links: 1, awards_cancelled: 0 }),
+        json({ credentials_kept: 1, share_links_withdrawn: 1, awards_cancelled: 0 }),
     });
     renderAt("/admin/privacy");
     await userEvent.type(await screen.findByLabelText("Find a person by name"), "Sa");
@@ -257,7 +257,7 @@ describe("administration", () => {
     expect(erase).toBeDisabled();
     await userEvent.type(screen.getByLabelText("Type ERASE to confirm"), "ERASE");
     await userEvent.click(erase);
-    expect(await screen.findByText(/1 issued credentials kept; 1 public share/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 issued credentials kept; 1 public share links taken down/)).toBeInTheDocument();
     expect(calls.find((c) => c.method === "POST")!.body).toEqual({ confirm: "ERASE" });
   });
 });

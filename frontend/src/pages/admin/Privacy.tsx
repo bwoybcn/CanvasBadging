@@ -71,9 +71,9 @@ function PersonalData() {
           </DownloadButton>
           <Alert variant="info" margin="small 0">
             Erasing removes the person's name, email, Canvas identifiers, roles, Canvas progress and eligibility history,
-            and cancels awards not yet issued. It does not revoke credentials already issued (they contain no name and
-            the learner may still rely on them) and it does not withdraw public share links. Do those separately if they
-            are also requested.
+            cancels awards not yet issued and takes down their public share pages. It does not revoke credentials already
+            issued (they contain no name and the learner may still rely on them). Do that separately if it is also
+            requested.
           </Alert>
           <TextInput renderLabel="Type ERASE to confirm" value={confirm} onChange={(_e, v) => setConfirm(v)} width="12rem" />
           <Button color="danger" margin="x-small 0" interaction={confirm === "ERASE" ? "enabled" : "disabled"} onClick={() => erase.mutate()}>
@@ -82,8 +82,8 @@ function PersonalData() {
           {erase.isError && <ErrorAlert error={erase.error} />}
           {erase.data && (
             <Alert variant="success" margin="small 0">
-              Erased. {erase.data.credentials_kept} issued credentials kept; {erase.data.active_share_links} public share
-              links still active; {erase.data.awards_cancelled} pending awards cancelled.
+              Erased. {erase.data.credentials_kept} issued credentials kept; {erase.data.share_links_withdrawn} public share
+              links taken down; {erase.data.awards_cancelled} pending awards cancelled.
             </Alert>
           )}
         </View>
