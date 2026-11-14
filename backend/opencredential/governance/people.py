@@ -78,7 +78,7 @@ def _clean_review_policy(
                 )
         elif not isinstance(v, bool):
             raise Invalid("REVIEW_POLICY_INVALID", f"{key} must be true or false.")
-        if not policy.get("areas_may_relax_review", True) and authz.relaxes(key, v, base[key]):
+        if not policy.get("areas_may_relax_review", False) and authz.relaxes(key, v, base[key]):
             raise Forbidden(
                 "REVIEW_RELAX_NOT_ALLOWED",
                 "Your institution does not let areas set review less strictly than its own policy.",

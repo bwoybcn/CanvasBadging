@@ -44,6 +44,9 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- "Areas may set review less strictly" (`areas_may_relax_review`) is now off by default:
+  faculties, departments and services can only make review stricter until an institution
+  administrator opts in. Institutions that already saved the setting keep their choice.
 - Usability fixes from the 14 Nov 2026 review:
   - Award to a list: the badge picker lists only live badges you can award, with their course;
     a character count for the justification; the preview says up front when a second member of
