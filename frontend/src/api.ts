@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Minimal API client. The session token lives in memory only (ADR-0015, no cookies). */
 
+import { fieldProblems, type FieldError } from "./fieldErrors";
 import { currentToken } from "./session";
 
 export interface Problem {
@@ -9,6 +10,8 @@ export interface Problem {
   title: string;
   detail?: string | null;
   request_id?: string | null;
+  /** Which fields were refused and why (present on a 422). */
+  errors?: FieldError[] | null;
 }
 
 export class ApiError extends Error {
@@ -400,12 +403,20 @@ export const POLICY_LABELS: Record<string, string> = {
 export const SESSION_ENDED =
   "Your session has ended. Open Micro-Credentials from the Canvas course menu again to carry on.";
 
-export function problemText(error: unknown): string {
+/** What went wrong, one sentence per problem, in words the person can act on. */
+export function problemLines(error: unknown): string[] {
   if (error instanceof ApiError) {
-    if (error.problem.status === 401) return SESSION_ENDED;
-    return error.problem.detail || error.problem.title;
+    const p = error.problem;
+    if (p.status === 401) return [SESSION_ENDED];
+    // The server says only "validation failed" for a refused form: name the fields instead.
+    if (p.code === "VALIDATION_FAILED" && p.errors?.length) return fieldProblems(p.errors);
+    return [p.detail || p.title];
   }
-  return "Something went wrong. Please try again.";
+  return ["Something went wrong. Please try again."];
+}
+
+export function problemText(error: unknown): string {
+  return problemLines(error).join(" ");
 }
 
 /* ---- W6: collection, sharing and LinkedIn ------------------------------------------------- */

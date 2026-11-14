@@ -51,8 +51,8 @@ def _csv(body: str, name: str) -> Response:
 
 
 class Branding(BaseModel):
-    primary_colour: str | None = None
-    secondary_colour: str | None = None
+    primary_colour: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    secondary_colour: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class InstitutionIn(BaseModel):

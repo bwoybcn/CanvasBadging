@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Lecturer view of a course: every learner against every live badge, plus Canvas freshness. */
-import { Alert, Button, Flex, Heading, List, Modal, Table, Text, TextArea, TextInput, View } from "@instructure/ui";
+import { Alert, Button, Flex, Heading, List, Modal, Table, Text, TextInput, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router";
@@ -15,6 +15,7 @@ import {
   type SyncState,
 } from "../api";
 import { useAuth } from "../auth";
+import { LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
 import { DownloadButton } from "./admin/AdminPage";
@@ -94,7 +95,7 @@ function ApprovalModal({
       <Modal.Body>
         {rules.isPending && <Loading what="requirements" />}
         {items.length === 0 && !rules.isPending && <Text>This badge has no staff-confirmed requirements.</Text>}
-        <TextInput renderLabel="Note (optional)" value={note} onChange={(_e, v) => setNote(v)} />
+        <TextInput maxLength={2000} renderLabel="Note (optional)" value={note} onChange={(_e, v) => setNote(v)} />
         {items.map((r) => (
           <View key={r.id} as="div" margin="small 0" display="block">
             <Text as="p">{r.text}</Text>
@@ -140,7 +141,7 @@ function RevocationRequestModal({ credentialId, learner, badge, onClose }: { cre
               Revocation cannot be undone. Verifiers will show the credential as revoked, including copies the learner has
               already downloaded. The credential itself is never deleted.
             </Text>
-            <TextArea
+            <LimitedTextArea maxLength={2000}
               label="Why should it be revoked? (at least 5 characters)"
               value={reason}
               onChange={(e) => setReason(e.target.value)}

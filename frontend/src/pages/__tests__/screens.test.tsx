@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -227,6 +227,82 @@ describe("Create Micro-Credential wizard", () => {
     expect(screen.getByRole("heading", { name: /Step 2 of 7/ })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Lab Safety")).toBeInTheDocument();
     expect(writes(calls)).toEqual(["POST /api/v1/achievements"]);
+  });
+
+  it("names the field and the limit when the server refuses what was typed", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "POST /api/v1/achievements": () =>
+        new Response(
+          JSON.stringify({
+            status: 422,
+            code: "VALIDATION_FAILED",
+            title: "Request validation failed",
+            detail: null,
+            errors: [
+              {
+                field: "body.fields.short_description",
+                code: "string_too_long",
+                message: "String should have at most 280 characters",
+                limits: { max_length: 280 },
+              },
+              { field: "body.fields.category", code: "string_too_long", message: "x", limits: { max_length: 60 } },
+            ],
+          }),
+          { status: 422, headers: { "content-type": "application/problem+json" } },
+        ),
+    });
+    await startNewBadge();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByText(/Short description is too long: use up to 280 characters\./)).toBeInTheDocument();
+    expect(screen.getByText(/Category is too long: use up to 60 characters\./)).toBeInTheDocument();
+    expect(screen.queryByText(/validation failed/i)).not.toBeInTheDocument();
+  });
+
+  it("limits the short description while it is typed and counts the characters", async () => {
+    stubApi(COURSE_ROUTES);
+    renderAt("/badges/new");
+    await screen.findByRole("heading", { name: /Step 1 of 7/ });
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    const short = await screen.findByLabelText(/Short description/);
+    expect(short).toHaveAttribute("maxlength", "280");
+    expect(screen.getByLabelText(/Full description/)).toHaveAttribute("maxlength", "4000");
+    await userEvent.type(short, "Works safely.");
+    expect(screen.getByText("13 of 280 characters.")).toBeInTheDocument();
+  });
+
+  it("makes artwork from colours picked by eye, not typed as codes", async () => {
+    const draft = definition({ id: "d-new" });
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "POST /api/v1/achievements": draft,
+      "PATCH /api/v1/achievements/d-new": draft,
+      "POST /api/v1/assets/from-template": {
+        id: "a-1",
+        media_type: "image/svg+xml",
+        alt_text: "Green shield",
+        data_url: "data:image/svg+xml;base64,AA==",
+        warnings: [],
+      },
+    });
+    await startNewBadge();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 3 of 7/ });
+    await userEvent.type(screen.getByLabelText("Learning outcome 1"), "Handle reagents safely");
+    await userEvent.type(screen.getByLabelText(/Criteria/), "Pass the lab induction.");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: /Step 4 of 7/ });
+    const main = screen.getByLabelText("Main colour");
+    expect(main).toHaveAttribute("type", "color");
+    expect(screen.queryByLabelText(/\(hex\)/)).not.toBeInTheDocument();
+    fireEvent.change(main, { target: { value: "#0b6e4f" } });
+    fireEvent.change(screen.getByLabelText("Accent colour"), { target: { value: "#ffd166" } });
+    await userEvent.type(screen.getByLabelText(/Alternative text/), "Green shield");
+    await userEvent.click(screen.getByRole("button", { name: "Create artwork" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/api/v1/assets/from-template")).toBe(true));
+    const sent = calls.find((c) => c.url === "/api/v1/assets/from-template")!.body as Record<string, string>;
+    expect(sent.primary_colour).toBe("#0b6e4f");
+    expect(sent.secondary_colour).toBe("#ffd166");
   });
 
   it("tells the author their draft is safe when the session ends part-way through", async () => {

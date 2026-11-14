@@ -433,6 +433,7 @@
           "primary_colour": {
             "anyOf": [
               {
+                "pattern": "^#[0-9a-fA-F]{6}$",
                 "type": "string"
               },
               {
@@ -444,6 +445,7 @@
           "secondary_colour": {
             "anyOf": [
               {
+                "pattern": "^#[0-9a-fA-F]{6}$",
                 "type": "string"
               },
               {

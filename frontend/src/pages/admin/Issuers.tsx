@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Issuers with explicit delegated authority (spec §10.2). */
-import { Alert, Button, Flex, Heading, SimpleSelect, Text, TextArea, TextInput, View } from "@instructure/ui";
+import { Alert, Button, Flex, Heading, SimpleSelect, Text, TextInput, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { apiDelete, apiFetch, apiSend, type AdminCourse, type AdminIssuer, type OrgUnit } from "../../api";
 import { useAuth } from "../../auth";
+import { LimitedTextArea } from "../../components/Fields";
 import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
 
@@ -136,7 +137,8 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
       </Flex>
       {f.isInstAdmin && issuer.status !== "active" && (
         <View as="div" margin="small 0 0">
-          <TextArea
+          <LimitedTextArea
+            maxLength={2000}
             label="Basis of this issuer's authority (for example the committee decision that approved it)"
             value={basis}
             onChange={(e) => setBasis(e.target.value)}
@@ -153,7 +155,7 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
       )}
       {f.isInstAdmin && issuer.status === "active" && (
         <Flex gap="small" alignItems="end" margin="small 0 0" wrap="wrap">
-          <TextInput renderLabel="Reason to suspend" value={reason} onChange={(_e, v) => setReason(v)} width="20rem" />
+          <TextInput maxLength={2000} renderLabel="Reason to suspend" value={reason} onChange={(_e, v) => setReason(v)} width="20rem" />
           <Button
             interaction={reason.trim().length >= 5 ? "enabled" : "disabled"}
             onClick={() => act.mutate({ path: `/api/v1/admin/issuers/${issuer.id}/suspend`, body: { reason } })}
@@ -191,8 +193,9 @@ function CreateIssuer() {
       <Heading level="h2" margin="0 0 small">
         New issuer
       </Heading>
-      <TextInput renderLabel="Name as it appears on credentials" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} />
+      <TextInput maxLength={200} renderLabel="Name as it appears on credentials" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} />
       <TextInput
+        maxLength={63}
         renderLabel="Short name (lowercase, used in web addresses)"
         value={v.slug}
         onChange={(_e, x) => setV({ ...v, slug: x })}
@@ -220,7 +223,7 @@ function CreateIssuer() {
             </SimpleSelect.Option>
           ))}
       </SimpleSelect>
-      <TextInput renderLabel="Web address (https://, optional)" value={v.url} onChange={(_e, x) => setV({ ...v, url: x })} />
+      <TextInput maxLength={500} renderLabel="Web address (https://, optional)" value={v.url} onChange={(_e, x) => setV({ ...v, url: x })} />
       {create.isError && <ErrorAlert error={create.error} />}
       <Button color="primary" margin="small 0" onClick={() => create.mutate()}>
         Create issuer (not yet authorised)

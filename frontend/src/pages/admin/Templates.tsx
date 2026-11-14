@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { apiFetch, apiSend, type BadgeTemplate, type OrgUnit } from "../../api";
 import { useAuth } from "../../auth";
+import { ColourField, LimitedTextArea } from "../../components/Fields";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage } from "./AdminPage";
 
@@ -147,8 +148,8 @@ export function Templates() {
         <Heading level="h2" margin="0 0 small">
           New template
         </Heading>
-        <TextInput renderLabel="Template name" value={v.name} onChange={set("name")} />
-        <TextInput renderLabel="What it is for" value={v.description} onChange={set("description")} />
+        <TextInput maxLength={120} renderLabel="Template name" value={v.name} onChange={set("name")} />
+        <TextInput maxLength={2000} renderLabel="What it is for" value={v.description} onChange={set("description")} />
         <SimpleSelect renderLabel="Available to" value={v.org_unit_id} onChange={(_e, { value }) => setV({ ...v, org_unit_id: String(value) })}>
           <SimpleSelect.Option id="t-all" value="">
             The whole institution
@@ -161,11 +162,11 @@ export function Templates() {
               </SimpleSelect.Option>
             ))}
         </SimpleSelect>
-        <TextInput renderLabel="Title pattern" value={v.title} onChange={set("title")} />
-        <TextInput renderLabel="Short description" value={v.short_description} onChange={set("short_description")} />
-        <TextInput renderLabel="Category" value={v.category} onChange={set("category")} />
-        <TextArea label="Criteria structure" value={v.criteria_narrative} onChange={(e) => setV({ ...v, criteria_narrative: e.target.value })} />
-        <TextArea label="Evidence expectations" value={v.evidence_description} onChange={(e) => setV({ ...v, evidence_description: e.target.value })} />
+        <TextInput maxLength={120} renderLabel="Title pattern" value={v.title} onChange={set("title")} />
+        <TextInput maxLength={280} renderLabel="Short description" value={v.short_description} onChange={set("short_description")} />
+        <TextInput maxLength={60} renderLabel="Category" value={v.category} onChange={set("category")} />
+        <LimitedTextArea maxLength={4000} label="Criteria structure" value={v.criteria_narrative} onChange={(e) => setV({ ...v, criteria_narrative: e.target.value })} />
+        <LimitedTextArea maxLength={2000} label="Evidence expectations" value={v.evidence_description} onChange={(e) => setV({ ...v, evidence_description: e.target.value })} />
         <TextArea label="Skills terms (one per line)" value={v.skills} onChange={(e) => setV({ ...v, skills: e.target.value })} />
         <NumberInput
           renderLabel="Standard validity (days, blank for no expiry)"
@@ -174,9 +175,14 @@ export function Templates() {
           onChange={(_e, x) => setV({ ...v, validity_days: x })}
           width="14rem"
         />
-        <TextInput renderLabel="Artwork style (shield, circle, hexagon…)" value={v.artwork_template} onChange={set("artwork_template")} />
-        <TextInput renderLabel="Artwork colour (for example #212b58)" value={v.primary_colour} onChange={set("primary_colour")} />
-        <TextArea label="Artwork guidance" value={v.artwork_guidance} onChange={(e) => setV({ ...v, artwork_guidance: e.target.value })} />
+        <TextInput maxLength={40} renderLabel="Artwork style (shield, circle, hexagon…)" value={v.artwork_template} onChange={set("artwork_template")} />
+        <ColourField
+          label="Artwork colour"
+          optional
+          value={v.primary_colour}
+          onChange={(x) => setV((p) => ({ ...p, primary_colour: x }))}
+        />
+        <LimitedTextArea maxLength={1000} label="Artwork guidance" value={v.artwork_guidance} onChange={(e) => setV({ ...v, artwork_guidance: e.target.value })} />
         {create.isError && <ErrorAlert error={create.error} />}
         <Button color="primary" margin="small 0" onClick={() => create.mutate()} interaction={v.name.trim().length >= 3 ? "enabled" : "disabled"}>
           Save template

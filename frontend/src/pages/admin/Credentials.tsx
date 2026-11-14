@@ -121,7 +121,7 @@ function RecordRow({ r }: { r: CredentialRecord }) {
                 </SimpleSelect.Option>
               ))}
             </SimpleSelect>
-            <TextInput renderLabel="Explanation (kept in the record, not shown publicly)" value={text} onChange={(_e, v) => setText(v)} />
+            <TextInput maxLength={2000} renderLabel="Explanation (kept in the record, not shown publicly)" value={text} onChange={(_e, v) => setText(v)} />
             <Alert variant="warning" margin="x-small 0">
               Verifiers will report this credential as revoked, including copies the learner has already downloaded.
             </Alert>
