@@ -8,13 +8,14 @@ import re
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from opencredential import audit
 from opencredential.authz import policy as authz
 from opencredential.db.models import BadgeAsset, Institution, Issuer, IssuerKey
 from opencredential.db.models.tenancy import DEFAULT_POLICY, DEFAULT_RETENTION
-from opencredential.errors import Conflict, Invalid
+from opencredential.errors import Conflict, Forbidden, Invalid
 
 HOST_RE = re.compile(
     r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(:\d{2,5})?$"
@@ -27,7 +28,6 @@ CONFIG_FIELDS = (
     "website_url",
     "logo_asset_id",
     "branding",
-    "verification_host",
     "categories",
     "linkedin_org_id",
     "linkedin_org_name",
@@ -77,7 +77,7 @@ def update_config(
     inst = current(db, actor)
     clean: dict[str, Any] = {}
     for key, value in changes.items():
-        if key not in CONFIG_FIELDS:
+        if key not in CONFIG_FIELDS and key != "verification_host":
             continue
         if key == "name":
             value = (value or "").strip()
@@ -87,19 +87,16 @@ def update_config(
             if not str(value).startswith("https://"):
                 raise Invalid("URL_INVALID", "The website must be an https:// address.")
         elif key == "verification_host":
-            value = (value or "").strip().lower() or None
-            if value is not None and not HOST_RE.match(value):
-                raise Invalid(
-                    "HOST_INVALID",
-                    "Enter a host name such as badges.example.ac.uk (no https://, no path).",
+            # Operator-only (review finding S3): an admin may resend the current value, as the
+            # settings form does, but cannot change it. See set_verification_host.
+            if _normalise_host(value) != inst.verification_host:
+                raise Forbidden(
+                    "VERIFICATION_HOST_OPERATOR_ONLY",
+                    "The verification domain is set by the service operator.",
+                    "Ask whoever runs this service to set it with "
+                    "`oc admin set-verification-host`.",
                 )
-            if value != inst.verification_host and _did_web_issuers_with_keys(db):
-                raise Conflict(
-                    "VERIFICATION_HOST_IN_USE",
-                    "Issuers already sign with did:web identifiers on the current host.",
-                    "Changing the host would break verification of credentials already issued. "
-                    "Plan a migration (new issuers on the new host) instead.",
-                )
+            continue
         elif key == "logo_asset_id" and value is not None:
             if db.get(BadgeAsset, value) is None:
                 raise Invalid("ASSET_NOT_FOUND", "Upload the logo first, then choose it.")
@@ -134,12 +131,67 @@ def update_config(
     return inst
 
 
-def _did_web_issuers_with_keys(db: Session) -> bool:
+def _normalise_host(value: Any) -> str | None:
+    return (str(value) if value is not None else "").strip().lower() or None
+
+
+def set_verification_host(
+    db: Session, inst: Institution, host: str | None, *, via: str = "cli"
+) -> Institution:
+    """Set the institution's public verification domain. Operator only (review finding S3).
+
+    Institution admins cannot change it in the app: whoever runs the service sets it, after
+    checking the institution controls the domain. The host is unique across institutions and is
+    locked once issuers sign with ``did:web`` identifiers on it.
+    """
+    value = _normalise_host(host)
+    if value is not None and not HOST_RE.match(value):
+        raise Invalid(
+            "HOST_INVALID",
+            "Enter a host name such as badges.example.ac.uk (no https://, no path).",
+        )
+    if value == inst.verification_host:
+        return inst
+    if _did_web_issuers_with_keys(db, inst.id):
+        raise Conflict(
+            "VERIFICATION_HOST_IN_USE",
+            "Issuers already sign with did:web identifiers on the current host.",
+            "Changing the host would break verification of credentials already issued. "
+            "Plan a migration (new issuers on the new host) instead.",
+        )
+    previous = inst.verification_host
+    inst.verification_host = value
+    try:
+        with db.begin_nested():
+            db.flush()
+    except IntegrityError:
+        raise Conflict(
+            "VERIFICATION_HOST_TAKEN",
+            "Another institution on this service already uses that verification host.",
+            "Each institution needs its own host.",
+        ) from None
+    audit.record(
+        db,
+        action="institution.verification_host_set",
+        resource_type="institution",
+        resource_id=inst.id,
+        institution_id=inst.id,
+        actor_kind="system",
+        data={"from": previous, "to": value, "via": via},
+    )
+    return inst
+
+
+def _did_web_issuers_with_keys(db: Session, institution_id: Any) -> bool:
     return (
         db.scalar(
             select(IssuerKey.id)
             .join(Issuer, Issuer.id == IssuerKey.issuer_id)
-            .where(Issuer.did.startswith("did:web:"), IssuerKey.state.in_(("active", "retired")))
+            .where(
+                Issuer.institution_id == institution_id,
+                Issuer.did.startswith("did:web:"),
+                IssuerKey.state.in_(("active", "retired")),
+            )
             .limit(1)
         )
         is not None

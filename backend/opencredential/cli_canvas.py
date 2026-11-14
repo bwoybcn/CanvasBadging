@@ -246,3 +246,34 @@ def admin_grant(
                 data={"role": "inst_admin", "via": "cli"},
             )
         typer.echo(f"{email} is inst_admin of {institution}")
+
+
+@admin_app.command("set-verification-host")
+def admin_set_verification_host(
+    institution: str = typer.Option(..., help="Institution slug"),
+    host: str = typer.Option("", help="Public verification domain, such as badges.liverpool.ac.uk"),
+    clear: bool = typer.Option(False, "--clear", help="Remove the host instead"),
+) -> None:
+    """Set an institution's public verification domain (operator only).
+
+    Check first that the institution controls the domain: issuers get did:web identifiers on
+    it and this service vouches for them. The host is unique across institutions and locked
+    once issuers sign on it.
+    """
+    from opencredential.db.models import Institution
+    from opencredential.db.session import owner_session
+    from opencredential.errors import DomainError
+    from opencredential.governance.institution import set_verification_host
+
+    if bool(host) == clear:
+        typer.echo("pass either --host or --clear", err=True)
+        raise typer.Exit(1)
+    with owner_session() as db:
+        inst = db.get(Institution, _institution_id(db, institution))
+        assert inst is not None
+        try:
+            set_verification_host(db, inst, None if clear else host)
+        except DomainError as exc:
+            typer.echo(f"{exc.code}: {exc.title}", err=True)
+            raise typer.Exit(1) from None
+        typer.echo(f"{institution} verification host: {inst.verification_host or '(none)'}")

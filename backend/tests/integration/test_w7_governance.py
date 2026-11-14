@@ -24,6 +24,9 @@ from sqlalchemy import select
 
 from opencredential.api.app import create_app
 from opencredential.db import models as m
+from opencredential.db.session import owner_session
+from opencredential.errors import Conflict
+from opencredential.governance.institution import set_verification_host
 from opencredential.integrations import registry
 from opencredential.jobs import tasks
 from opencredential.settings import get_settings
@@ -338,16 +341,17 @@ def test_institution_configuration(world: World) -> None:
             "description": "Test tenant",
             "website_url": "https://www.liverpool.ac.uk/",
             "branding": {"primary_colour": "#212b58", "secondary_colour": "#c8102e"},
-            "verification_host": "badges.example.ac.uk",
             "categories": ["Academic Skills", "Employability", "Academic Skills"],
         },
     )
     assert r.status_code == 200, r.text
     cfg = r.json()
     assert cfg["categories"] == ["Academic Skills", "Employability"]
-    assert cfg["verification_host"] == "badges.example.ac.uk"
-    bad = world.patch("admin", "/api/v1/institutions/current", {"verification_host": "https://x"})
-    assert bad.status_code == 422
+    # The verification domain is operator-only (review finding S3).
+    bad = world.patch(
+        "admin", "/api/v1/institutions/current", {"verification_host": "badges.example.ac.uk"}
+    )
+    assert bad.status_code == 403 and bad.json()["code"] == "VERIFICATION_HOST_OPERATOR_ONLY"
     assert (
         world.patch(
             "admin", "/api/v1/institutions/current", {"website_url": "http://insecure"}
@@ -363,16 +367,25 @@ def test_institution_configuration(world: World) -> None:
 
 
 def test_did_web_issuer_on_configured_host(world: World, signer_available: bool) -> None:
-    world.patch("admin", "/api/v1/institutions/current", {"verification_host": "badges.test.ac.uk"})
+    host = f"badges-{uuid.uuid4().hex[:6]}.test.ac.uk"
+    _operator_sets_host(world, host)
     issuer = _new_issuer(world, who="admin", slug="library-web")
     r = world.post(
         "admin", f"/api/v1/admin/issuers/{issuer['id']}/authorise", {"authority_basis": BASIS}
     )
     assert r.status_code == 200, r.text
-    assert r.json()["did"] == "did:web:badges.test.ac.uk:issuers:library-web"
+    assert r.json()["did"] == f"did:web:{host}:issuers:library-web"
     # Now that credentials could be signed on this host, moving it is refused.
-    r = world.patch("admin", "/api/v1/institutions/current", {"verification_host": "other.ac.uk"})
-    assert r.status_code == 409 and r.json()["code"] == "VERIFICATION_HOST_IN_USE"
+    with pytest.raises(Conflict) as exc:
+        _operator_sets_host(world, "other.ac.uk")
+    assert exc.value.code == "VERIFICATION_HOST_IN_USE"
+
+
+def _operator_sets_host(world: World, host: str | None) -> None:
+    with owner_session() as db:
+        inst = db.get(m.Institution, world.iid)
+        assert inst is not None
+        set_verification_host(db, inst, host)
 
 
 # ---- templates (§10.4) ----------------------------------------------------------------------

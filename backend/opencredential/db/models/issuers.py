@@ -73,6 +73,8 @@ class IssuerKey(TenantMixin, Base):
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revocation_reason: Mapped[str | None] = mapped_column(Text)
+    #: When the signer erased the private half (public key stays for verification).
+    destroyed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     #: Development key: the api and signer refuse to start in production while one is active.
     is_dev: Mapped[bool] = mapped_column(Boolean, default=False)
 

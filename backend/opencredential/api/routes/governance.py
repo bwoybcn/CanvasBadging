@@ -60,7 +60,13 @@ class InstitutionIn(BaseModel):
     website_url: str | None = Field(default=None, max_length=500)
     logo_asset_id: uuid.UUID | None = None
     branding: Branding | None = None
-    verification_host: str | None = Field(default=None, max_length=253)
+    #: Read-only here: only the operator sets it (``oc admin set-verification-host``). Sending the
+    #: current value is accepted; a different one is refused with 403.
+    verification_host: str | None = Field(
+        default=None,
+        max_length=253,
+        description="Operator-only. Send the current value or leave it out; a change is refused.",
+    )
     categories: list[str] | None = Field(default=None, max_length=30)
     linkedin_org_id: str | None = Field(default=None, max_length=40)
     linkedin_org_name: str | None = Field(default=None, max_length=200)

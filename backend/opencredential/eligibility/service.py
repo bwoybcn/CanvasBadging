@@ -16,19 +16,19 @@ Flow for one learner and one live badge version:
      justification.
 
 At most one live decision exists per learner, version and issuance sequence (unique index), and
-the decision's ``idempotency_key`` is deterministic, so replays never create a second award.
+the decision's ``idempotency_key`` is deterministic, so replays never create a second award. Keys
+and inserts both come from :mod:`opencredential.issuance.decisions`, the only place decisions
+are created.
 """
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from opencredential import audit
@@ -48,6 +48,7 @@ from opencredential.db.models import (
 )
 from opencredential.eligibility.snapshots import CourseData, approvals_for, load_course, snapshot
 from opencredential.errors import Conflict, Forbidden, Invalid, NotFound
+from opencredential.issuance import decisions
 from opencredential.jobs import enqueue
 from opencredential.rules import MET, Evaluation, RuleSet, evaluate
 
@@ -56,13 +57,6 @@ MIN_JUSTIFICATION = 20
 
 def _now() -> datetime:
     return datetime.now(UTC)
-
-
-def idempotency_key(
-    institution_id: uuid.UUID, user_id: uuid.UUID, version_id: uuid.UUID, kind: str, seq: int
-) -> str:
-    raw = f"{institution_id}|{user_id}|{version_id}|{kind}|{seq}"
-    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 @dataclass
@@ -231,17 +225,6 @@ def _request_issuance(db: Session, decision: AwardDecision) -> None:
     )
 
 
-def _insert_decision(db: Session, decision: AwardDecision) -> AwardDecision | None:
-    """Insert unless a concurrent worker already made the same decision."""
-    try:
-        with db.begin_nested():
-            db.add(decision)
-            db.flush()
-    except IntegrityError:
-        return None
-    return decision
-
-
 def apply_award_policy(
     db: Session, target: Target, user_id: uuid.UUID, evaluation: EligibilityEvaluation
 ) -> AwardDecision | None:
@@ -257,22 +240,19 @@ def apply_award_policy(
     kind, status = (
         ("automatic", "ready") if policy == "automatic" else ("confirmed", "awaiting_confirmation")
     )
-    decision = AwardDecision(
+    decision, created = decisions.decide(
+        db,
         institution_id=target.definition.institution_id,
-        version_id=version.id,
         user_id=user_id,
-        issuer_id=target.definition.issuer_id,
+        version_id=version.id,
         kind=kind,
         evaluation_id=evaluation.id,
-        decided_at=_now(),
         status=status,
-        issuance_seq=1,
-        idempotency_key=idempotency_key(
-            target.definition.institution_id, user_id, version.id, kind, 1
-        ),
+        now=_now(),
+        record_audit=False,
     )
-    if _insert_decision(db, decision) is None:
-        return _existing_decision(db, version.id, user_id)
+    if not created:
+        return decision  # a concurrent worker already decided
     audit.record(
         db,
         action=f"award.{status}",
@@ -539,24 +519,39 @@ def manual_award(
         raise Conflict("ALREADY_AWARDED", "This learner already has this badge.")
     policy = authz.institution_policy(db, actor.institution_id)
     second = bool(policy.get("manual_awards_require_second_approval"))
-    decision = AwardDecision(
-        institution_id=actor.institution_id,
-        version_id=target.version.id,
-        user_id=user_id,
-        issuer_id=definition.issuer_id,
-        kind="manual",
-        evaluation_id=None,
-        justification=justification,
-        evidence=[dict(e) for e in (evidence or [])],
-        decided_by=actor.user_id,
-        decided_at=_now(),
-        status="awaiting_confirmation" if second else "ready",
-        issuance_seq=1,
-        idempotency_key=idempotency_key(
-            actor.institution_id, user_id, target.version.id, "manual", 1
-        ),
+    # Each earlier rejected manual award is an earlier attempt: a corrected award after a
+    # rejection needs a key of its own, or it would collide with the rejected one.
+    rejected = (
+        db.scalar(
+            select(func.count())
+            .select_from(AwardDecision)
+            .where(
+                AwardDecision.version_id == target.version.id,
+                AwardDecision.user_id == user_id,
+                AwardDecision.issuance_seq == 1,
+                AwardDecision.kind == "manual",
+                AwardDecision.status == "rejected",
+            )
+        )
+        or 0
     )
-    if _insert_decision(db, decision) is None:
+    decision, created = decisions.decide(
+        db,
+        institution_id=actor.institution_id,
+        user_id=user_id,
+        version_id=target.version.id,
+        kind="manual",
+        justification=justification,
+        evidence=evidence,
+        decided_by=actor.user_id,
+        status="awaiting_confirmation" if second else "ready",
+        attempt=rejected,
+        now=_now(),
+        record_audit=False,
+    )
+    if not created:
+        if decision.kind == "manual" and decision.justification == justification:
+            return decision, False  # a concurrent replay of the same request won the race
         raise Conflict("ALREADY_AWARDED", "This learner already has this badge.")
     audit.record(
         db,

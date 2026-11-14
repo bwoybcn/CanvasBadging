@@ -253,8 +253,12 @@ def list_awards(
         q = q.where(AchievementDefinition.id == definition_id)
     if kind:
         q = q.where(AwardDecision.kind == kind)
+    scope = authz.award_list_scope(db, actor)
+    if scope is not None:
+        q = q.where(scope)
     out = []
-    for decision, definition in db.execute(q.order_by(AwardDecision.decided_at).limit(limit * 2)):
+    for decision, definition in db.execute(q.order_by(AwardDecision.decided_at).limit(limit)):
+        # The SQL scope already applies this rule; the per-row check stays as a safety net.
         course = authz.definition_course(db, definition)
         if course is not None:
             if not authz.is_course_staff(db, actor, course):
@@ -262,8 +266,6 @@ def list_awards(
         elif not authz.can_edit_definition(db, actor, definition):
             continue
         out.append(_decision_out(db, decision, with_eligibility=True))
-        if len(out) >= limit:
-            break
     return out
 
 

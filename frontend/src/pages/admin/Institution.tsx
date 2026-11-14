@@ -41,7 +41,6 @@ function ConfigForm({ initial }: { initial: Config }) {
     website_url: initial.website_url ?? "",
     primary_colour: initial.branding.primary_colour ?? "",
     secondary_colour: initial.branding.secondary_colour ?? "",
-    verification_host: initial.verification_host ?? "",
     categories: initial.categories.join("\n"),
     linkedin_org_id: initial.linkedin_org_id ?? "",
     linkedin_org_name: initial.linkedin_org_name ?? "",
@@ -54,7 +53,6 @@ function ConfigForm({ initial }: { initial: Config }) {
         description: c.description || null,
         website_url: c.website_url || null,
         branding: { primary_colour: c.primary_colour || null, secondary_colour: c.secondary_colour || null },
-        verification_host: c.verification_host || null,
         categories: c.categories.split("\n").map((s) => s.trim()).filter(Boolean),
         linkedin_org_id: c.linkedin_org_id || null,
         linkedin_org_name: c.linkedin_org_name || null,
@@ -76,14 +74,14 @@ function ConfigForm({ initial }: { initial: Config }) {
       </Heading>
       <TextInput
         renderLabel="Public verification domain"
+        interaction="readonly"
         messages={[
           {
             type: "hint",
-            text: "Host name only, such as badges.liverpool.ac.uk. Issuers get did:web identifiers on this host; it cannot change once they sign.",
+            text: "Set by the service operator once they have checked your institution controls the domain. Issuers get did:web identifiers on this host; it cannot change once they sign.",
           },
         ]}
-        value={c.verification_host}
-        onChange={set("verification_host")}
+        value={initial.verification_host ?? "Not set yet: ask the service operator"}
       />
       <Heading level="h2" margin="medium 0 small">
         Achievement categories

@@ -242,9 +242,37 @@ def handle_compromise(
 
 
 def keys_due_for_destruction(db: Session, now: datetime | None = None) -> list[IssuerKey]:
+    """Retired keys past the grace period whose private material has not been erased yet."""
     cutoff = (now or datetime.now(UTC)) - RETIRED_KEY_DESTROY_AFTER
     return list(
         db.scalars(
-            select(IssuerKey).where(IssuerKey.state == "retired", IssuerKey.retired_at < cutoff)
+            select(IssuerKey).where(
+                IssuerKey.state == "retired",
+                IssuerKey.retired_at < cutoff,
+                IssuerKey.destroyed_at.is_(None),
+            )
         )
     )
+
+
+def mark_destroyed(
+    db: Session, key_id: uuid.UUID, *, reason: str, now: datetime | None = None
+) -> bool:
+    """Record that the signer erased ``key_id``'s private material. Idempotent.
+
+    Call only after the signer confirmed the destruction. Returns ``True`` the first time.
+    """
+    key = db.get(IssuerKey, key_id)
+    if key is None or key.destroyed_at is not None:
+        return False
+    key.destroyed_at = now or datetime.now(UTC)
+    audit.record(
+        db,
+        action="issuer_key.destroyed",
+        resource_type="issuer_key",
+        resource_id=key.id,
+        institution_id=key.institution_id,
+        actor_kind="system",
+        data={"reason": reason, "state": key.state},
+    )
+    return True
