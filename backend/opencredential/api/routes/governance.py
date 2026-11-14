@@ -471,7 +471,7 @@ def list_credentials(
     actor: ActorDep,
     course_id: uuid.UUID | None = None,
     definition_id: uuid.UUID | None = None,
-    status: Literal["active", "revoked"] | None = None,
+    status: Literal["active", "expired", "revoked"] | None = None,
     issued_from: date | None = None,
     issued_to: date | None = None,
     learner: str | None = Query(None, max_length=100),
@@ -502,19 +502,21 @@ def issuance_csv(
     actor: ActorDep,
     course_id: uuid.UUID | None = None,
     definition_id: uuid.UUID | None = None,
-    status: Literal["active", "revoked"] | None = None,
+    status: Literal["active", "expired", "revoked"] | None = None,
     issued_from: date | None = None,
     issued_to: date | None = None,
 ) -> Response:
-    rows = records.records(
-        db,
-        actor,
-        course_id=course_id,
-        definition_id=definition_id,
-        status=status,
-        issued_from=issued_from,
-        issued_to=issued_to,
-        limit=1_000_000,
+    body, n = records.to_csv_counted(
+        records.iter_records(
+            db,
+            actor,
+            course_id=course_id,
+            definition_id=definition_id,
+            status=status,
+            issued_from=issued_from,
+            issued_to=issued_to,
+        ),
+        records.RECORD_COLUMNS,
     )
     from opencredential import audit as audit_mod
 
@@ -525,9 +527,9 @@ def issuance_csv(
         resource_id="issuance",
         institution_id=actor.institution_id,
         actor_user_id=actor.user_id,
-        data={"counts": {"rows": len(rows)}},
+        data={"counts": {"rows": n}},
     )
-    return _csv(records.to_csv(rows, records.RECORD_COLUMNS), "issuance-records.csv")
+    return _csv(body, "issuance-records.csv")
 
 
 @router.get("/admin/reports/summary")

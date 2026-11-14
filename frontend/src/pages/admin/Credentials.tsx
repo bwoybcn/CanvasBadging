@@ -39,6 +39,9 @@ export function Credentials() {
           <SimpleSelect.Option id="st-active" value="active">
             Active
           </SimpleSelect.Option>
+          <SimpleSelect.Option id="st-expired" value="expired">
+            Expired
+          </SimpleSelect.Option>
           <SimpleSelect.Option id="st-revoked" value="revoked">
             Revoked
           </SimpleSelect.Option>

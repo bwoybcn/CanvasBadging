@@ -686,6 +686,92 @@ def test_personal_data_export_and_erasure_are_separate_from_revocation(
     assert "privacy.erase" in _actions(world)
 
 
+def _expire(owner_conn: psycopg.Connection, cred_id: str) -> None:
+    """Back-date a credential's expiry (the issued-credential trigger normally forbids it)."""
+    with owner_conn.transaction():
+        owner_conn.execute(
+            "ALTER TABLE app.credentials DISABLE TRIGGER trg_credentials_issued_immutable"
+        )
+        owner_conn.execute(
+            "UPDATE app.credentials SET valid_until = now() - interval '1 day' WHERE id = %s",
+            [uuid.UUID(cred_id)],
+        )
+        owner_conn.execute(
+            "ALTER TABLE app.credentials ENABLE TRIGGER trg_credentials_issued_immutable"
+        )
+
+
+def test_records_paging_and_summary_count_expired_credentials_correctly(
+    world: World, signer_available: bool, owner_conn: psycopg.Connection
+) -> None:
+    """Outside review finding 4 (14 Nov 2026): status filters run in SQL, so pages are full,
+    and the summary is counted in PostgreSQL."""
+    definition_id = _manual_badge(world, _authorised_issuer(world))
+    active = _issue_to(world, definition_id, "s3")
+    revoked = _issue_to(world, definition_id, "s1")
+    expired = _issue_to(world, definition_id, "s2")  # newest
+    r = world.post(
+        "admin",
+        f"/api/v1/credentials/{revoked}/revoke",
+        {"reason_code": "issued_in_error", "reason_text": "test"},
+    )
+    assert r.status_code == 200, r.text
+    _expire(owner_conn, expired)
+
+    def ids(path: str) -> list[str]:
+        r = world.get("admin", path)
+        assert r.status_code == 200, r.text
+        return [row["credential_id"] for row in r.json()]
+
+    # The newest credential is expired; an "active" page of one must still hold one row.
+    assert ids("/api/v1/admin/credentials?status=active&limit=1") == [active]
+    assert ids("/api/v1/admin/credentials?status=active&limit=1&offset=1") == []
+    assert ids("/api/v1/admin/credentials?status=expired") == [expired]
+    assert ids("/api/v1/admin/credentials?status=revoked") == [revoked]
+    assert ids("/api/v1/admin/credentials?limit=2") == [expired, revoked]
+    assert ids("/api/v1/admin/credentials?limit=2&offset=2") == [active]
+    course = f"/api/v1/courses/{world.course_id}/credentials"
+    assert ids(f"{course}?status=expired") == [expired]
+    assert [r["status"] for r in world.get("admin", course).json()] == [
+        "expired",
+        "revoked",
+        "active",
+    ]
+
+    s = world.get("admin", "/api/v1/admin/reports/summary").json()
+    assert (s["issued"], s["revoked"], s["active"]) == (3, 1, 1)
+    assert [(c["issued"], c["revoked"]) for c in s["by_course"]] == [(3, 1)]
+    assert [(b["badge_title"], b["issued"], b["revoked"]) for b in s["by_badge"]] == [
+        ("Seminar Participation", 3, 1)
+    ]
+    assert sum(m["issued"] for m in s["by_month"]) == 3
+    assert (
+        world.get(
+            "admin", "/api/v1/admin/reports/summary?issued_from=2000-01-01&issued_to=2000-01-02"
+        ).json()["issued"]
+        == 0
+    )
+
+    for path in (
+        "/api/v1/admin/reports/issuance.csv?status=expired",
+        f"{course}.csv?status=expired",
+    ):
+        r = world.get("admin", path)
+        assert r.status_code == 200, r.text
+        table = list(csv.DictReader(io.StringIO(r.text)))
+        assert [(row["credential_id"], row["status"]) for row in table] == [(expired, "expired")]
+    table = list(
+        csv.DictReader(io.StringIO(world.get("admin", "/api/v1/admin/reports/issuance.csv").text))
+    )
+    assert [row["credential_id"] for row in table] == [expired, revoked, active]
+    exports = [
+        e
+        for e in world.get("admin", "/api/v1/admin/audit?limit=500").json()["items"]
+        if e["action"] in ("institution.report_export", "course.report_export")
+    ]
+    assert exports  # still audited, with the row count
+
+
 def test_session_stops_working_once_the_account_is_erased(
     world: World, signer_available: bool
 ) -> None:

@@ -6095,6 +6095,7 @@
                 {
                   "enum": [
                     "active",
+                    "expired",
                     "revoked"
                   ],
                   "type": "string"
@@ -7215,6 +7216,7 @@
                 {
                   "enum": [
                     "active",
+                    "expired",
                     "revoked"
                   ],
                   "type": "string"
@@ -8695,6 +8697,7 @@
                 {
                   "enum": [
                     "active",
+                    "expired",
                     "revoked"
                   ],
                   "type": "string"
@@ -8764,6 +8767,7 @@
                 {
                   "enum": [
                     "active",
+                    "expired",
                     "revoked"
                   ],
                   "type": "string"

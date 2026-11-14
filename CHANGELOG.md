@@ -75,6 +75,12 @@ All notable changes to this project are documented here. The format follows
   the fields a template fills in plain words.
 - The data freshness list leaves out courses that are switched off.
 
+### Fixed
+- Issuance records filter by status entirely in the database, so a page of "active" records is
+  no longer cut short by expired ones; records can now also be filtered to "expired". The
+  operational summary is counted in PostgreSQL instead of loading every record, and CSV exports
+  read records in batches (outside review, 14 Nov 2026).
+
 ### Security
 - Erasing a person's data now ends their existing sessions at once: every authenticated
   request checks the account is still active, so a session issued before erasure can no longer
