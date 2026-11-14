@@ -187,3 +187,128 @@ def _audit(
         request_id=request_id,
         data={"template_id": str(t.id), "status": t.status},
     )
+
+
+# ---- ready-made templates for extracurricular badges ----------------------------------------
+
+#: Starting points for badges that are not tied to a module. Wording avoids credit terms
+#: (spec §11.2), which would force review. Placeholders in [brackets] are for the author to replace.
+STARTER_TEMPLATES: tuple[dict[str, Any], ...] = (
+    {
+        "name": "Volunteering hours",
+        "description": "Recognises a set number of volunteering hours, for example on a widening "
+        "participation scheme. Award from the scheme's log with a list award, or from a Canvas "
+        "assignment where volunteers upload their log.",
+        "defaults": {
+            "title": "[Scheme name] Volunteer: [10] hours",
+            "short_description": "Completed [10] hours of volunteering with [scheme name].",
+            "description": "Awarded to students who volunteered for at least [10] hours with "
+            "[scheme name], supporting [who the scheme serves]. This badge recognises "
+            "participation.",
+            "learning_outcomes": [
+                "Contribute reliably to a team supporting [who the scheme serves]",
+                "Communicate clearly with people from different backgrounds",
+            ],
+            "criteria_narrative": "Log at least [10] hours of volunteering with [scheme name], "
+            "confirmed by the scheme coordinator.",
+            "category": "Participation",
+            "achievement_type": "CoCurricular",
+            "demonstration_kind": "participating",
+            "evidence_description": "Hours log confirmed by the scheme coordinator.",
+            "award_policy": "manual",
+            "skills": [{"name": "Teamwork"}, {"name": "Communication"}],
+        },
+    },
+    {
+        "name": "Workshop attendance",
+        "description": "Recognises attending a workshop or short series, for example from the "
+        "library or a skills service. Award from the register with a list award.",
+        "defaults": {
+            "title": "[Workshop name]",
+            "short_description": "Attended [the workshop / all sessions of the series] on [topic].",
+            "description": "Awarded to students who attended [workshop name], run by "
+            "[provider]. It recognises attendance.",
+            "learning_outcomes": ["Describe the main ideas of [topic]"],
+            "criteria_narrative": "Attend [the workshop / every session], recorded on the "
+            "register.",
+            "category": "Participation",
+            "achievement_type": "CoCurricular",
+            "demonstration_kind": "attending",
+            "evidence_description": "Workshop register.",
+            "award_policy": "manual",
+        },
+    },
+    {
+        "name": "Event participation",
+        "description": "Recognises taking an active part in an event, such as a hackathon, "
+        "conference or competition, beyond attending it.",
+        "defaults": {
+            "title": "[Event name] [year]: Participant",
+            "short_description": "Took an active part in [event name].",
+            "description": "Awarded to students who [presented / competed / organised] at "
+            "[event name]. It recognises participation.",
+            "learning_outcomes": ["[What participants practised, e.g. present work to peers]"],
+            "criteria_narrative": "[Present / compete / help organise] at [event name], "
+            "confirmed by the organisers.",
+            "category": "Participation",
+            "achievement_type": "CoCurricular",
+            "demonstration_kind": "participating",
+            "evidence_description": "Organisers' list of participants.",
+            "award_policy": "manual",
+        },
+    },
+    {
+        "name": "CPD activity",
+        "description": "Recognises completing a staff or student professional development "
+        "activity with a short reflection or task.",
+        "defaults": {
+            "title": "[Activity name]",
+            "short_description": "Completed [activity name] and a short reflection on applying it.",
+            "description": "Awarded for completing [activity name] and submitting a reflection "
+            "on how it applies to [practice]. It recognises professional development.",
+            "learning_outcomes": ["Reflect on how [topic] applies to your practice"],
+            "criteria_narrative": "Complete [activity name] and submit a reflection that a "
+            "facilitator approves.",
+            "category": "Professional development",
+            "achievement_type": "Badge",
+            "demonstration_kind": "completing",
+            "evidence_description": "Reflection approved by a facilitator.",
+        },
+    },
+)
+
+
+def install_starters(
+    db: Session,
+    actor: authz.Actor,
+    *,
+    org_unit_id: uuid.UUID | None = None,
+    request_id: str | None = None,
+) -> list[BadgeTemplate]:
+    """Add the ready-made templates that are not there yet (matched by name in that scope)."""
+    _require_manage(db, actor, org_unit_id)
+    existing = set(
+        db.scalars(
+            select(BadgeTemplate.name).where(
+                BadgeTemplate.org_unit_id.is_(None)
+                if org_unit_id is None
+                else BadgeTemplate.org_unit_id == org_unit_id
+            )
+        )
+    )
+    added = []
+    for spec in STARTER_TEMPLATES:
+        if spec["name"] in existing:
+            continue
+        added.append(
+            create(
+                db,
+                actor,
+                name=spec["name"],
+                description=spec["description"],
+                org_unit_id=org_unit_id,
+                defaults=TemplateDefaults.model_validate(spec["defaults"]),
+                request_id=request_id,
+            )
+        )
+    return added

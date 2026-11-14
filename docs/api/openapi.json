@@ -3578,6 +3578,24 @@
         "title": "Skill",
         "type": "object"
       },
+      "StarterTemplatesIn": {
+        "properties": {
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          }
+        },
+        "title": "StarterTemplatesIn",
+        "type": "object"
+      },
       "SubmitIn": {
         "properties": {
           "review": {
@@ -7403,6 +7421,53 @@
           }
         },
         "summary": "Create Template",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/templates/starters": {
+      "post": {
+        "description": "Add the ready-made templates (volunteering hours, workshop attendance, event\nparticipation, CPD activity) that are not there yet. Returns the ones added.",
+        "operationId": "install_starter_templates_api_v1_admin_templates_starters_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StarterTemplatesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Install Starter Templates Api V1 Admin Templates Starters Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Install Starter Templates",
         "tags": [
           "institutional administration"
         ]

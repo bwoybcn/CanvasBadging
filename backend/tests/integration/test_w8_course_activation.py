@@ -113,7 +113,8 @@ def test_only_active_courses_join_scheduled_reconciliation(client: TestClient, o
     assert w.post("admin", f"/api/v1/courses/{w.course_id}/activate").status_code == 200
     _clear_sync_jobs(owner_conn, w.course_id)
     tasks.schedule_course_syncs(0)
-    assert _sync_jobs(owner_conn, w.course_id) == ["scheduled"]
+    # A manual-only badge needs only its roster kept fresh (PR 4 of the extracurricular work).
+    assert _sync_jobs(owner_conn, w.course_id) == ["roster"]
 
     # switching it off again stops scheduled reconciliation; credentials are not touched
     r = w.post("lecturer", f"/api/v1/courses/{w.course_id}/deactivate")

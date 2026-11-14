@@ -20,6 +20,12 @@ All notable changes to this project are documented here. The format follows
 - Badge teams for shared courses (migration 0010): with a course's badge teams on, each badge is
   edited and awarded only by its owner, its named team (editors or awarders) and administrators
   over the course.
+- Lighter syncing for staff-awarded courses: a course whose live badges read no Canvas progress
+  gets a roster refresh every six hours instead of a full sync every 30 minutes, and is never
+  marked stale on the data freshness page.
+- Ready-made templates for badges outside modules (volunteering hours, workshop attendance,
+  event participation, CPD activity): **Add ready-made templates** on the templates page
+  (`POST /api/v1/admin/templates/starters`).
 
 ### Security
 - Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):

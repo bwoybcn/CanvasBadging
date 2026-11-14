@@ -386,6 +386,20 @@ def create_template(
     return templates.out(db, t)
 
 
+class StarterTemplatesIn(BaseModel):
+    org_unit_id: uuid.UUID | None = None
+
+
+@router.post("/admin/templates/starters", status_code=201)
+def install_starter_templates(
+    body: StarterTemplatesIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> list[dict[str, Any]]:
+    """Add the ready-made templates (volunteering hours, workshop attendance, event
+    participation, CPD activity) that are not there yet. Returns the ones added."""
+    added = templates.install_starters(db, actor, org_unit_id=body.org_unit_id, request_id=rid)
+    return [templates.out(db, t) for t in added]
+
+
 @router.patch("/admin/templates/{template_id}")
 def update_template(
     template_id: uuid.UUID, body: TemplatePatch, db: TenantDb, actor: ActorDep, rid: RequestIdDep

@@ -42,7 +42,15 @@ from opencredential.jobs.defer import defer
 from opencredential.logging import get_logger
 from opencredential.settings import get_settings
 from opencredential.signer_client import SignerClient
-from opencredential.sync import integration_for, record_failed_run, sync_course
+from opencredential.sync import (
+    integration_for,
+    needs_canvas_data,
+    record_failed_run,
+    sync_course,
+)
+
+#: How often courses with only staff-awarded badges refresh their roster.
+ROSTER_ONLY_EVERY_HOURS = 6
 
 log = get_logger("jobs")
 blueprint = procrastinate.Blueprint()
@@ -118,6 +126,11 @@ def sync_course_task(
                 log.info("sync.skipped_inactive", course_id=course_id, status=course.status)
                 return {"status": "course_inactive"}
             integration = integration_for(db, course)
+            if kind == "roster":
+                # Staff-awarded badges only: keep enrolments current, read no progress data.
+                _refresh_roster(db, integration, course)
+                log.info("sync.roster_only", course_id=course_id)
+                return {"status": "roster_only"}
             adapter = get_adapter(integration, course.canvas_course_id)
             _refresh_roster(db, integration, course)
             result = sync_course(db, course, adapter, kind=kind, now=started)
@@ -197,7 +210,13 @@ def evaluate_learner_task(
     name="schedule_course_syncs", queue="maintenance", queueing_lock="schedule_course_syncs"
 )
 def schedule_course_syncs(timestamp: int) -> int:
-    """ADR-0010: refresh every active course that has a live badge (default every 30 min)."""
+    """ADR-0010: refresh every active course that has a live badge (default every 30 min).
+
+    Courses whose live badges read no Canvas progress (staff-awarded only, as in many recognition
+    courses) get a roster-only refresh every six hours instead of a full sync every 30 minutes.
+    """
+    slot = datetime.fromtimestamp(timestamp, UTC)
+    roster_slot = slot.hour % ROSTER_ONLY_EVERY_HOURS == 0 and slot.minute < 30
     with tenant_session(None) as db:
         institutions = [
             i.id for i in db.scalars(select(Institution).where(Institution.status == "active"))
@@ -219,12 +238,18 @@ def schedule_course_syncs(timestamp: int) -> int:
             for cid in course_ids:
                 if cid is None:
                     continue
+                course = db.get(Course, cid)
+                kind = "scheduled"
+                if course is not None and not needs_canvas_data(db, course):
+                    if not roster_slot:
+                        continue
+                    kind = "roster"
                 job = enqueue.defer(
                     db,
                     enqueue.SYNC_COURSE,
                     queue="sync",
                     institution_id=iid,
-                    args={"course_id": str(cid), "kind": "scheduled"},
+                    args={"course_id": str(cid), "kind": kind},
                     subject_type="course",
                     subject_id=cid,
                     queueing_lock=f"sync:{cid}",

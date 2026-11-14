@@ -132,6 +132,19 @@ describe("administration", () => {
     });
   });
 
+  it("adds the ready-made templates for badges outside modules", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/templates": [],
+      "POST /api/v1/admin/templates/starters": [
+        { id: "t-1", name: "Volunteering hours", description: null, org_unit_id: null, org_unit_name: null, status: "active", defaults: {} },
+      ],
+    });
+    renderAt("/admin/templates");
+    await userEvent.click(await screen.findByRole("button", { name: "Add ready-made templates" }));
+    expect(await screen.findByText("Added 1 template.")).toBeInTheDocument();
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/templates/starters"))).toBe(true);
+  });
+
   it("revokes a credential with a reason and explains the effect", async () => {
     const calls = admin({
       "GET /api/v1/admin/revocation-requests": [],

@@ -78,6 +78,20 @@ def course_learners(db: Session, course: Course) -> dict[uuid.UUID, str | None]:
     return {uid: lms.get(uid) for uid in ids}
 
 
+#: Rule types whose answer comes from Canvas progress data (modules, submissions, scores).
+#: ``manual_approval`` and ``group`` read nothing from Canvas themselves.
+CANVAS_DATA_RULES = frozenset(
+    {"module_completed", "modules_completed", "assignment_submitted", "assignment_score"}
+)
+
+
+def needs_canvas_data(db: Session, course: Course) -> bool:
+    """Whether any live badge in ``course`` has a rule that reads Canvas progress. Courses whose
+    badges are only awarded by staff (manual awards, list awards, staff approval), such as many
+    recognition courses, need their roster kept fresh but not a full progress sync."""
+    return any(r.type in CANVAS_DATA_RULES for r in _live_rules(db, course))
+
+
 def _live_rules(db: Session, course: Course) -> list[AwardRule]:
     return list(
         db.scalars(
