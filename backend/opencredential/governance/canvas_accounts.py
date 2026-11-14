@@ -16,7 +16,7 @@ administrator reads that tree from Canvas and ticks the sub-accounts that should
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -28,9 +28,16 @@ from opencredential.authz import policy as authz
 from opencredential.db.models import CanvasAccount, CanvasIntegration, Course, OrgUnit
 from opencredential.errors import DomainError, Invalid, NotFound
 from opencredential.governance import people
-from opencredential.integrations.base import AccountDirectory, LmsError, LmsPermissionError
+from opencredential.integrations.base import (
+    AccountDirectory,
+    AccountRecord,
+    LmsError,
+    LmsPermissionError,
+)
 
 MAX_DEPTH = 50
+#: Canvas's internal top-level account. It never holds courses, so it is never offered.
+SITE_ADMIN = "site admin"
 
 
 class CanvasUnavailable(DomainError):
@@ -48,6 +55,22 @@ def _directory(integration: CanvasIntegration) -> AccountDirectory | None:
 
 
 # ---- reading the tree ------------------------------------------------------------------------
+
+
+def _without_site_admin(accounts: Sequence[AccountRecord]) -> list[AccountRecord]:
+    """Leave out Canvas's top-level "Site Admin" account and anything below it."""
+    dropped = {
+        a.account_id
+        for a in accounts
+        if a.parent_id is None and a.name.strip().lower() == SITE_ADMIN
+    }
+    out = []
+    for a in accounts:
+        if a.account_id in dropped or a.parent_id in dropped:
+            dropped.add(a.account_id)
+            continue
+        out.append(a)
+    return out
 
 
 def refresh(db: Session, actor: authz.Actor, *, request_id: str | None = None) -> dict[str, Any]:
@@ -80,6 +103,7 @@ def refresh(db: Session, actor: authz.Actor, *, request_id: str | None = None) -
                 "Canvas did not answer properly. Try again in a few minutes.",
             ) from exc
         connected += 1
+        accounts = _without_site_admin(accounts)
         existing = {
             r.account_id: r
             for r in db.scalars(

@@ -40,7 +40,8 @@ All notable changes to this project are documented here. The format follows
   Reading sub-accounts needs two more API key scopes, `url:GET|/api/v1/accounts` and
   `url:GET|/api/v1/accounts/:account_id/sub_accounts`: existing installs add them to the API
   developer key and reconnect Canvas. The page can link a sub-account to an existing area, shows
-  the tree indented, and does not offer the root account.
+  the tree indented, and does not offer the root account. Canvas's internal "Site Admin"
+  account is left out.
 
 ### Changed
 - "Badges published without review" uses each live version's latest approval, and includes
