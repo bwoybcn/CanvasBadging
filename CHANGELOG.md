@@ -76,6 +76,10 @@ All notable changes to this project are documented here. The format follows
 - The data freshness list leaves out courses that are switched off.
 
 ### Security
+- The verifier fails closed on revocation: a credential whose status entry is malformed, uses an
+  unsupported status method or points at an unreadable list now shows "Unable to verify", never
+  "Verified" (outside review, 14 Nov 2026). Suspension entries are checked too. A credential
+  with no status at all still verifies, and the check says it cannot be revoked.
 - Owning a course badge no longer grants rights of its own: an owner whose staff role in the
   course has gone can no longer edit, archive, version or manage the team of the badge (outside
   review, 14 Nov 2026). Badges without a course keep owner editing.
