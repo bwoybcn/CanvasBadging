@@ -37,6 +37,10 @@ All notable changes to this project are documented here. The format follows
   (new custom field `canvas_account_id=$Canvas.account.id`). Unticked sub-accounts are ignored
   and courses already placed are never moved
   (`GET /api/v1/admin/canvas-accounts`, `POST …/refresh`, `POST …/link`, `DELETE …/{id}/link`).
+  Reading sub-accounts needs two more API key scopes, `url:GET|/api/v1/accounts` and
+  `url:GET|/api/v1/accounts/:account_id/sub_accounts`: existing installs add them to the API
+  developer key and reconnect Canvas. The page can link a sub-account to an existing area, shows
+  the tree indented, and does not offer the root account.
 
 ### Changed
 - Usability fixes from the 14 Nov 2026 review:

@@ -142,8 +142,11 @@ function CanvasSubAccounts() {
     queryFn: () => apiFetch<CanvasAccount[]>("/api/v1/admin/canvas-accounts", token),
     enabled: f.isInstAdmin,
   });
+  const units = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
   const [picked, setPicked] = useState<string[]>([]);
   const [kind, setKind] = useState("");
+  /** "" creates a new area per ticked sub-account; otherwise link to this existing area. */
+  const [target, setTarget] = useState("");
   const [done, setDone] = useState("");
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["canvas-accounts"] });
@@ -160,7 +163,7 @@ function CanvasSubAccounts() {
   const link = useMutation({
     mutationFn: () =>
       apiSend<{ linked: number; courses_placed: number }>("/api/v1/admin/canvas-accounts/link", token, "POST", {
-        items: picked.map((id) => ({ id, kind: kind || null })),
+        items: picked.map((id) => (target ? { id, org_unit_id: target } : { id, kind: kind || null })),
       }),
     onSuccess: (r) => {
       setPicked([]);
@@ -172,8 +175,11 @@ function CanvasSubAccounts() {
     },
   });
   const unlink = useMutation({
-    mutationFn: (id: string) => apiDelete(`/api/v1/admin/canvas-accounts/${id}/link`, token),
-    onSuccess: refreshAll,
+    mutationFn: (a: CanvasAccount) => apiDelete(`/api/v1/admin/canvas-accounts/${a.id}/link`, token),
+    onSuccess: (_r, a) => {
+      setDone(`Unlinked ${a.name}. Courses already in ${a.org_unit_name ?? "its area"} stay there.`);
+      refreshAll();
+    },
   });
   if (!f.isInstAdmin) return null;
   const rows = q.data ?? [];
@@ -187,7 +193,7 @@ function CanvasSubAccounts() {
         Tick the Canvas sub-accounts that should be areas, such as faculties, departments or the Library. Each one
         becomes an area named after it, nested as in Canvas, and its courses join that area when they are first opened.
         Sub-accounts you leave unticked, such as sandboxes or terms, are ignored. A course you have already placed is
-        never moved.
+        never moved, and unlinking keeps the area and its courses.
       </Text>
       <Flex gap="small" alignItems="end" wrap="wrap" margin="0 0 small">
         <Button onClick={() => read.mutate()} interaction={read.isPending ? "disabled" : "enabled"}>
@@ -217,9 +223,13 @@ function CanvasSubAccounts() {
                 {rows.map((a) => (
                   <Table.Row key={a.id}>
                     <Table.RowHeader>
-                      <View as="div" padding={`0 0 0 ${a.depth * 1.5}rem`}>
+                      <div style={{ paddingInlineStart: `${a.depth * 1.5}rem` }}>
                         {a.org_unit_id ? (
                           <Text>{a.name}</Text>
+                        ) : a.depth === 0 ? (
+                          <Text>
+                            {a.name} <Text color="secondary">(whole Canvas)</Text>
+                          </Text>
                         ) : (
                           <Checkbox
                             label={a.name}
@@ -227,13 +237,13 @@ function CanvasSubAccounts() {
                             onChange={(e) => toggle(a.id, e.target.checked)}
                           />
                         )}
-                      </View>
+                      </div>
                     </Table.RowHeader>
                     <Table.Cell>
                       {a.org_unit_name ? (
                         <Flex gap="small" alignItems="center" wrap="wrap">
                           <Text>{a.org_unit_name}</Text>
-                          <Button size="small" onClick={() => unlink.mutate(a.id)}>
+                          <Button size="small" onClick={() => unlink.mutate(a)}>
                             Unlink {a.name}
                           </Button>
                         </Flex>
@@ -250,10 +260,28 @@ function CanvasSubAccounts() {
           {unlink.isError && <ErrorAlert error={unlink.error} />}
           <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0 0">
             <SimpleSelect
+              renderLabel="Link to"
+              value={target}
+              onChange={(_e, { value }) => setTarget(String(value))}
+              width="20rem"
+            >
+              <SimpleSelect.Option id="ca-target-new" value="">
+                A new area named after each sub-account
+              </SimpleSelect.Option>
+              {(units.data ?? [])
+                .filter((u) => u.status === "active")
+                .map((u) => (
+                  <SimpleSelect.Option key={u.id} id={`ca-target-${u.id}`} value={u.id}>
+                    {`Existing area: ${u.name}`}
+                  </SimpleSelect.Option>
+                ))}
+            </SimpleSelect>
+            <SimpleSelect
               renderLabel="Kind for new areas"
               value={kind}
               onChange={(_e, { value }) => setKind(String(value))}
               width="20rem"
+              interaction={target ? "disabled" : "enabled"}
             >
               <SimpleSelect.Option id="ca-kind-auto" value="">
                 Automatic: faculty at the top, department below
