@@ -12,7 +12,7 @@ export const DEMO_INSTITUTION = "demo-university";
 
 const ROLE_LABELS: Record<string, string> = {
   student: "Student",
-  lecturer: "Lecturer",
+  lecturer: "Course staff",
   course_admin: "Course admin",
   issuer_manager: "Issuer manager",
   dept_admin: "Department admin",

@@ -333,7 +333,7 @@ def set_rules(
         raise Invalid(
             "COURSE_REQUIRED",
             "Canvas-based requirements need a course. Badges without a course can only use "
-            "lecturer confirmation.",
+            "staff confirmation.",
         )
     version = working_version(db, definition)
     saved = rules_store.save(db, actor.institution_id, version.id, rules)
@@ -535,7 +535,7 @@ def readiness(
                     "rules",
                     "ASSESSMENT_RULE_EXPECTED",
                     "This badge says achievement is assessed, but no requirement checks a mark "
-                    "or a lecturer's judgement.",
+                    "or a member of staff's judgement.",
                     "warning",
                 )
             )
@@ -798,7 +798,7 @@ def resolve_award_policy(
         chosen = version_choice
     if has_score and chosen == "automatic" and policy.get("score_rules_force_confirmation"):
         return "lecturer_confirmed", (
-            "Your institution requires lecturer confirmation for badges based on marks."
+            "Your institution requires staff confirmation for badges based on marks."
         )
     return chosen, None
 

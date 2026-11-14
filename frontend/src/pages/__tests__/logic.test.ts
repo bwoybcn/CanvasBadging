@@ -57,7 +57,7 @@ describe("rule checks", () => {
     expect(problems).toEqual([
       "Requirement 1: the score must be above 0 and at most 100 per cent.",
       "Requirement 2: a group needs at least two requirements.",
-      "Requirement 2.1: say what the lecturer is confirming.",
+      "Requirement 2.1: say what staff are confirming.",
     ]);
   });
 

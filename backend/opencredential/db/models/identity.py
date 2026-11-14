@@ -76,7 +76,7 @@ class OrgUnit(TenantMixin, Base):
     parent_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     name: Mapped[str] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(
-        choice("faculty", "department", "programme", "other", name="kind")
+        choice("faculty", "department", "programme", "service", "other", name="kind")
     )
     #: Spec §10.3 "which departments can issue credentials". Inherited: a unit can issue only if
     #: it and every ancestor may.

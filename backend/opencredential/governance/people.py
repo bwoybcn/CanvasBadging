@@ -23,7 +23,7 @@ from opencredential.authz import policy as authz
 from opencredential.db.models import Course, Issuer, Membership, OrgUnit, User
 from opencredential.errors import Conflict, Forbidden, Invalid, NotFound
 
-ORG_KINDS = ("faculty", "department", "programme", "other")
+ORG_KINDS = ("faculty", "department", "programme", "service", "other")
 
 
 # ---- org units ------------------------------------------------------------------------------

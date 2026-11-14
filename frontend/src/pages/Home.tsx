@@ -9,7 +9,7 @@ import { Nav } from "../components/Page";
 
 const ROLE_LABELS: Record<string, string> = {
   student: "Student",
-  lecturer: "Lecturer",
+  lecturer: "Course staff",
   course_admin: "Course admin",
   issuer_manager: "Issuer manager",
   dept_admin: "Department admin",
@@ -95,7 +95,7 @@ function CourseContext({ course }: { course: NonNullable<Me["launch_course"]> })
           <ActivateCourse courseId={course.id} />
         ) : (
           <Alert variant="info" margin="small 0">
-            Your lecturer has not switched on micro-credentials for this course yet.
+            Course staff have not switched on micro-credentials for this course yet.
           </Alert>
         ))}
       {course.view === "lecturer" && course.status === "active" && <BadgeTeamsToggle courseId={course.id} />}
@@ -126,7 +126,8 @@ function ActivateCourse({ courseId }: { courseId: string }) {
     <Alert variant="info" margin="small 0">
       <Text as="p">
         Micro-credentials are not switched on for this course yet. Switch them on to read students&apos; progress from
-        Canvas now and then every 30 minutes. You can switch them off again at any time; issued credentials are not
+        Canvas now and then regularly (every 30 minutes for badges based on Canvas activity; badges that staff award
+        only need the class list, refreshed every 6 hours). You can switch them off again at any time; issued credentials are not
         affected.
       </Text>
       <Button color="primary" onClick={() => activate.mutate()} interaction={activate.isPending ? "disabled" : "enabled"}>

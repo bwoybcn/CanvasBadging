@@ -160,8 +160,8 @@ def data_freshness(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
     out = []
     for cid in course_ids:
         course = db.get(Course, cid) if cid else None
-        if cid is None or course is None:
-            continue
+        if cid is None or course is None or course.status != "active":
+            continue  # a course that is switched off is never read, so it cannot be stale
         state = sync_state(db, cid)
         last = state["last_success_at"]
         reads_canvas = needs_canvas_data(db, course)

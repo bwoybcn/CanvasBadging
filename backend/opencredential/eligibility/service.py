@@ -366,7 +366,7 @@ def record_rule_approval(
         )
     )
     if rule is None:
-        raise NotFound("RULE_NOT_FOUND", "That requirement is not a lecturer confirmation.")
+        raise NotFound("RULE_NOT_FOUND", "That requirement is not a staff confirmation.")
     if decision not in ("approve", "decline"):
         raise Invalid("DECISION_INVALID", "Choose approve or decline.")
     _require_learner(db, definition, user_id)

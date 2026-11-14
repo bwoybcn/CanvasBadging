@@ -11,7 +11,7 @@ import { ErrorAlert, Loading, Page } from "../components/Page";
 export const BADGE_STATUS: Record<string, { label: string; color: "success" | "info" | "warning" | "primary" }> = {
   earned: { label: "Earned", color: "success" },
   awarded: { label: "Awarded: being issued", color: "success" },
-  awaiting_confirmation: { label: "Awaiting lecturer confirmation", color: "info" },
+  awaiting_confirmation: { label: "Awaiting confirmation by course staff", color: "info" },
   requirements_met: { label: "Requirements met", color: "info" },
   pending: { label: "Waiting for information", color: "warning" },
   in_progress: { label: "In progress", color: "primary" },

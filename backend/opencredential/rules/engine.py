@@ -43,36 +43,36 @@ MESSAGES: dict[str, str] = {
     "MODULE_NOT_COMPLETED": "Canvas does not yet report this module as complete.",
     "MODULES_COMPLETED": "Canvas reports every module in this set as complete.",
     "MODULES_NOT_COMPLETED": "Some modules in this set are not complete yet.",
-    "MODULE_NOT_FOUND": "This module is no longer in the Canvas course. A lecturer needs to "
+    "MODULE_NOT_FOUND": "This module is no longer in the Canvas course. Course staff need to "
     "update the badge rules.",
     "MODULE_HAS_NO_REQUIREMENTS": "This module has no completion requirements in Canvas, so "
-    "Canvas cannot report completion. A lecturer needs to add requirements in Canvas.",
+    "Canvas cannot report completion. Course staff need to add requirements in Canvas.",
     "SUBMITTED": "Canvas has a submission for this assignment.",
     "NOT_SUBMITTED": "There is no submission for this assignment yet.",
-    "GRADED_WITHOUT_SUBMISSION": "A mark exists but Canvas has no submission. A lecturer can "
+    "GRADED_WITHOUT_SUBMISSION": "A mark exists but Canvas has no submission. Course staff can "
     "confirm this manually.",
-    "ASSIGNMENT_NOT_FOUND": "This assignment is no longer in the Canvas course. A lecturer "
-    "needs to update the badge rules.",
+    "ASSIGNMENT_NOT_FOUND": "This assignment is no longer in the Canvas course. Course staff "
+    "need to update the badge rules.",
     "ASSIGNMENT_UNPUBLISHED": "This assignment is not published in Canvas.",
     "NO_POINTS_POSSIBLE": "This assignment has no points possible in Canvas, so a percentage "
     "cannot be calculated.",
-    "EXCUSED": "This assignment is excused. A lecturer can decide on the award manually.",
+    "EXCUSED": "This assignment is excused. Course staff can decide on the award manually.",
     "AWAITING_GRADE": "This assignment has not been marked yet.",
     "AWAITING_RELEASE": "Awaiting published result: the mark has not been released.",
     "GRADE_OUTDATED": "The mark is for an earlier submission. Waiting for the current "
     "submission to be marked.",
     "SCORE_MET": "The released mark meets the required score.",
     "SCORE_BELOW_THRESHOLD": "The released mark is below the required score.",
-    "AWAITING_APPROVAL": "Waiting for a lecturer to confirm this requirement.",
-    "APPROVED": "A lecturer confirmed this requirement.",
-    "APPROVAL_DECLINED": "A lecturer recorded that this requirement is not yet met.",
+    "AWAITING_APPROVAL": "Waiting for course staff to confirm this requirement.",
+    "APPROVED": "A member of staff confirmed this requirement.",
+    "APPROVAL_DECLINED": "A member of staff recorded that this requirement is not yet met.",
     "DATA_NOT_SYNCED": "Course data has not been read from Canvas yet.",
     "DATA_UNAVAILABLE": "The last attempt to read this from Canvas failed. It will be retried.",
     "DATA_STALE": "The course data from Canvas is out of date. It will refresh shortly.",
     "RULE_SOURCE_MISSING": "The Canvas item this requirement uses was removed. Awards are "
-    "paused until a lecturer reviews the badge.",
+    "paused until course staff review the badge.",
     "RULE_SOURCE_CHANGED": "The Canvas item this requirement uses has changed. Awards are "
-    "paused until a lecturer reviews the badge.",
+    "paused until course staff review the badge.",
     "GROUP_MET": "Requirements in this group are met.",
     "GROUP_NOT_MET": "Requirements in this group are not met yet.",
     "GROUP_UNKNOWN": "Some requirements in this group cannot be confirmed yet.",

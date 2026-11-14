@@ -385,7 +385,7 @@ export const STATE_LABELS: Record<Definition["state"], string> = {
 
 export const POLICY_LABELS: Record<string, string> = {
   automatic: "Automatic when requirements are met",
-  lecturer_confirmed: "Lecturer confirms each award",
+  lecturer_confirmed: "Staff confirm each award",
   manual: "Manual award with justification",
 };
 
@@ -534,7 +534,7 @@ export async function downloadFile(path: string, token: string | null, filename:
 export interface OrgUnit {
   id: string;
   name: string;
-  kind: "faculty" | "department" | "programme" | "other";
+  kind: "faculty" | "department" | "programme" | "service" | "other";
   parent_id: string | null;
   may_issue: boolean;
   effective_may_issue: boolean;
@@ -701,7 +701,7 @@ export const ROLE_LABELS: Record<string, string> = {
   dept_admin: "Department administrator",
   issuer_manager: "Issuer manager",
   reviewer: "Badge reviewer",
-  lecturer: "Lecturer",
+  lecturer: "Course staff",
   course_admin: "Course administrator",
   student: "Student",
 };

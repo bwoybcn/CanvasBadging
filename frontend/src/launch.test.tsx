@@ -55,7 +55,7 @@ describe("LTI launch hand-over", () => {
     const ctx = await screen.findByTestId("course-context");
     expect(ctx).toHaveTextContent("OpenCredential W3 Test Course");
     expect(ctx).toHaveTextContent("Canvas course 4");
-    expect(ctx).toHaveTextContent("Your role: Lecturer");
+    expect(ctx).toHaveTextContent("Your role: Course staff");
     expect(ctx).toHaveTextContent("Course progress");
   });
 

@@ -27,7 +27,7 @@ export const RULE_TYPES: { value: LeafRule["type"]; label: string; hint: string 
     label: "Reach a score on an assignment",
     hint: "Only released (posted) marks count. Missing, excused or unreleased marks stay pending.",
   },
-  { value: "manual_approval", label: "Lecturer confirms", hint: "A member of staff records that the learner met this." },
+  { value: "manual_approval", label: "Staff confirm", hint: "A member of staff records that the learner met this." },
 ];
 
 export function blankRule(type: LeafRule["type"]): LeafRule {
@@ -57,7 +57,7 @@ export function ruleProblems(rs: RuleSet): string[] {
     if (r.type === "assignment_score" && !(r.threshold_percent > 0 && r.threshold_percent <= 100))
       out.push(`${where}: the score must be above 0 and at most 100 per cent.`);
     if (r.type === "manual_approval" && (r.instructions ?? "").trim().length < 5)
-      out.push(`${where}: say what the lecturer is confirming.`);
+      out.push(`${where}: say what staff are confirming.`);
   };
   rs.rules.forEach((r, i) => {
     const where = `Requirement ${i + 1}`;

@@ -35,9 +35,9 @@ PENDING_LABELS = {
     "AWAITING_RELEASE": "Awaiting published result",
     "AWAITING_GRADE": "Awaiting marking",
     "GRADE_OUTDATED": "Awaiting marking of your latest submission",
-    "AWAITING_APPROVAL": "Awaiting lecturer confirmation",
-    "EXCUSED": "Excused: your lecturer will decide",
-    "GRADED_WITHOUT_SUBMISSION": "Your lecturer will confirm this",
+    "AWAITING_APPROVAL": "Awaiting confirmation by course staff",
+    "EXCUSED": "Excused: course staff will decide",
+    "GRADED_WITHOUT_SUBMISSION": "Course staff will confirm this",
     "DATA_STALE": "Information is being refreshed",
     "DATA_UNAVAILABLE": "Information unavailable",
     "DATA_NOT_SYNCED": "Information unavailable",
@@ -51,7 +51,7 @@ def requirement_label(result: RuleResult) -> str:
         if result.code == "SCORE_BELOW_THRESHOLD":
             return "Required score not reached"
         if result.code == "APPROVAL_DECLINED":
-            return "Not yet confirmed by your lecturer"
+            return "Not yet confirmed by course staff"
         return "Not yet complete"
     return PENDING_LABELS.get(result.code, "Cannot be confirmed yet")
 
