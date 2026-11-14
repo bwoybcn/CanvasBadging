@@ -125,6 +125,10 @@ class BulkRowOut(BaseModel):
 
 class BulkAwardOut(BaseModel):
     committed: bool
+    second_approval: bool = Field(
+        default=False,
+        description="true: each award waits for a second member of staff to confirm it.",
+    )
     counts: dict[str, int]
     rows: list[BulkRowOut]
 
@@ -365,6 +369,7 @@ def bulk_award(body: BulkAwardIn, db: TenantDb, actor: ActorDep, rid: RequestIdD
     )
     return BulkAwardOut(
         committed=result.committed,
+        second_approval=result.second_approval,
         counts=result.counts(),
         rows=[BulkRowOut(**r.__dict__) for r in result.rows],
     )

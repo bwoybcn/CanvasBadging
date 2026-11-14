@@ -355,6 +355,13 @@ function AreaReview() {
         volunteering badges. A unit inherits from the unit above it, then the institution, until it sets its own.
       </Text>
       {patch.isError && <ErrorAlert error={patch.error} />}
+      <Text as="p" role="status" size="small">
+        {patch.isPending
+          ? "Saving…"
+          : patch.isSuccess
+            ? `Saved review settings for ${patch.data.name}. Badges already published stay published.`
+            : ""}
+      </Text>
       {units.map((u) => (
         <Flex key={u.id} gap="small" alignItems="end" wrap="wrap" margin="small 0">
           <Text weight="bold">{u.name}</Text>
@@ -409,7 +416,17 @@ function PublishedWithoutReview() {
     queryKey: ["published-without-review"],
     queryFn: () => apiFetch<UnreviewedBadge[]>("/api/v1/admin/review/published-without-review", token),
   });
-  if (!q.data?.length) return q.isError ? <ErrorAlert error={q.error} /> : null;
+  if (q.isError) return <ErrorAlert error={q.error} />;
+  if (!q.data) return null;
+  if (!q.data.length)
+    return (
+      <View as="section" display="block" margin="0 0 large">
+        <Heading level="h2" margin="0 0 small">
+          Badges published without review
+        </Heading>
+        <Text as="p">Every live badge in your areas was reviewed by a colleague.</Text>
+      </View>
+    );
   return (
     <View as="section" display="block" margin="0 0 large">
       <Heading level="h2" margin="0 0 small">
@@ -455,6 +472,11 @@ function Courses() {
       apiSend(`/api/v1/admin/courses/${id}/org-unit`, token, "PUT", { org_unit_id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-courses"] }),
   });
+  const teams = useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+      apiSend(`/api/v1/courses/${id}/badge-teams`, token, "PUT", { enabled }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-courses"] }),
+  });
   return (
     <View as="section" display="block" margin="0 0 large">
       <Heading level="h2" margin="0 0 small">
@@ -462,9 +484,14 @@ function Courses() {
       </Heading>
       {courses.isError && <ErrorAlert error={courses.error} />}
       {move.isError && <ErrorAlert error={move.error} />}
+      {teams.isError && <ErrorAlert error={teams.error} />}
+      <Text as="p">
+        Badge teams: in a course many staff share, each badge is edited and awarded only by its owner, its team and
+        administrators. Lecturers can switch them on from the course; only administrators can switch them off.
+      </Text>
       {(courses.data ?? []).map((c) => (
+        <Flex key={c.id} gap="small" alignItems="end" wrap="wrap" margin="small 0">
         <SimpleSelect
-          key={c.id}
           renderLabel={`${c.title}${c.course_code ? ` (${c.course_code})` : ""} belongs to`}
           value={c.org_unit_id ?? ""}
           onChange={(_e, { value }) => move.mutate({ id: c.id, org_unit_id: String(value) || null })}
@@ -479,6 +506,13 @@ function Courses() {
             </SimpleSelect.Option>
           ))}
         </SimpleSelect>
+        <Checkbox
+          label={`Badge teams in ${c.title}`}
+          checked={!!c.badge_teams}
+          disabled={teams.isPending}
+          onChange={(e) => teams.mutate({ id: c.id, enabled: e.target.checked })}
+        />
+        </Flex>
       ))}
     </View>
   );

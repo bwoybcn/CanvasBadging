@@ -229,25 +229,45 @@ function ReviewChoice({
 const TEAM_ROLE: Record<string, string> = { owner: "Owner", editor: "Can edit and award", awarder: "Can award" };
 
 /** Who works on this badge when its course has badge teams switched on. */
+const NO_NAME = "A colleague without a name in Canvas";
+
 function TeamPanel({ id }: { id: string }) {
   const { token } = useAuth();
   const qc = useQueryClient();
   const [who, setWho] = useState("");
   const [role, setRole] = useState<"editor" | "awarder">("awarder");
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [newOwner, setNewOwner] = useState("");
+  const [done, setDone] = useState("");
   const team = useQuery({ queryKey: ["team", id], queryFn: () => apiFetch<BadgeTeam>(`/api/v1/achievements/${id}/team`, token) });
   const change = useMutation({
-    mutationFn: ({ user, r }: { user: string; r: "editor" | "awarder" | null }) =>
+    mutationFn: ({ user, r }: { user: string; r: "editor" | "awarder" | null; name: string }) =>
       r
         ? apiSend<BadgeTeam>(`/api/v1/achievements/${id}/team/${user}`, token, "PUT", { role: r })
         : apiSend<BadgeTeam>(`/api/v1/achievements/${id}/team/${user}`, token, "DELETE"),
-    onSuccess: (t) => {
+    onSuccess: (t, v) => {
       qc.setQueryData(["team", id], t);
       setWho("");
+      setRemoving(null);
+      setDone(v.r ? `Added ${v.name} to the team.` : `Removed ${v.name} from the team.`);
+    },
+  });
+  const transfer = useMutation({
+    mutationFn: ({ user }: { user: string; name: string }) =>
+      apiSend<BadgeTeam>(`/api/v1/achievements/${id}/owner`, token, "PUT", { user_id: user }),
+    onSuccess: (t, v) => {
+      qc.setQueryData(["team", id], t);
+      qc.invalidateQueries({ queryKey: ["achievement", id] });
+      setNewOwner("");
+      setDone(`${v.name} now owns this badge.`);
     },
   });
   if (team.isPending) return <Loading what="team" />;
   if (team.isError) return <ErrorAlert error={team.error} />;
   const t = team.data;
+  const nameOf = (n: string | null) => n ?? NO_NAME;
+  // Anyone on staff who is not the owner can take the badge over.
+  const others = [...t.members.filter((mb) => mb.role !== "owner"), ...t.candidates];
   return (
     <View as="div" display="block" margin="small 0">
       <Text as="p">
@@ -258,15 +278,35 @@ function TeamPanel({ id }: { id: string }) {
       <List>
         {t.members.map((mb) => (
           <List.Item key={mb.user_id}>
-            {mb.name ?? "Unnamed"}: {TEAM_ROLE[mb.role]}
-            {t.can_manage && mb.role !== "owner" && (
-              <Button size="small" margin="0 0 0 small" onClick={() => change.mutate({ user: mb.user_id, r: null })}>
-                Remove {mb.name ?? "this person"} from the team
+            {nameOf(mb.name)}: {TEAM_ROLE[mb.role]}
+            {t.can_manage && mb.role !== "owner" && removing !== mb.user_id && (
+              <Button size="small" margin="0 0 0 small" onClick={() => setRemoving(mb.user_id)}>
+                Remove {mb.name ?? "this colleague"} from the team
               </Button>
+            )}
+            {removing === mb.user_id && (
+              <>
+                <Text> Remove them? They will no longer be able to work on this badge.</Text>
+                <Button
+                  size="small"
+                  color="danger"
+                  margin="0 0 0 small"
+                  interaction={change.isPending ? "disabled" : "enabled"}
+                  onClick={() => change.mutate({ user: mb.user_id, r: null, name: nameOf(mb.name) })}
+                >
+                  Remove
+                </Button>
+                <Button size="small" margin="0 0 0 x-small" onClick={() => setRemoving(null)}>
+                  Keep
+                </Button>
+              </>
             )}
           </List.Item>
         ))}
       </List>
+      <Text as="p" role="status" size="small">
+        {done}
+      </Text>
       {t.can_manage && t.candidates.length > 0 && (
         <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0">
           <SimpleSelect renderLabel="Add a colleague from this course" value={who} onChange={(_e, { value }) => setWho(String(value))} width="16rem">
@@ -275,7 +315,7 @@ function TeamPanel({ id }: { id: string }) {
             </SimpleSelect.Option>
             {t.candidates.map((c) => (
               <SimpleSelect.Option key={c.user_id} id={`tm-${c.user_id}`} value={c.user_id}>
-                {c.name ?? c.user_id}
+                {nameOf(c.name)}
               </SimpleSelect.Option>
             ))}
           </SimpleSelect>
@@ -287,12 +327,49 @@ function TeamPanel({ id }: { id: string }) {
               Edit and award
             </SimpleSelect.Option>
           </SimpleSelect>
-          <Button interaction={who && !change.isPending ? "enabled" : "disabled"} onClick={() => change.mutate({ user: who, r: role })}>
+          <Button
+            interaction={who && !change.isPending ? "enabled" : "disabled"}
+            onClick={() =>
+              change.mutate({ user: who, r: role, name: nameOf(t.candidates.find((c) => c.user_id === who)?.name ?? null) })
+            }
+          >
             Add to team
           </Button>
         </Flex>
       )}
       {change.isError && <ErrorAlert error={change.error} />}
+      {t.can_transfer && others.length > 0 && (
+        <View as="div" margin="medium 0 0">
+          <Heading level="h3" margin="0 0 x-small">
+            Hand this badge to a colleague
+          </Heading>
+          <Text as="p" size="small">
+            For example when you are leaving or handing over a service. The new owner manages the team; you stay on it
+            as an editor while you are staff in this course.
+          </Text>
+          <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0">
+            <SimpleSelect renderLabel="New owner" value={newOwner} onChange={(_e, { value }) => setNewOwner(String(value))} width="16rem">
+              <SimpleSelect.Option id="ow-none" value="">
+                Choose
+              </SimpleSelect.Option>
+              {others.map((c) => (
+                <SimpleSelect.Option key={c.user_id} id={`ow-${c.user_id}`} value={c.user_id}>
+                  {nameOf(c.name)}
+                </SimpleSelect.Option>
+              ))}
+            </SimpleSelect>
+            <Button
+              interaction={newOwner && !transfer.isPending ? "enabled" : "disabled"}
+              onClick={() =>
+                transfer.mutate({ user: newOwner, name: nameOf(others.find((c) => c.user_id === newOwner)?.name ?? null) })
+              }
+            >
+              Hand over
+            </Button>
+          </Flex>
+          {transfer.isError && <ErrorAlert error={transfer.error} />}
+        </View>
+      )}
     </View>
   );
 }

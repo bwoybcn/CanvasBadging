@@ -86,7 +86,10 @@ Many staff often share such a course. Switch on **Badge teams** (course home pag
 OpenCredential) so each badge is edited and awarded only by its owner, the colleagues they add
 on the badge's **Team** tab ("edit and award" or "award only") and administrators over the
 course. Other staff in the course can still see every badge. Any lecturer in the course can
-switch badge teams on; only an institution or department administrator can switch them off.
+switch badge teams on (after a confirmation that explains colleagues lose access); only an
+institution or department administrator can switch them off, from the course home page or from
+**Departments and roles → Courses**. A badge's owner, or an administrator, can hand the badge to
+another member of course staff on its **Team** tab, for example when the owner leaves.
 
 A recognition course whose live badges are all awarded by staff (manual awards, list awards or
 staff approval, with no module, assignment or score rule) reads nothing from Canvas progress. It
@@ -141,7 +144,9 @@ nearest setting wins. Department administrators can set their own units. If **Ar
 review less strictly** is off, a unit can only be stricter than the institution.
 
 Two kinds of badge always need review, whatever the area says: badges that claim **assessed
-proficiency**, and badges whose wording refers to credit or a qualification.
+proficiency**, and badges whose wording refers to credit or a qualification. The wording check
+is a prompt, not a control: it looks for words such as "credit" or "CATS", so a badge phrased
+differently is not caught. Where it matters, keep review required for the area.
 
 **Badge reviewer** is a role for a named colleague (a senior librarian, a programme lead) who
 may review badges in a unit and the units below it. Institution and department administrators

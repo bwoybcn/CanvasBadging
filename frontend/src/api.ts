@@ -89,6 +89,8 @@ export interface BadgeTeam {
   members: { user_id: string; name: string | null; role: "owner" | "editor" | "awarder" }[];
   candidates: { user_id: string; name: string | null }[];
   can_manage: boolean;
+  /** The owner (still course staff) or an administrator may hand the badge to someone else. */
+  can_transfer?: boolean;
 }
 
 export interface IssuerRef {
@@ -229,6 +231,8 @@ export interface DefinitionSummary {
   live_version_id: string | null;
   award_policy: string;
   updated_at: string;
+  course_title?: string | null;
+  can_award?: boolean;
 }
 
 export interface Asset {
@@ -601,6 +605,7 @@ export interface AdminCourse {
   status: string;
   org_unit_id: string | null;
   org_unit_name: string | null;
+  badge_teams?: boolean;
 }
 
 export interface StaffRole {
@@ -755,6 +760,8 @@ export interface BulkRow {
 
 export interface BulkAwardResult {
   committed: boolean;
+  /** Each award waits for a second member of staff to confirm it. */
+  second_approval?: boolean;
   counts: Partial<Record<BulkRow["status"], number>>;
   rows: BulkRow[];
 }

@@ -215,3 +215,43 @@ def test_awards_list_is_not_used_up_by_other_teams_badges(world: World) -> None:
     assert _award(world, "lecturer", mine, "s2").status_code == 201
     listed = world.get("colleague", "/api/v1/awards", params={"limit": 1, "status": ""}).json()
     assert [d["user_id"] for d in listed] == [str(world.users["s2"])]
+
+
+# ---- usability follow-ups (review 14 Nov 2026, items B, C, D) --------------------------------
+
+
+def test_owner_hands_a_badge_to_a_colleague(world: World) -> None:
+    did = _badge(world)
+    _teams(world, "lecturer", True)
+    owner = f"/api/v1/achievements/{did}/owner"
+    r = world.put("colleague", owner, {"user_id": str(world.users["colleague"])})
+    assert r.status_code == 403  # nobody takes a badge for themselves
+    r = world.put("lecturer", owner, {"user_id": str(world.users["outsider"])})
+    assert r.status_code == 422 and r.json()["code"] == "NOT_COURSE_STAFF"
+    r = world.put("lecturer", owner, {"user_id": str(world.users["colleague"])})
+    assert r.status_code == 200, r.text
+    first = r.json()["members"][0]
+    assert (first["name"], first["role"]) == ("Robin Librarian", "owner")
+    assert "editor" in [x["role"] for x in r.json()["members"]]  # the old owner stays on
+    assert _award(world, "colleague", did).status_code == 201
+    detail = world.get("lecturer", f"/api/v1/achievements/{did}").json()
+    assert detail["can_edit"] is True
+
+
+def test_award_picker_lists_only_live_badges_you_can_award(world: World) -> None:
+    did = _badge(world)
+    _teams(world, "lecturer", True)
+    assert world.post("lecturer", f"/api/v1/achievements/{did}/new-version").status_code == 200
+    mine = world.get("lecturer", "/api/v1/achievements", params={"awardable": True}).json()
+    assert [(i["id"], i["title"], i["can_award"]) for i in mine["items"]] == [
+        (did, "Library volunteer", True)
+    ]
+    assert mine["items"][0]["course_title"]
+    theirs = world.get("colleague", "/api/v1/achievements", params={"awardable": True}).json()
+    assert theirs["items"] == []
+
+
+def test_admin_course_list_shows_badge_teams(world: World) -> None:
+    _teams(world, "lecturer", True)
+    rows = world.get("admin", "/api/v1/admin/courses").json()
+    assert [c["badge_teams"] for c in rows if c["id"] == str(world.course_id)] == [True]
