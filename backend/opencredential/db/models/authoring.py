@@ -160,6 +160,9 @@ class DefinitionReview(TenantMixin, Base):
     decision: Mapped[str] = mapped_column(choice("approve", "reject", "comment", name="decision"))
     checklist: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     comment: Mapped[str | None] = mapped_column(Text)
+    #: True when the approval was automatic (review not required, or the author chose to publish
+    #: without review where their area lets them). Lets admins find badges nobody else checked.
+    without_review: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class ManualRuleApproval(TenantMixin, Base):

@@ -11,10 +11,12 @@ import {
   apiSend,
   type AdminCourse,
   type AdminIssuer,
+  type AreaReviewPolicy,
   type OrgUnit,
   type Person,
   ROLE_LABELS,
   type StaffRole,
+  type UnreviewedBadge,
 } from "../../api";
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
@@ -25,6 +27,8 @@ export function People() {
   return (
     <AdminPage title="Departments and roles">
       <OrgUnits />
+      <AreaReview />
+      <PublishedWithoutReview />
       <Courses />
       <Roles />
     </AdminPage>
@@ -126,6 +130,141 @@ function OrgUnits() {
   );
 }
 
+const MODE_LABELS: Record<string, string> = {
+  required: "Required",
+  author_decides: "Author decides",
+  not_required: "Not required",
+};
+const YES_NO: Record<string, [string, string]> = {
+  self_approval_allowed: ["Allowed", "Not allowed"],
+  manual_awards_require_second_approval: ["Required", "Not required"],
+};
+
+/** Colleague review set per faculty, department or service; a unit inherits until it sets its own. */
+function AreaReview() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
+  const patch = useMutation({
+    mutationFn: ({ id, review_policy }: { id: string; review_policy: Record<string, unknown> }) =>
+      apiSend<OrgUnit>(`/api/v1/admin/org-units/${id}`, token, "PATCH", { review_policy }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["org-units"] }),
+  });
+  const units = (q.data ?? []).filter((u) => u.manageable && u.status === "active");
+  const inherited = (u: OrgUnit, key: keyof AreaReviewPolicy) => {
+    const v = u.effective_review[key];
+    const text = key === "definition_review" ? MODE_LABELS[String(v)] : YES_NO[key][v ? 0 : 1];
+    return `Inherit (${text})`;
+  };
+  const valueOf = (u: OrgUnit, key: keyof AreaReviewPolicy) => {
+    const v = u.review_policy[key];
+    return v === undefined ? "" : String(v);
+  };
+  const change = (u: OrgUnit, key: keyof AreaReviewPolicy, raw: string) => {
+    const value = raw === "" ? null : key === "definition_review" ? raw : raw === "true";
+    patch.mutate({ id: u.id, review_policy: { [key]: value } });
+  };
+  if (!units.length) return null;
+  return (
+    <View as="section" display="block" margin="0 0 large">
+      <Heading level="h2" margin="0 0 small">
+        Colleague review by area
+      </Heading>
+      <Text as="p">
+        Each faculty, department or service can set its own review rules, for example switching review off for
+        volunteering badges. A unit inherits from the unit above it, then the institution, until it sets its own.
+      </Text>
+      {patch.isError && <ErrorAlert error={patch.error} />}
+      {units.map((u) => (
+        <Flex key={u.id} gap="small" alignItems="end" wrap="wrap" margin="small 0">
+          <Text weight="bold">{u.name}</Text>
+          <SimpleSelect
+            renderLabel={`Badge review in ${u.name}`}
+            value={valueOf(u, "definition_review")}
+            onChange={(_e, { value }) => change(u, "definition_review", String(value))}
+            width="14rem"
+          >
+            <SimpleSelect.Option id={`${u.id}-rv-inherit`} value="">
+              {inherited(u, "definition_review")}
+            </SimpleSelect.Option>
+            {Object.entries(MODE_LABELS).map(([k, label]) => (
+              <SimpleSelect.Option key={k} id={`${u.id}-rv-${k}`} value={k}>
+                {label}
+              </SimpleSelect.Option>
+            ))}
+          </SimpleSelect>
+          {(["self_approval_allowed", "manual_awards_require_second_approval"] as const).map((key) => (
+            <SimpleSelect
+              key={key}
+              renderLabel={
+                key === "self_approval_allowed"
+                  ? `Authors approving their own badges in ${u.name}`
+                  : `Second approval of manual awards in ${u.name}`
+              }
+              value={valueOf(u, key)}
+              onChange={(_e, { value }) => change(u, key, String(value))}
+              width="14rem"
+            >
+              <SimpleSelect.Option id={`${u.id}-${key}-inherit`} value="">
+                {inherited(u, key)}
+              </SimpleSelect.Option>
+              <SimpleSelect.Option id={`${u.id}-${key}-true`} value="true">
+                {YES_NO[key][0]}
+              </SimpleSelect.Option>
+              <SimpleSelect.Option id={`${u.id}-${key}-false`} value="false">
+                {YES_NO[key][1]}
+              </SimpleSelect.Option>
+            </SimpleSelect>
+          ))}
+        </Flex>
+      ))}
+    </View>
+  );
+}
+
+/** Live badges nobody else reviewed, so admins can check them after making review stricter. */
+function PublishedWithoutReview() {
+  const { token } = useAuth();
+  const q = useQuery({
+    queryKey: ["published-without-review"],
+    queryFn: () => apiFetch<UnreviewedBadge[]>("/api/v1/admin/review/published-without-review", token),
+  });
+  if (!q.data?.length) return q.isError ? <ErrorAlert error={q.error} /> : null;
+  return (
+    <View as="section" display="block" margin="0 0 large">
+      <Heading level="h2" margin="0 0 small">
+        Badges published without review
+      </Heading>
+      <TableScroll>
+        <Table caption="Badges published without review">
+          <Table.Head>
+            <Table.Row>
+              <Table.ColHeader id="nr-title">Badge</Table.ColHeader>
+              <Table.ColHeader id="nr-area">Area</Table.ColHeader>
+              <Table.ColHeader id="nr-author">Author</Table.ColHeader>
+              <Table.ColHeader id="nr-when">Published</Table.ColHeader>
+              <Table.ColHeader id="nr-now">Review now</Table.ColHeader>
+            </Table.Row>
+          </Table.Head>
+          <Table.Body>
+            {q.data.map((b) => (
+              <Table.Row key={b.id}>
+                <Table.RowHeader>
+                  {b.title} (version {b.version_no})
+                </Table.RowHeader>
+                <Table.Cell>{b.area ?? "Institution"}</Table.Cell>
+                <Table.Cell>{b.author ?? ""}</Table.Cell>
+                <Table.Cell>{fmtDate(b.approved_at)}</Table.Cell>
+                <Table.Cell>{MODE_LABELS[b.review_now]}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+      </TableScroll>
+    </View>
+  );
+}
+
 function Courses() {
   const { token } = useAuth();
   const qc = useQueryClient();
@@ -168,6 +307,7 @@ function Courses() {
 const SCOPE_FOR: Record<string, string> = {
   inst_admin: "institution",
   dept_admin: "org_unit",
+  reviewer: "org_unit",
   issuer_manager: "issuer",
   lecturer: "course",
   course_admin: "course",

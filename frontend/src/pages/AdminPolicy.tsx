@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Institution awarding policy (Gary's decision: per-badge choice with an admin-set default). */
-import { Alert, Button, Checkbox, RadioInput, RadioInputGroup, NumberInput, View } from "@instructure/ui";
+import { Alert, Button, Checkbox, RadioInput, RadioInputGroup, NumberInput, Text, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiFetch, apiSend } from "../api";
+import { apiFetch, apiSend, type ReviewMode } from "../api";
 import { useAuth } from "../auth";
 import { ErrorAlert, Loading } from "../components/Page";
 import { AdminPage } from "./admin/AdminPage";
@@ -13,6 +13,8 @@ interface Policy {
   score_rules_default_policy: "automatic" | "lecturer_confirmed";
   score_rules_force_confirmation: boolean;
   definitions_require_approval: boolean;
+  definition_review: ReviewMode;
+  areas_may_relax_review: boolean;
   self_approval_allowed: boolean;
   manual_awards_require_second_approval: boolean;
   max_snapshot_age_minutes: number;
@@ -104,13 +106,30 @@ function PolicyForm({ initial }: { initial: Policy }) {
           checked={p.score_rules_force_confirmation}
           onChange={(e) => set({ score_rules_force_confirmation: e.target.checked })}
         />
+        <RadioInputGroup
+          name="definition-review"
+          description="Colleague review of new and changed badges (default for the whole institution)"
+          value={p.definition_review}
+          onChange={(_e, v) => {
+            const mode = v as ReviewMode;
+            set({ definition_review: mode, definitions_require_approval: mode !== "not_required" });
+          }}
+        >
+          <RadioInput value="required" label="Required: a reviewer approves every badge before it can be published" />
+          <RadioInput value="author_decides" label="The author decides whether to ask a colleague" />
+          <RadioInput value="not_required" label="Not required: badges can be published straight away" />
+        </RadioInputGroup>
+        <Text as="p" size="small">
+          Badges that claim assessed proficiency, or whose wording refers to credit or a qualification, always need
+          review.
+        </Text>
         <Checkbox
-          label="New and changed badges must be approved before publishing"
-          checked={p.definitions_require_approval}
-          onChange={(e) => set({ definitions_require_approval: e.target.checked })}
+          label="Faculties, departments and services may set review less strictly for themselves"
+          checked={p.areas_may_relax_review}
+          onChange={(e) => set({ areas_may_relax_review: e.target.checked })}
         />
         <Checkbox
-          label="Authors may approve their own badges"
+          label="Authors may approve their own badges (default; areas can change this)"
           checked={p.self_approval_allowed}
           onChange={(e) => set({ self_approval_allowed: e.target.checked })}
         />
@@ -137,7 +156,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           onChange={(e) => set({ course_activation_required: e.target.checked })}
         />
         <Checkbox
-          label="Manual awards need a second member of staff to confirm"
+          label="Manual awards need a second member of staff to confirm (default; areas can change this)"
           checked={p.manual_awards_require_second_approval}
           onChange={(e) => set({ manual_awards_require_second_approval: e.target.checked })}
         />

@@ -55,7 +55,23 @@ function admin(routes: Record<string, unknown>) {
   return stubApi({
     "GET /api/v1/learners/me": ADMIN_ME,
     "GET /api/v1/admin/org-units": [
-      { id: "ou-1", name: "Library", kind: "department", parent_id: null, may_issue: true, effective_may_issue: true, status: "active", manageable: true },
+      {
+        id: "ou-1",
+        name: "Library",
+        kind: "department",
+        parent_id: null,
+        may_issue: true,
+        effective_may_issue: true,
+        status: "active",
+        manageable: true,
+        review_policy: {},
+        effective_review: {
+          definition_review: "required",
+          self_approval_allowed: false,
+          manual_awards_require_second_approval: false,
+          sources: { definition_review: null, self_approval_allowed: null, manual_awards_require_second_approval: null },
+        },
+      },
     ],
     "GET /api/v1/admin/courses": [],
     ...routes,
@@ -86,6 +102,34 @@ describe("administration", () => {
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/authorise"))).toBe(true));
     const body = calls.find((c) => c.url.endsWith("/authorise"))!.body as { authority_basis: string };
     expect(body.authority_basis).toBe("Senate resolution S/2026/14");
+  });
+
+  it("sets colleague review for one area and lists badges published without review", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/memberships": [],
+      "GET /api/v1/admin/issuers": [],
+      "GET /api/v1/admin/review/published-without-review": [
+        {
+          id: "d-9",
+          title: "WP Volunteer",
+          version_no: 1,
+          area: "Library",
+          author: "Lee Lecturer",
+          approved_at: "2026-11-14T10:00:00Z",
+          reason: "Approved automatically: review is not required in this area.",
+          review_now: "required",
+        },
+      ],
+      "PATCH /api/v1/admin/org-units/ou-1": {},
+    });
+    renderAt("/admin/people");
+    expect(await screen.findByText("WP Volunteer (version 1)")).toBeInTheDocument();
+    await userEvent.click(await screen.findByLabelText("Badge review in Library"));
+    await userEvent.click(await screen.findByRole("option", { name: "Not required" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PATCH")).toBe(true));
+    expect(calls.find((c) => c.method === "PATCH")!.body).toEqual({
+      review_policy: { definition_review: "not_required" },
+    });
   });
 
   it("revokes a credential with a reason and explains the effect", async () => {

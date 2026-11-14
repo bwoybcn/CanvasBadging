@@ -542,16 +542,7 @@ def readiness(
         course = db.get(Course, definition.course_id) if definition.course_id else None
         issues.extend(_rule_source_issues(db, course, rules))
 
-    text_blob = " ".join(
-        [
-            version.title,
-            version.short_description,
-            version.description,
-            version.criteria_narrative,
-            *version.learning_outcomes,
-        ]
-    )
-    terms = sorted({m.group(0).lower() for m in CREDIT_TERMS.finditer(text_blob)})
+    terms = credit_terms(version)
     if terms and not version.credit_claim_approved:
         issues.append(
             _issue(
@@ -577,14 +568,69 @@ def _content_hash(db: Session, version: AchievementVersion) -> str:
 # ---- lifecycle -----------------------------------------------------------------------------------
 
 
+def credit_terms(version: AchievementVersion) -> list[str]:
+    """Words in the badge's text that can imply academic credit or a qualification."""
+    text_blob = " ".join(
+        [
+            version.title,
+            version.short_description,
+            version.description,
+            version.criteria_narrative,
+            *version.learning_outcomes,
+        ]
+    )
+    return sorted({m.group(0).lower() for m in CREDIT_TERMS.finditer(text_blob)})
+
+
+def review_forced_reason(version: AchievementVersion) -> str | None:
+    """The fixed safeguard: badges that claim assessed proficiency or use credit wording always
+    need a colleague's review, whatever their area's setting."""
+    if version.demonstration_kind == "assessed":
+        return "assessed"
+    if credit_terms(version):
+        return "credit"
+    return None
+
+
+def review_requirement(
+    db: Session, definition: AchievementDefinition, version: AchievementVersion
+) -> dict[str, Any]:
+    """How this badge version would be reviewed if submitted now.
+
+    ``mode`` is the effective review mode (``required``, ``author_decides`` or
+    ``not_required``); ``area_mode`` is what the badge's area set; ``forced_by`` names the
+    safeguard that made review required (``assessed`` or ``credit``), if any.
+    """
+    settings = authz.definition_review_settings(db, definition)
+    area_mode = settings["definition_review"]
+    forced = review_forced_reason(version)
+    source = settings["sources"]["definition_review"]
+    return {
+        "mode": "required" if forced else area_mode,
+        "area_mode": area_mode,
+        "forced_by": forced,
+        "set_by_org_unit_id": str(source) if source else None,
+        "self_approval_allowed": bool(settings["self_approval_allowed"]),
+    }
+
+
+REVIEW_CHOICES = ("colleague", "skip")
+
+
 def submit(
     db: Session,
     actor: authz.Actor,
     definition: AchievementDefinition,
     request_id: str | None = None,
+    *,
+    review: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Submit a draft. ``review`` is the author's choice where their area lets them decide:
+    ``colleague`` (the default) asks for review, ``skip`` publishes without review."""
     authz.require_edit(db, actor, definition)
     _require_state(definition, "draft")
+    if review is not None and review not in REVIEW_CHOICES:
+        raise Invalid("REVIEW_CHOICE_INVALID", "Choose colleague review or no review.")
     version = working_version(db, definition)
     issues = readiness(db, definition, version)
     errors = [i for i in issues if i["severity"] == "error"]
@@ -597,9 +643,18 @@ def submit(
                 {"field": e["field"], "code": e["code"], "message": e["message"]} for e in errors
             ],
         )
+    requirement = review_requirement(db, definition, version)
+    mode = requirement["mode"]
+    if review == "skip" and mode == "required":
+        reason = {
+            "assessed": "Badges that claim assessed proficiency always need a colleague's review.",
+            "credit": "Badges whose wording refers to credit or a qualification always need a "
+            "colleague's review.",
+        }.get(requirement["forced_by"] or "", "Your area requires a colleague to review badges.")
+        raise Conflict("REVIEW_REQUIRED", reason)
     version.content_hash = _content_hash(db, version)
-    policy = authz.institution_policy(db, actor.institution_id)
     definition.state = "in_review"
+    skip = mode == "not_required" or (mode == "author_decides" and review == "skip")
     audit.record(
         db,
         action="achievement.submit",
@@ -608,10 +663,16 @@ def submit(
         institution_id=actor.institution_id,
         actor_user_id=actor.user_id,
         request_id=request_id,
-        data={"content_hash": version.content_hash},
+        data={
+            "content_hash": version.content_hash,
+            "review_mode": mode,
+            "review": "skipped" if skip else "requested",
+            **({"review_forced_by": requirement["forced_by"]} if requirement["forced_by"] else {}),
+        },
     )
-    if not policy.get("definitions_require_approval", True):
+    if skip:
         definition.state = "approved"
+        author_chose = mode == "author_decides"
         db.add(
             DefinitionReview(
                 institution_id=actor.institution_id,
@@ -619,8 +680,13 @@ def submit(
                 version_id=version.id,
                 reviewer_id=actor.user_id,
                 decision="approve",
-                checklist={"policy": "definitions_require_approval=false"},
-                comment="Approved automatically: institutional policy does not require review.",
+                checklist={"policy": f"definition_review={mode}"},
+                comment=(
+                    "Published without review: the author chose not to ask a colleague."
+                    if author_chose
+                    else "Approved automatically: review is not required in this area."
+                ),
+                without_review=True,
             )
         )
     return issues

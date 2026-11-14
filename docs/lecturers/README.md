@@ -39,7 +39,11 @@ On the badge page, **Preview** shows the badge as a credential would look. It is
 ### Review and publish
 
 1. **Submit for review.** Your department or institution reviewers get it in their **Review
-   queue**. You cannot approve your own badge unless your institution allows it.
+   queue**. You cannot approve your own badge unless your area allows it. Some areas do not
+   require review, or let you choose: the badge page says which applies. If you can choose, pick
+   **Ask a colleague to review it first** or **Publish without review**; the second goes straight
+   to **Approved** and administrators can see that nobody else checked it. Badges that claim
+   assessed proficiency, or whose wording refers to credit or a qualification, always need review.
 2. The reviewer works through a checklist (clarity, level, evidence, alignment, accessibility,
    consistency, terminology) and **approves** it, or **rejects** it with comments. A rejected
    badge goes back to draft.

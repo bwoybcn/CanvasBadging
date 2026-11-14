@@ -10,6 +10,8 @@ from sqlalchemy import Index, UniqueConstraint, text
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
+    JSONB,
+    Any,
     Boolean,
     DateTime,
     Mapped,
@@ -20,7 +22,15 @@ from opencredential.db.models._types import (
     uuid,
 )
 
-ROLES = ("student", "lecturer", "course_admin", "issuer_manager", "dept_admin", "inst_admin")
+ROLES = (
+    "student",
+    "lecturer",
+    "course_admin",
+    "issuer_manager",
+    "reviewer",
+    "dept_admin",
+    "inst_admin",
+)
 
 
 class User(TenantMixin, Base):
@@ -74,6 +84,10 @@ class OrgUnit(TenantMixin, Base):
     status: Mapped[str] = mapped_column(
         choice("active", "archived", name="status"), default="active"
     )
+    #: Colleague-review overrides for this unit and the units below it (migration 0009). Keys
+    #: from ``authz.AREA_REVIEW_KEYS``; a missing key inherits from the unit above, then the
+    #: institution policy.
+    review_policy: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
 
 class Course(TenantMixin, Base):

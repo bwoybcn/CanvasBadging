@@ -23,6 +23,10 @@ from opencredential.db.models._types import (
 
 DEFAULT_POLICY: dict[str, Any] = {
     "definitions_require_approval": True,
+    # Whether faculties, departments and services may set review less strictly than the
+    # institution (migration 0009). The institution's own mode is ``definition_review``, which
+    # falls back to ``definitions_require_approval`` when unset.
+    "areas_may_relax_review": True,
     "self_approval_allowed": False,
     "approver_roles": ["dept_admin", "inst_admin"],
     "manual_awards_require_second_approval": False,

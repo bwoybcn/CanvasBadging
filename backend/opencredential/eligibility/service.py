@@ -517,8 +517,9 @@ def manual_award(
                 "This learner already has an award waiting for confirmation. Confirm that instead.",
             )
         raise Conflict("ALREADY_AWARDED", "This learner already has this badge.")
-    policy = authz.institution_policy(db, actor.institution_id)
-    second = bool(policy.get("manual_awards_require_second_approval"))
+    second = bool(
+        authz.definition_review_settings(db, definition)["manual_awards_require_second_approval"]
+    )
     # Each earlier rejected manual award is an earlier attempt: a corrected award after a
     # rejection needs a key of its own, or it would collide with the rejected one.
     rejected = (

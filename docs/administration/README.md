@@ -68,8 +68,9 @@ course in its department so department administrators and templates apply to it.
 
 | Setting | Default |
 | --- | --- |
-| Badges must be approved before publishing | On |
-| Who approves definitions | Department and institution administrators |
+| Colleague review of new and changed badges | Required (other modes: author decides, not required) |
+| Areas may set review less strictly | On |
+| Who approves definitions | Department and institution administrators, plus named badge reviewers |
 | Authors may approve their own badges | Off |
 | Default for badges that use marks | A lecturer confirms each award (per-badge choice allowed) |
 | Always require confirmation for mark-based badges | Off |
@@ -79,6 +80,32 @@ course in its department so department administrators and templates apply to it.
 
 Institution administrators can always approve and revoke whatever the lists say. Every policy
 change is audited with the fields changed.
+
+### Colleague review by area
+
+Review, self-approval and second approval of manual awards can differ by faculty, department or
+service, so a volunteering or library workshop badge need not follow the rules for a module
+badge. Set them under **Departments and roles → Colleague review by area**:
+
+- **Required**: a reviewer approves every badge before it can be published.
+- **Author decides**: the author chooses "Ask a colleague to review it first" (the default) or
+  "Publish without review".
+- **Not required**: badges can be published straight away. The automatic approval is recorded.
+
+A unit inherits from the unit above it, then from the institution, until it sets its own; the
+nearest setting wins. Department administrators can set their own units. If **Areas may set
+review less strictly** is off, a unit can only be stricter than the institution.
+
+Two kinds of badge always need review, whatever the area says: badges that claim **assessed
+proficiency**, and badges whose wording refers to credit or a qualification.
+
+**Badge reviewer** is a role for a named colleague (a senior librarian, a programme lead) who
+may review badges in a unit and the units below it. Institution and department administrators
+grant it under **Staff roles**.
+
+Changing a setting never unpublishes anything. **Badges published without review** lists live
+badges that nobody else checked, with what review would be now, so you can follow them up after
+making review stricter.
 
 ## 5. Templates (§10.4)
 
