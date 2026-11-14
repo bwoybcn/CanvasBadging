@@ -8,10 +8,13 @@ make one manual award per learner with the same written justification.
 
 * Learners must be students in the badge's course. Enrolment stays Canvas's job (self-enrol link,
   SIS feed), so a list cannot reach anyone outside the course.
+* Identifiers are matched only against the course's students. Anyone else, enrolled elsewhere or
+  not at all, gets the same ``not_found`` row with no name, so the preview cannot be used to look
+  up who an email or student number belongs to across the institution.
 * Student ID numbers match the SIS user id Canvas sends at launch or in the roster; emails match
   the address Canvas holds for the learner, ignoring case.
-* Each award goes through :func:`eligibility.service.manual_award`, so second approval, audit and
-  issuance behave exactly as for a single manual award.
+* Each award goes through :func:`eligibility.service.make_manual_award`, the same code as a
+  single manual award, so second approval, audit and issuance behave exactly the same.
 * Identifiers are never written to the audit log: one ``award.bulk`` event records the counts.
 """
 
@@ -43,7 +46,6 @@ AWARDED = "awarded"
 AWAITING_CONFIRMATION = "awaiting_confirmation"
 ALREADY_AWARDED = "already_awarded"
 PENDING = "pending_confirmation"
-NOT_IN_COURSE = "not_in_course"
 NOT_FOUND = "not_found"
 DUPLICATE = "duplicate"
 FAILED = "failed"
@@ -90,18 +92,24 @@ def parse_identifiers(raw: list[str]) -> list[str]:
     return out
 
 
-def _match(db: Session, course: Course, identifiers: list[str]) -> dict[str, uuid.UUID]:
-    """Map each identifier to a user id, where one matches (any enrolment)."""
+def _match(
+    db: Session, course: Course, students: set[uuid.UUID], identifiers: list[str]
+) -> dict[str, uuid.UUID]:
+    """Map each identifier to one of ``students`` (the course's students), where one matches."""
+    if not students:
+        return {}
     emails = {i.lower() for i in identifiers if "@" in i}
     ids = {i for i in identifiers if "@" not in i}
     found: dict[str, uuid.UUID] = {}
     if emails:
         for uid, email in db.execute(
             select(User.id, func.lower(User.email)).where(
-                func.lower(User.email).in_(emails), User.status == "active"
+                func.lower(User.email).in_(emails),
+                User.status == "active",
+                User.id.in_(students),
             )
         ):
-            # Two accounts with one email: refuse to guess (treated as not found).
+            # Two students in the course with one email: refuse to guess (treated as not found).
             found[email] = uid if email not in found else uuid.UUID(int=0)
     if ids:
         for uid, value in db.execute(
@@ -109,6 +117,7 @@ def _match(db: Session, course: Course, identifiers: list[str]) -> dict[str, uui
                 ExternalIdentity.canvas_integration_id == course.canvas_integration_id,
                 ExternalIdentity.kind == "sis_user_id",
                 ExternalIdentity.value.in_(ids),
+                ExternalIdentity.user_id.in_(students),
             )
         ):
             found[value] = uid
@@ -145,8 +154,13 @@ def award_list(
             f"(at least {eligibility.MIN_JUSTIFICATION} characters).",
         )
     items = parse_identifiers(identifiers)
-    matches = _match(db, course, items)
     students = set(eligibility.course_students(db, course.id))
+    matches = _match(db, course, students, items)
+    # Checked once for the whole list: staff rights, live version and justification above, and
+    # each learner against the course's students below.
+    second = bool(
+        authz.definition_review_settings(db, definition)["manual_awards_require_second_approval"]
+    )
     result = BulkResult(committed=confirm)
     seen: set[uuid.UUID] = set()
     for ident in items:
@@ -157,9 +171,6 @@ def award_list(
             continue
         user = db.get(User, uid)
         name = user.display_name if user else None
-        if uid not in students:
-            result.rows.append(Row(ident, NOT_IN_COURSE, uid, name))
-            continue
         if uid in seen:
             result.rows.append(Row(ident, DUPLICATE, uid, name))
             continue
@@ -174,13 +185,14 @@ def award_list(
             continue
         try:
             with db.begin_nested():
-                decision, _ = eligibility.manual_award(
+                decision, _ = eligibility.make_manual_award(
                     db,
                     actor,
-                    definition,
+                    target,
                     user_id=uid,
                     justification=justification,
                     evidence=evidence,
+                    second_approval=second,
                     request_id=request_id,
                 )
         except DomainError as exc:

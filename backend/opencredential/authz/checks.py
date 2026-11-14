@@ -23,9 +23,13 @@ from opencredential.db.models import (
 )
 
 
-def credential_course(db: Session, cred: Credential) -> Course | None:
+def credential_definition(db: Session, cred: Credential) -> AchievementDefinition | None:
     version = db.get(AchievementVersion, cred.version_id)
-    definition = db.get(AchievementDefinition, version.definition_id) if version else None
+    return db.get(AchievementDefinition, version.definition_id) if version else None
+
+
+def credential_course(db: Session, cred: Credential) -> Course | None:
+    definition = credential_definition(db, cred)
     if definition is None or definition.course_id is None:
         return None
     return db.get(Course, definition.course_id)
@@ -37,7 +41,9 @@ def may_revoke(db: Session, user_id: uuid.UUID, cred: Credential) -> bool:
         return False
     actor = policy.load_actor(db, user_id, cred.institution_id)
     rules = policy.institution_policy(db, cred.institution_id)
-    return policy.can_revoke(db, actor, issuer, credential_course(db, cred), rules)
+    return policy.can_revoke(
+        db, actor, issuer, credential_course(db, cred), rules, credential_definition(db, cred)
+    )
 
 
 def require_revoker(db: Session, user_id: uuid.UUID, cred: Credential) -> None:

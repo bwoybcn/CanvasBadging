@@ -92,10 +92,12 @@ def test_preview_then_award_a_list(world: World) -> None:
         ("202222222", "will_award"),
         ("s3@student.example.ac.uk", "will_award"),
         ("201111111", "duplicate"),
-        ("209999999", "not_in_course"),
+        ("209999999", "not_found"),
         ("123456789", "not_found"),
     ]
     assert preview["rows"][0]["learner_name"] == "S1"
+    # Someone outside the course looks exactly like nobody: no name, no id.
+    assert preview["rows"][4]["learner_name"] is None and preview["rows"][4]["user_id"] is None
     assert world.jobs(ISSUE) == []  # a preview changes nothing
 
     r = _bulk(world, did, pasted, confirm=True)
@@ -103,8 +105,7 @@ def test_preview_then_award_a_list(world: World) -> None:
     assert result["counts"] == {
         "awarded": 3,
         "duplicate": 1,
-        "not_in_course": 1,
-        "not_found": 1,
+        "not_found": 2,
     }
     assert len(world.jobs(ISSUE)) == 3
     with world.db() as db:
@@ -151,3 +152,14 @@ def test_list_awards_are_refused_when_they_should_be(world: World) -> None:
     draft = world.draft(MANUAL_RULES, award_policy="manual", title="Not yet published")
     r = _bulk(world, draft["id"], ["201111111"])
     assert r.status_code == 422 and r.json()["code"] == "NOT_LIVE"
+
+
+def test_list_cannot_look_up_people_outside_the_course(world: World) -> None:
+    """The preview only matches the course's students: an outsider's email or student number
+    reads exactly like a typo, with no name or id (review 14 Nov 2026, finding 1)."""
+    did = _badge(world)
+    preview = _bulk(world, did, ["outsider@student.example.ac.uk", SIS["outsider"]]).json()
+    assert [(x["status"], x["learner_name"], x["user_id"]) for x in preview["rows"]] == [
+        ("not_found", None, None),
+        ("not_found", None, None),
+    ]

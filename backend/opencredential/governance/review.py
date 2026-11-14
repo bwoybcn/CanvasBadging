@@ -27,6 +27,9 @@ def published_without_review(db: Session, actor: authz.Actor) -> list[dict[str, 
     """Live badges in the actor's administrative scope whose live version was not reviewed."""
     authz.require_admin(actor)
     scope = authz.admin_org_units(db, actor)
+    # Every approval of each live version, newest first. Only the newest counts: a badge a
+    # colleague reviewed after an automatic approval is not "published without review". Live
+    # means it has a current version and is not archived, even while a new draft is in progress.
     rows = db.execute(
         select(AchievementDefinition, AchievementVersion, DefinitionReview)
         .join(AchievementVersion, AchievementVersion.id == AchievementDefinition.current_version_id)
@@ -35,10 +38,7 @@ def published_without_review(db: Session, actor: authz.Actor) -> list[dict[str, 
             (DefinitionReview.version_id == AchievementVersion.id)
             & (DefinitionReview.decision == "approve"),
         )
-        .where(
-            AchievementDefinition.state == "published",
-            DefinitionReview.without_review.is_(True),
-        )
+        .where(AchievementDefinition.state != "archived")
         .order_by(DefinitionReview.created_at.desc())
     ).all()
     out: list[dict[str, Any]] = []
@@ -47,6 +47,8 @@ def published_without_review(db: Session, actor: authz.Actor) -> list[dict[str, 
         if d.id in seen:
             continue
         seen.add(d.id)
+        if not review.without_review:
+            continue
         area = authz.definition_area(db, d)
         if scope is not None and (area is None or area not in scope):
             continue

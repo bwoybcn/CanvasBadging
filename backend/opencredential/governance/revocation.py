@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from opencredential import audit
 from opencredential.authz import policy as authz
-from opencredential.authz.checks import credential_course
+from opencredential.authz.checks import credential_course, credential_definition
 from opencredential.db.models import (
     AchievementVersion,
     Credential,
@@ -58,7 +58,9 @@ def can_revoke(db: Session, actor: authz.Actor, cred: Credential) -> bool:
     issuer = db.get(Issuer, cred.issuer_id)
     assert issuer is not None
     rules = authz.institution_policy(db, actor.institution_id)
-    return authz.can_revoke(db, actor, issuer, credential_course(db, cred), rules)
+    return authz.can_revoke(
+        db, actor, issuer, credential_course(db, cred), rules, credential_definition(db, cred)
+    )
 
 
 def require_revoke(db: Session, actor: authz.Actor, cred: Credential) -> None:
@@ -71,7 +73,13 @@ def can_request(db: Session, actor: authz.Actor, cred: Credential) -> bool:
     if can_revoke(db, actor, cred):
         return True
     course = credential_course(db, cred)
-    return course is not None and authz.is_course_staff(db, actor, course)
+    if course is None:
+        return False
+    definition = credential_definition(db, cred)
+    if course.badge_teams:
+        # Badge teams: only the badge's own team (and admins over the course) may ask.
+        return definition is not None and authz.can_award_definition(db, actor, definition)
+    return authz.is_course_staff(db, actor, course)
 
 
 def _validate(reason_code: str, reason_text: str) -> str:

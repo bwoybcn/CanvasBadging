@@ -41,7 +41,7 @@ from opencredential.jobs import enqueue
 from opencredential.jobs.defer import defer
 from opencredential.logging import get_logger
 from opencredential.settings import get_settings
-from opencredential.signer_client import SignerClient
+from opencredential.signer_client import SignerClient, SignerUnavailable
 from opencredential.sync import (
     integration_for,
     needs_canvas_data,
@@ -61,6 +61,14 @@ RETRY_TRANSIENT = procrastinate.RetryStrategy(
     wait=5,
     exponential_wait=2,
     retry_exceptions={LmsTransientError, OperationalError},
+)
+#: Signer key retire/destroy: also retry while the signer is unreachable, which is exactly when
+#: the durable retry matters (a compromised key must not survive a signer outage).
+RETRY_SIGNER = procrastinate.RetryStrategy(
+    max_attempts=12,
+    wait=5,
+    exponential_wait=2,
+    retry_exceptions={SignerUnavailable, LmsTransientError, OperationalError},
 )
 #: A job whose worker has not sent a heartbeat for this long is considered stranded.
 STALLED_AFTER_SECONDS = 300
@@ -420,7 +428,7 @@ def reconcile_issuance(timestamp: int) -> int:
     return count
 
 
-@blueprint.task(name="signer_key_lifecycle", queue="maintenance", retry=RETRY_TRANSIENT)
+@blueprint.task(name="signer_key_lifecycle", queue="maintenance", retry=RETRY_SIGNER)
 def signer_key_lifecycle(
     key_id: str, action: str, institution_id: str | None = None, **_meta: Any
 ) -> str:

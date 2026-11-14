@@ -142,11 +142,10 @@ def team_role(db: Session, actor: Actor, definition: AchievementDefinition) -> s
 def _team_allows(
     db: Session, actor: Actor, definition: AchievementDefinition, course: Course, roles: set[str]
 ) -> bool:
-    """Badge teams are on for ``course``: admins over it, the owner, or a team member who is
-    still staff in the course, with one of ``roles``."""
+    """Badge teams are on for ``course``: admins over it, or the owner or a team member with one
+    of ``roles``, as long as they are still staff in the course. An owner whose course role has
+    gone loses access like anyone else, as they would with badge teams off."""
     if actor.is_inst_admin or is_dept_admin_over(db, actor, course.org_unit_id):
-        return True
-    if actor.user_id == definition.owner_user_id:
         return True
     if not actor.course_roles(course.id) & COURSE_STAFF:
         return False
@@ -334,8 +333,30 @@ def award_list_scope(db: Session, actor: Actor) -> ColumnElement[bool] | None:
     if actor.is_inst_admin:
         return None
     units = admin_org_units(db, actor) or set()
-    courses = set(actor.course_ids(COURSE_STAFF)) | (admin_course_ids(db, actor) or set())
-    course_clause = AchievementDefinition.course_id.in_(courses) if courses else false()
+    admin_courses = admin_course_ids(db, actor) or set()
+    courses = set(actor.course_ids(COURSE_STAFF)) | admin_courses
+    if courses:
+        # Badge teams: in a course with teams on, staff see only their own team's badges unless
+        # they administer the course (the same rule as can_award_definition).
+        team_courses = select(Course.id).where(Course.badge_teams.is_(True))
+        on_team = or_(
+            AchievementDefinition.owner_user_id == actor.user_id,
+            AchievementDefinition.id.in_(
+                select(AchievementTeamMember.definition_id).where(
+                    AchievementTeamMember.user_id == actor.user_id
+                )
+            ),
+        )
+        course_clause = and_(
+            AchievementDefinition.course_id.in_(courses),
+            or_(
+                AchievementDefinition.course_id.not_in(team_courses),
+                AchievementDefinition.course_id.in_(admin_courses) if admin_courses else false(),
+                on_team,
+            ),
+        )
+    else:
+        course_clause = false()
     standalone = [AchievementDefinition.owner_user_id == actor.user_id]
     if units:
         standalone.append(
@@ -408,9 +429,11 @@ def can_revoke(
     issuer: Issuer,
     course: Course | None,
     policy: dict[str, Any],
+    definition: AchievementDefinition | None = None,
 ) -> bool:
     """Spec §10.3 "who may revoke credentials": roles in ``policy["revokers"]``, each within the
-    scope it holds. Institution administrators can always revoke."""
+    scope it holds. Institution administrators can always revoke. In a course with badge teams
+    on, course staff may only revoke credentials of badges whose team they are on."""
     if actor.is_inst_admin:
         return True
     roles = set(policy.get("revokers") or ["inst_admin"])
@@ -420,9 +443,15 @@ def can_revoke(
             return True
     if "issuer_manager" in roles and actor.has("issuer_manager", "issuer", issuer.id):
         return True
-    return bool(
+    if not (
         "lecturer" in roles and course is not None and actor.course_roles(course.id) & COURSE_STAFF
-    )
+    ):
+        return False
+    if course.badge_teams:
+        return definition is not None and _team_allows(
+            db, actor, definition, course, {"editor", "awarder"}
+        )
+    return True
 
 
 # ---- colleague review per area (extracurricular badges, migration 0009) ---------------------

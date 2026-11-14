@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from opencredential import audit
@@ -128,9 +129,9 @@ def upsert_user(
                 link_identity(
                     db, institution_id, integration_id, user.id, "sis_user_id", sis_user_id
                 )
-        except ValueError:
-            # Another account holds this student ID (an SIS merge in Canvas): leave it unlinked
-            # rather than block the launch; list awards will report the ID as not found.
+        except (ValueError, IntegrityError):
+            # Another account holds this student ID (an SIS merge in Canvas), or a roster sync
+            # linked it at the same moment: leave it unlinked rather than block the launch.
             pass
     return user, created
 

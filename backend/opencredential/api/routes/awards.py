@@ -114,7 +114,8 @@ class BulkRowOut(BaseModel):
     identifier: str
     status: str = Field(
         description="will_award, awarded, awaiting_confirmation, already_awarded, "
-        "pending_confirmation, not_in_course, not_found, duplicate or failed"
+        "pending_confirmation, not_found (no student in the badge's course matches), "
+        "duplicate or failed"
     )
     user_id: uuid.UUID | None = None
     learner_name: str | None = None

@@ -744,7 +744,6 @@ export interface BulkRow {
     | "awaiting_confirmation"
     | "already_awarded"
     | "pending_confirmation"
-    | "not_in_course"
     | "not_found"
     | "duplicate"
     | "failed";

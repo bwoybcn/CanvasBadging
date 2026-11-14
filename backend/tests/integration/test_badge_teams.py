@@ -7,14 +7,18 @@ awarded only by its owner, its named team and administrators over the course.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import delete, select
 
 from opencredential.api.app import create_app
+from opencredential.authz import policy as authz
 from opencredential.db import models as m
 from opencredential.integrations import registry
 from opencredential.settings import get_settings
@@ -139,3 +143,75 @@ def test_team_rules(world: World) -> None:
     assert _teams(world, "s1", True).status_code == 404
     assert _teams(world, "reviewer", False).json()["badge_teams"] is False
     assert _award(world, "colleague", did).status_code == 201
+
+
+# ---- review 14 Nov 2026: findings 2 to 4 ----------------------------------------------------
+
+
+def test_owner_removed_from_course_loses_award_rights(world: World) -> None:
+    """With badge teams on, the owner needs to still be staff in the course, as with teams off."""
+    did = _badge(world)
+    _teams(world, "lecturer", True)
+    with world.db() as db:
+        for ms in db.scalars(
+            select(m.Membership).where(
+                m.Membership.user_id == world.users["lecturer"],
+                m.Membership.scope_id == world.course_id,
+            )
+        ):
+            ms.revoked_at = datetime.now(UTC)
+    assert _award(world, "lecturer", did).status_code == 403
+    bulk = {"definition_id": did, "identifiers": ["x"], "justification": REASON}
+    assert world.post("lecturer", "/api/v1/awards/bulk", bulk).status_code == 403
+
+
+def test_revoking_follows_badge_teams(world: World) -> None:
+    """Course staff may only revoke (or ask to revoke) credentials of badges on their team."""
+    did = _badge(world)
+    _teams(world, "lecturer", True)
+    with world.db() as db:
+        definition = db.get(m.AchievementDefinition, uuid.UUID(did))
+        assert definition is not None
+        course = db.get(m.Course, world.course_id)
+        issuer = db.get(m.Issuer, definition.issuer_id)
+        assert course is not None and issuer is not None
+        policy = {"revokers": ["lecturer"]}
+
+        def may(who: str) -> bool:
+            actor = authz.load_actor(db, world.users[who], world.iid)
+            return authz.can_revoke(db, actor, issuer, course, policy, definition)
+
+        assert may("lecturer") is True
+        assert may("colleague") is False
+        db.add(
+            m.AchievementTeamMember(
+                institution_id=world.iid,
+                definition_id=definition.id,
+                user_id=world.users["colleague"],
+                role="awarder",
+                added_by=world.users["lecturer"],
+            )
+        )
+        db.flush()
+        assert may("colleague") is True
+        course.badge_teams = False
+        db.flush()
+        db.execute(
+            delete(m.AchievementTeamMember).where(
+                m.AchievementTeamMember.definition_id == definition.id
+            )
+        )
+        assert may("colleague") is True  # teams off: any course staff, as before
+
+
+def test_awards_list_is_not_used_up_by_other_teams_badges(world: World) -> None:
+    """The team rule is applied in SQL, so ``limit`` counts only awards the caller may see."""
+    theirs = _badge(world)
+    mine = _badge(world)
+    _teams(world, "lecturer", True)
+    path = f"/api/v1/achievements/{mine}/team/{world.users['colleague']}"
+    assert world.put("lecturer", path, {"role": "awarder"}).status_code == 200
+    assert _award(world, "lecturer", theirs, "s1").status_code == 201  # oldest
+    assert _award(world, "lecturer", mine, "s2").status_code == 201
+    listed = world.get("colleague", "/api/v1/awards", params={"limit": 1, "status": ""}).json()
+    assert [d["user_id"] for d in listed] == [str(world.users["s2"])]

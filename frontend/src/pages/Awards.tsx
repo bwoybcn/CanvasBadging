@@ -179,8 +179,7 @@ export const BULK_STATUS: Record<BulkRow["status"], string> = {
   awaiting_confirmation: "Recorded; a second member of staff must confirm",
   already_awarded: "Already has this badge",
   pending_confirmation: "Already waiting for confirmation",
-  not_in_course: "Not a student in this badge's course",
-  not_found: "No student with this ID or email",
+  not_found: "No student in this badge's course has this ID or email",
   duplicate: "Listed more than once",
   failed: "Could not be awarded",
 };

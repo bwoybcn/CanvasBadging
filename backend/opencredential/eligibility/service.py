@@ -510,6 +510,36 @@ def manual_award(
             f"Explain why this badge is awarded (at least {MIN_JUSTIFICATION} characters).",
         )
     _require_learner(db, definition, user_id)
+    second = bool(
+        authz.definition_review_settings(db, definition)["manual_awards_require_second_approval"]
+    )
+    return make_manual_award(
+        db,
+        actor,
+        target,
+        user_id=user_id,
+        justification=justification,
+        evidence=evidence,
+        second_approval=second,
+        request_id=request_id,
+    )
+
+
+def make_manual_award(
+    db: Session,
+    actor: authz.Actor,
+    target: Target,
+    *,
+    user_id: uuid.UUID,
+    justification: str,
+    evidence: list[dict[str, Any]] | None,
+    second_approval: bool,
+    request_id: str | None = None,
+) -> tuple[AwardDecision, bool]:
+    """The award itself, once the caller has checked staff rights, the live version, the
+    justification and that ``user_id`` is a student in the course (see :func:`manual_award`).
+    List awards check those once for the whole list and call this per learner."""
+    second = second_approval
     existing = _existing_decision(db, target.version.id, user_id, live_only=True)
     if existing is not None:
         if existing.kind == "manual" and existing.justification == justification:
@@ -520,9 +550,6 @@ def manual_award(
                 "This learner already has an award waiting for confirmation. Confirm that instead.",
             )
         raise Conflict("ALREADY_AWARDED", "This learner already has this badge.")
-    second = bool(
-        authz.definition_review_settings(db, definition)["manual_awards_require_second_approval"]
-    )
     # Each earlier rejected manual award is an earlier attempt: a corrected award after a
     # rejection needs a key of its own, or it would collide with the rejected one.
     rejected = (

@@ -654,7 +654,10 @@ def submit(
         raise Conflict("REVIEW_REQUIRED", reason)
     version.content_hash = _content_hash(db, version)
     definition.state = "in_review"
-    skip = mode == "not_required" or (mode == "author_decides" and review == "skip")
+    # An explicit request for a colleague's review is always honoured, even where none is needed.
+    skip = review != "colleague" and (
+        mode == "not_required" or (mode == "author_decides" and review == "skip")
+    )
     audit.record(
         db,
         action="achievement.submit",
