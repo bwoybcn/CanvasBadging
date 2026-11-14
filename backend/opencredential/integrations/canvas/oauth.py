@@ -41,6 +41,9 @@ API_SCOPES = (
     "url:GET|/api/v1/courses/:course_id/students/submissions",
     "url:GET|/api/v1/courses/:course_id/enrollments",
     "url:GET|/api/v1/users/:user_id/profile",
+    # Linking chosen sub-accounts to areas (admin reads the account tree).
+    "url:GET|/api/v1/accounts",
+    "url:GET|/api/v1/accounts/:account_id/sub_accounts",
 )
 STATE_AUDIENCE = "opencredential-canvas-oauth"
 REFRESH_MARGIN = timedelta(minutes=5)

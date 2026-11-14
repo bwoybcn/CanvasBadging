@@ -53,7 +53,9 @@ list awards by email work either way. Add `canvas_account_id=$Canvas.account.id`
 courses join the area linked to their sub-account on first launch; without it, linking looks each
 course up through `GET /api/v1/courses/:id` instead. Reading the sub-account tree uses
 `GET /api/v1/accounts` and `GET /api/v1/accounts/:id/sub_accounts?recursive=true`, so the
-connected Canvas user must be an account administrator.
+connected Canvas user must be an account administrator. Existing installs: add the scopes
+`url:GET|/api/v1/accounts` and `url:GET|/api/v1/accounts/:account_id/sub_accounts` to the API
+developer key and reconnect Canvas, or reading sub-accounts fails with a scope error.
 
 ## 2. Install the tool
 
@@ -86,6 +88,8 @@ screens show it, and the API returns it.
   | `url:GET\|/api/v1/courses/:course_id/students/submissions` | submissions, scores, `posted_at`, excused |
   | `url:GET\|/api/v1/courses/:course_id/enrollments` | enrolment checks |
   | `url:GET\|/api/v1/users/:user_id/profile` | the authorising account's identity |
+  | `url:GET\|/api/v1/accounts` | accounts the connected admin can see (linking sub-accounts to areas) |
+  | `url:GET\|/api/v1/accounts/:account_id/sub_accounts` | the sub-account tree below them |
 
   Note the profile scope is spelt `:user_id` on current Canvas (ADR-0009 originally said `:id`;
   `url:GET|/api/v1/users/:id/profile` does not exist).

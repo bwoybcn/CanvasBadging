@@ -175,3 +175,16 @@ def test_link_chosen_sub_accounts(client: TestClient) -> None:
         assert w.post("admin", "/api/v1/admin/canvas-accounts/refresh").status_code == 200
     names = [x["name"] for x in w.get("admin", "/api/v1/admin/canvas-accounts").json()]
     assert "Sandboxes" not in names and "Chemistry" in names
+
+
+def test_a_missing_scope_says_which_scopes_to_add(client: TestClient) -> None:
+    from opencredential.integrations.base import LmsPermissionError
+
+    w = build_world(client)
+    w.lms.failures[("accounts",)] = LmsPermissionError("401 insufficient scopes")
+    with registry.override(w.lms):
+        r = w.post("admin", "/api/v1/admin/canvas-accounts/refresh")
+    assert r.status_code == 409
+    body = r.json()
+    assert body["code"] == "CANVAS_ACCOUNTS_FORBIDDEN"
+    assert "url:GET|/api/v1/accounts/:account_id/sub_accounts" in body["detail"]

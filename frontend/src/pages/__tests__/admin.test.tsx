@@ -160,6 +160,8 @@ describe("administration", () => {
     renderAt("/admin/people");
     await userEvent.click(await screen.findByRole("button", { name: "Read sub-accounts from Canvas" }));
     expect(await screen.findByText("Read 3 accounts from Canvas.")).toBeInTheDocument();
+    // The root account (the whole of Canvas) cannot be ticked.
+    expect(screen.queryByLabelText("University of Liverpool")).toBeNull();
     // A linked sub-account shows its area and can be unlinked rather than ticked.
     expect(screen.getByRole("button", { name: "Unlink Faculty of Science" })).toBeInTheDocument();
     expect(screen.queryByLabelText("Faculty of Science")).toBeNull();
@@ -173,6 +175,31 @@ describe("administration", () => {
     expect(calls.find((c) => c.url.endsWith("/canvas-accounts/link"))!.body).toEqual({
       items: [{ id: "a4", kind: "service" }],
     });
+  });
+
+  it("links a sub-account to an existing area and reassures on unlink", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/memberships": [],
+      "GET /api/v1/admin/issuers": [],
+      "GET /api/v1/admin/review/published-without-review": [],
+      "GET /api/v1/admin/canvas-accounts": [
+        { id: "a4", account_id: "4", name: "Library", parent_account_id: "1", depth: 1, org_unit_id: null, org_unit_name: null, courses: 1, refreshed_at: "2026-11-14T17:00:00Z" },
+        { id: "a5", account_id: "5", name: "Careers", parent_account_id: "1", depth: 1, org_unit_id: "ou-1", org_unit_name: "Library", courses: 0, refreshed_at: "2026-11-14T17:00:00Z" },
+      ],
+      "POST /api/v1/admin/canvas-accounts/link": { linked: 1, courses_placed: 0 },
+      "DELETE /api/v1/admin/canvas-accounts/a5/link": new Response(null, { status: 204 }),
+    });
+    renderAt("/admin/people");
+    await userEvent.click(await screen.findByLabelText("Library"));
+    await userEvent.click(screen.getByLabelText("Link to"));
+    await userEvent.click(await screen.findByRole("option", { name: "Existing area: Library" }));
+    await userEvent.click(screen.getByRole("button", { name: "Link selected (1)" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/canvas-accounts/link"))).toBe(true));
+    expect(calls.find((c) => c.url.endsWith("/canvas-accounts/link"))!.body).toEqual({
+      items: [{ id: "a4", org_unit_id: "ou-1" }],
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Unlink Careers" }));
+    expect(await screen.findByText("Unlinked Careers. Courses already in Library stay there.")).toBeInTheDocument();
   });
 
   it("adds the ready-made templates for badges outside modules", async () => {
