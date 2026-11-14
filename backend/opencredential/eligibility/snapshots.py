@@ -47,6 +47,15 @@ class CourseData:
         return cls(None, {}, {}, {}, {}, None, {})
 
 
+def _latest_run(db: Session, course_id: uuid.UUID, statuses: tuple[str, ...]) -> SyncRun | None:
+    return db.scalar(
+        select(SyncRun)
+        .where(SyncRun.course_id == course_id, SyncRun.status.in_(statuses))
+        .order_by(SyncRun.started_at.desc())
+        .limit(1)
+    )
+
+
 def load_course(db: Session, course_id: uuid.UUID | None) -> CourseData:
     if course_id is None:
         return CourseData.empty()
@@ -80,16 +89,12 @@ def load_course(db: Session, course_id: uuid.UUID | None) -> CourseData:
             s.missing,
             s.fetched_at,
         )
-    runs = db.scalars(
-        select(SyncRun)
-        .where(SyncRun.course_id == course_id)
-        .order_by(SyncRun.started_at.desc())
-        .limit(5)
-    ).all()
-    ok = next((r for r in runs if r.status in ("ok", "partial")), None)
-    latest = runs[0] if runs else None
+    # The latest usable run and the latest failed run, looked up directly: however many
+    # failures follow the last good run, the newest failure is still seen.
+    ok = _latest_run(db, course_id, ("ok", "partial"))
+    last_failure = _latest_run(db, course_id, ("failed",))
     failed: dict[str, list[str]] = {}
-    if latest is not None and latest.status == "failed" and ok is not None:
+    if ok is not None and last_failure is not None and last_failure.started_at > ok.started_at:
         # The latest attempt failed entirely: keep the earlier data but treat it as unavailable
         # for everyone, so nothing is issued from a snapshot we just failed to refresh.
         failed = {"*": ["modules", "submissions"]}

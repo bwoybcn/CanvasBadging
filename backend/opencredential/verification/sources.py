@@ -24,7 +24,7 @@ import httpcore
 import httpx
 from sqlalchemy import select, text
 
-from opencredential.db.models import Issuer, IssuerKey, StatusList
+from opencredential.db.models import Institution, Issuer, IssuerKey, StatusList
 from opencredential.db.session import tenant_session
 from opencredential.institutions.identity import (
     IdentityError,
@@ -54,6 +54,25 @@ def _institution_for(fn: str, value: str) -> uuid.UUID | None:
     return uuid.UUID(str(iid)) if iid else None
 
 
+def _did_web_host(did: str) -> str | None:
+    if not did.startswith("did:web:"):
+        return None
+    return unquote(did[len("did:web:") :].split("#")[0].split(":")[0]).lower()
+
+
+def _host_belongs_to(db: Any, iid: uuid.UUID, did: str) -> bool:
+    """A did:web issuer is only answered locally under its own institution's host (S3).
+
+    Otherwise an institution could create an issuer under a host it does not own and have this
+    service vouch for it. did:key issuers carry no host and are unaffected.
+    """
+    host = _did_web_host(did)
+    if host is None:
+        return True
+    inst = db.get(Institution, iid)
+    return inst is not None and (inst.verification_host or "").lower() == host
+
+
 def local_did_document(did: str) -> dict[str, Any] | None:
     iid = _institution_for("institution_for_issuer_did", did)
     if iid is None:
@@ -61,6 +80,8 @@ def local_did_document(did: str) -> dict[str, Any] | None:
     with tenant_session(iid) as db:
         issuer = db.scalar(select(Issuer).where(Issuer.did == did))
         if issuer is None or not did.startswith("did:web:"):
+            return None
+        if not _host_belongs_to(db, iid, did):
             return None
         keys = list(db.scalars(select(IssuerKey).where(IssuerKey.issuer_id == issuer.id)))
         return did_document(issuer, keys)
@@ -89,7 +110,7 @@ def known_issuer_local(did: str) -> dict[str, Any] | None:
         return None
     with tenant_session(iid) as db:
         issuer = db.scalar(select(Issuer).where(Issuer.did == did))
-        if issuer is None:
+        if issuer is None or not _host_belongs_to(db, iid, did):
             return None
         return {
             "id": issuer.did,

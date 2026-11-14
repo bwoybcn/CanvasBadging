@@ -55,7 +55,9 @@ class Institution(Base):
     website_url: Mapped[str | None] = mapped_column(Text)
     logo_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     branding: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
-    verification_host: Mapped[str | None] = mapped_column(Text)
+    #: Unique across institutions: the did:web issuers of one institution live under this host,
+    #: so two institutions must never share it (review finding S3).
+    verification_host: Mapped[str | None] = mapped_column(Text, unique=True)
     linkedin_org_id: Mapped[str | None] = mapped_column(Text)
     linkedin_org_name: Mapped[str | None] = mapped_column(Text)
     policy: Mapped[dict[str, Any]] = mapped_column(JSONB, default=lambda: dict(DEFAULT_POLICY))

@@ -2295,6 +2295,18 @@
             ],
             "title": "Activated At"
           },
+          "destroyed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destroyed At"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2349,6 +2361,7 @@
           "activated_at",
           "retired_at",
           "revoked_at",
+          "destroyed_at",
           "is_dev"
         ],
         "title": "KeyOut",

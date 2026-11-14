@@ -26,7 +26,7 @@
 | C9 | Low | Maintainability | Idempotency key and decision logic are duplicated in two modules. |
 | S3 | Medium (multi-tenant only) | Governance | A tenant admin can claim any verification host. Below the confidence bar. |
 
-**Status:** S1, S2 and C1 to C4 are fixed in the same pull request as this report, each with regression tests (`signer/test/signer.test.ts`, `backend/tests/unit/test_verification_sources.py`, `backend/tests/integration/test_w8_review_fixes.py` and `backend/tests/integration/test_w8_course_activation.py`). C5 to C9 and S3 are still open.
+**Status:** S1, S2 and C1 to C4 are fixed in the same pull request as this report, each with regression tests (`signer/test/signer.test.ts`, `backend/tests/unit/test_verification_sources.py`, `backend/tests/integration/test_w8_review_fixes.py` and `backend/tests/integration/test_w8_course_activation.py`). C5 to C9 and the first part of S3 (unique verification host, local DID answers only under the owning host) are fixed in a follow-up pull request, with tests in `backend/tests/integration/test_w8_review_followups.py`. Still open from S3: who may set the verification host (operator, or proof of domain control), which needs a decision.
 
 **Suggested order:** S1, C1 and C2 before any pilot. S2, C3 and C4 before production. The rest can follow.
 

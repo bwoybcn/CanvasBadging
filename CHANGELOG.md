@@ -20,6 +20,17 @@ All notable changes to this project are documented here. The format follows
     current key (C3).
   - The signer retires or destroys a key only after the database change commits, with a queued
     job as the durable retry (C4).
+  - A verification host can belong to only one institution (unique, migration 0008), and this
+    service only vouches for a did:web issuer under its own institution's host (S3, part 1).
+  - After any number of failed Canvas reads in a row, the last good snapshot is still treated as
+    unavailable, so nothing is awarded from stale data (C5).
+  - A rejected manual award no longer blocks a corrected one for the same learner (C6).
+  - The awards list is filtered by the caller's courses in the database, so other courses'
+    older awards can no longer leave a lecturer's "to confirm" list empty (C7).
+  - Destroyed keys are recorded (`destroyed_at`, audited, shown in the key list) and the nightly
+    job no longer destroys the same retired keys again (C8).
+  - Award decisions are built in one place (`issuance.decisions`); eligibility no longer keeps
+    its own copy of the idempotency logic (C9).
 
 ### Added
 - Release hardening (W8, spec Phase 8): course activation ("Switch on micro-credentials for this

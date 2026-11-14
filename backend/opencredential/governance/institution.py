@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from opencredential import audit
@@ -120,6 +121,18 @@ def update_config(
         clean[key] = value
     for key, value in clean.items():
         setattr(inst, key, value)
+    if "verification_host" in clean:
+        try:
+            with db.begin_nested():
+                db.flush()
+        except IntegrityError:
+            # Another institution already uses this host (unique across institutions). The row
+            # itself is invisible here (row-level security), so say only that it is taken.
+            raise Conflict(
+                "VERIFICATION_HOST_TAKEN",
+                "Another institution on this service already uses that verification host.",
+                "Each institution needs its own host. Choose a host your institution controls.",
+            ) from None
     if clean:
         audit.record(
             db,

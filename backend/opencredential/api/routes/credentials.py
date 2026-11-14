@@ -119,6 +119,7 @@ class KeyOut(BaseModel):
     activated_at: datetime | None
     retired_at: datetime | None
     revoked_at: datetime | None
+    destroyed_at: datetime | None
     is_dev: bool
 
 
@@ -131,6 +132,7 @@ def _key_out(k: IssuerKey) -> KeyOut:
         activated_at=k.activated_at,
         retired_at=k.retired_at,
         revoked_at=k.revoked_at,
+        destroyed_at=k.destroyed_at,
         is_dev=k.is_dev,
     )
 

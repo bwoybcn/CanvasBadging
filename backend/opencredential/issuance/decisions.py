@@ -5,6 +5,11 @@ The idempotency key is SHA-256 of (institution | learner | achievement version |
 issuance sequence). Processing the same eligibility outcome twice therefore finds the same
 decision instead of creating a second one. Explicit reissue is a separate operation that bumps
 ``issuance_seq`` (spec §6.6 "explicit reissuance must be a separate authorised operation").
+
+A manual award made after an earlier award was rejected is a new decision, not a replay, so it
+passes ``attempt`` (the number of rejected decisions before it) and gets a key of its own.
+
+This module is the only place that builds keys and inserts decisions; eligibility calls it.
 """
 
 from __future__ import annotations
@@ -12,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -40,8 +46,12 @@ def idempotency_key(
     version_id: uuid.UUID,
     kind: str,
     issuance_seq: int = 1,
+    attempt: int = 0,
 ) -> str:
     material = f"{institution_id}|{user_id}|{version_id}|{kind}|{issuance_seq}"
+    if attempt:
+        # Attempt 0 keeps the original format, so keys of existing decisions do not change.
+        material += f"|attempt:{attempt}"
     return hashlib.sha256(material.encode()).hexdigest()
 
 
@@ -57,12 +67,18 @@ def decide(
     decided_by: uuid.UUID | None = None,
     status: str = "ready",
     issuance_seq: int = 1,
+    attempt: int = 0,
+    evidence: list[dict[str, Any]] | None = None,
     now: datetime | None = None,
+    record_audit: bool = True,
 ) -> tuple[AwardDecision, bool]:
     """Create the decision, or return the existing one for the same key. ``(decision, created)``.
 
     Uses ``INSERT … ON CONFLICT DO NOTHING`` so two workers racing on the same completion event
-    cannot both create a decision.
+    cannot both create a decision. If a concurrent decision of another kind won the race for
+    the learner's single live slot, that live decision is returned with ``created=False``.
+    ``record_audit=False`` lets a caller that writes its own, more specific audit event skip
+    the generic ``award.decide`` one.
     """
     if kind not in KINDS:
         raise DecisionError(f"kind must be one of {KINDS}")
@@ -73,18 +89,22 @@ def decide(
         raise DecisionError("awards can only be made against a published achievement version")
     definition = db.get(AchievementDefinition, version.definition_id)
     assert definition is not None
-    key = idempotency_key(institution_id, user_id, version_id, kind, issuance_seq)
-    # One live (not rejected) decision per learner, version and issuance sequence
-    # (``uq_award_decisions_live``): a second decision of another kind reuses the live one.
-    live = db.scalar(
-        select(AwardDecision).where(
-            AwardDecision.version_id == version_id,
-            AwardDecision.user_id == user_id,
-            AwardDecision.issuance_seq == issuance_seq,
-            AwardDecision.status != "rejected",
-            AwardDecision.idempotency_key != key,
+    key = idempotency_key(institution_id, user_id, version_id, kind, issuance_seq, attempt)
+
+    def other_live() -> AwardDecision | None:
+        # One live (not rejected) decision per learner, version and issuance sequence
+        # (``uq_award_decisions_live``): a second decision of another kind reuses the live one.
+        return db.scalar(
+            select(AwardDecision).where(
+                AwardDecision.version_id == version_id,
+                AwardDecision.user_id == user_id,
+                AwardDecision.issuance_seq == issuance_seq,
+                AwardDecision.status != "rejected",
+                AwardDecision.idempotency_key != key,
+            )
         )
-    )
+
+    live = other_live()
     if live is not None:
         return live, False
     new_id = uuid7()
@@ -104,14 +124,19 @@ def decide(
             status=status,
             issuance_seq=issuance_seq,
             idempotency_key=key,
+            evidence=[dict(e) for e in (evidence or [])],
         )
-        .on_conflict_do_nothing(index_elements=["idempotency_key"])
+        # No conflict target: covers both the idempotency key and the live-decision index.
+        .on_conflict_do_nothing()
         .returning(AwardDecision.id)
     )
     inserted = db.execute(stmt).scalar()
     decision = db.scalar(select(AwardDecision).where(AwardDecision.idempotency_key == key))
-    assert decision is not None
-    if inserted:
+    if decision is None:
+        live = other_live()
+        assert live is not None
+        return live, False
+    if inserted and record_audit:
         audit.record(
             db,
             action="award.decide",

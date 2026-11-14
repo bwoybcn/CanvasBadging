@@ -396,18 +396,24 @@ def reconcile_issuance(timestamp: int) -> int:
 
 
 @blueprint.task(name="signer_key_lifecycle", queue="maintenance", retry=RETRY_TRANSIENT)
-def signer_key_lifecycle(key_id: str, action: str, **_meta: Any) -> str:
+def signer_key_lifecycle(
+    key_id: str, action: str, institution_id: str | None = None, **_meta: Any
+) -> str:
     """Retire or destroy a key in the signer after the change that needs it has committed.
 
     Usually already done straight after the commit; this is the durable retry. Idempotent.
+    A destruction is recorded on the key (``destroyed_at``) once the signer has confirmed it.
     """
-    from opencredential.institutions.keys import apply_in_signer
+    from opencredential.institutions.keys import apply_in_signer, mark_destroyed
 
     signer = _signer()
     try:
         apply_in_signer(signer, action, uuid.UUID(key_id))
     finally:
         signer.close()
+    if action == "destroy" and institution_id:
+        with tenant_session(uuid.UUID(institution_id)) as db:
+            mark_destroyed(db, uuid.UUID(key_id), reason="compromise")
     return action
 
 
@@ -416,8 +422,11 @@ def signer_key_lifecycle(key_id: str, action: str, **_meta: Any) -> str:
     name="destroy_retired_keys", queue="maintenance", queueing_lock="destroy_retired_keys"
 )
 def destroy_retired_keys(timestamp: int) -> int:
-    """Erase private material of keys retired more than 30 days ago (public keys stay)."""
-    from opencredential.institutions.keys import keys_due_for_destruction
+    """Erase private material of keys retired more than 30 days ago (public keys stay).
+
+    Each destruction is recorded on the key and audited, so a key is only destroyed once.
+    """
+    from opencredential.institutions.keys import keys_due_for_destruction, mark_destroyed
 
     signer = _signer()
     count = 0
@@ -427,6 +436,8 @@ def destroy_retired_keys(timestamp: int) -> int:
                 ids = [k.id for k in keys_due_for_destruction(db)]
             for key_id in ids:
                 signer.destroy_key(key_id)
+                with tenant_session(iid) as db:
+                    mark_destroyed(db, key_id, reason="retired")
                 count += 1
     finally:
         signer.close()

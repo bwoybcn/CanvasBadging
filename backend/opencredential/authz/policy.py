@@ -17,7 +17,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, and_, false, or_, select
 from sqlalchemy.orm import Session
 
 from opencredential.db.models import (
@@ -276,6 +276,32 @@ def admin_course_ids(db: Session, actor: Actor) -> set[uuid.UUID] | None:
     if not units:
         return set()
     return set(db.scalars(select(Course.id).where(Course.org_unit_id.in_(units))))
+
+
+def award_list_scope(db: Session, actor: Actor) -> ColumnElement[bool] | None:
+    """SQL filter on ``AchievementDefinition`` for the awards a staff member may list.
+
+    The same rule as the per-row check in the awards list: course badges need course staff
+    (or a department admin over the course); badges without a course need their owner or a
+    department admin over the issuer. ``None`` means no filter (institution admin). Applying
+    it in SQL keeps ``limit`` honest: other courses' awards no longer use up the page.
+    """
+    if actor.is_inst_admin:
+        return None
+    units = admin_org_units(db, actor) or set()
+    courses = set(actor.course_ids(COURSE_STAFF)) | (admin_course_ids(db, actor) or set())
+    course_clause = AchievementDefinition.course_id.in_(courses) if courses else false()
+    standalone = [AchievementDefinition.owner_user_id == actor.user_id]
+    if units:
+        standalone.append(
+            AchievementDefinition.issuer_id.in_(
+                select(Issuer.id).where(Issuer.org_unit_id.in_(units))
+            )
+        )
+    return or_(
+        and_(AchievementDefinition.course_id.is_not(None), course_clause),
+        and_(AchievementDefinition.course_id.is_(None), or_(*standalone)),
+    )
 
 
 def can_manage_org_unit(db: Session, actor: Actor, org_unit_id: uuid.UUID | None) -> bool:
