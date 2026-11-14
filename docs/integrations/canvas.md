@@ -43,8 +43,13 @@ What the configuration contains:
 | Target link / redirect | `<public URL>/lti/launch` | id_token `form_post` |
 | Placement | `course_navigation`, text **Micro-Credentials**, `default: disabled` | Each course opts in (Q15) |
 | Privacy level | `public` | Name for the UI, email for the recipient identifier (Q5) |
-| Custom fields | `canvas_course_id=$Canvas.course.id`, `canvas_user_id=$Canvas.user.id` | Link LTI identities to REST ids |
+| Custom fields | `canvas_course_id=$Canvas.course.id`, `canvas_user_id=$Canvas.user.id`, `canvas_user_sis_id=$Person.sourcedId` | Link LTI identities to REST ids; the student ID number lets staff award a badge to a list |
 | Scopes | `contextmembership.readonly` (NRPS) only | Least privilege; no AGS |
+
+Existing installs: add `canvas_user_sis_id=$Person.sourcedId` to the developer key's custom
+fields to use list awards by student ID number. Without it, student IDs are still read from the
+LTI `lis.person_sourcedid` claim and from the Names and Roles roster when Canvas includes them;
+list awards by email work either way.
 
 ## 2. Install the tool
 

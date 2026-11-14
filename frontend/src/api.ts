@@ -711,3 +711,28 @@ export async function apiDelete(path: string, token: string | null): Promise<voi
     throw new ApiError(problem);
   }
 }
+
+/** One entry of a list award: what happened (or would happen) for that student ID or email. */
+export interface BulkRow {
+  identifier: string;
+  status:
+    | "will_award"
+    | "awarded"
+    | "awaiting_confirmation"
+    | "already_awarded"
+    | "pending_confirmation"
+    | "not_in_course"
+    | "not_found"
+    | "duplicate"
+    | "failed";
+  user_id: string | null;
+  learner_name: string | null;
+  decision_id: string | null;
+  message: string | null;
+}
+
+export interface BulkAwardResult {
+  committed: boolean;
+  counts: Partial<Record<BulkRow["status"], number>>;
+  rows: BulkRow[];
+}

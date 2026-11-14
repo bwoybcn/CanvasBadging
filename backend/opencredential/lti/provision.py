@@ -92,6 +92,7 @@ def upsert_user(
     *,
     sub: str,
     canvas_user_id: str | None,
+    sis_user_id: str | None = None,
     name: str | None,
     given_name: str | None,
     family_name: str | None,
@@ -121,6 +122,16 @@ def upsert_user(
         user.email, user.email_verified_by = email, verified_by
     link_identity(db, institution_id, integration_id, user.id, "lti_sub", sub)
     link_identity(db, institution_id, integration_id, user.id, "canvas_user_id", canvas_user_id)
+    if sis_user_id:
+        try:
+            with db.begin_nested():
+                link_identity(
+                    db, institution_id, integration_id, user.id, "sis_user_id", sis_user_id
+                )
+        except ValueError:
+            # Another account holds this student ID (an SIS merge in Canvas): leave it unlinked
+            # rather than block the launch; list awards will report the ID as not found.
+            pass
     return user, created
 
 
@@ -240,6 +251,7 @@ def provision_launch(
         integration_id,
         sub=launch.subject,
         canvas_user_id=launch.canvas_user_id,
+        sis_user_id=launch.sis_user_id,
         name=launch.name,
         given_name=launch.given_name,
         family_name=launch.family_name,

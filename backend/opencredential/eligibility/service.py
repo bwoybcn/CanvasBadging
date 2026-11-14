@@ -211,6 +211,13 @@ def _existing_decision(
     return db.scalar(q.order_by(AwardDecision.decided_at.desc()).limit(1))
 
 
+def existing_live_decision(
+    db: Session, version_id: uuid.UUID, user_id: uuid.UUID
+) -> AwardDecision | None:
+    """The learner's current (not rejected) award decision for this version, if any."""
+    return _existing_decision(db, version_id, user_id, live_only=True)
+
+
 def _request_issuance(db: Session, decision: AwardDecision) -> None:
     enqueue.defer(
         db,

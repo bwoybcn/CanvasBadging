@@ -198,10 +198,13 @@ test("E5 manual award: lecturer awards with justification; decision recorded and
   expect(target, "a learner without Seminar Participation").not.toBe("");
   await signIn(page, STAFF.lecturer);
   await page.goto("/app/awards");
-  await choose(page, "Badge", "Seminar Participation");
+  // The page also has "Award a badge to a list", with its own badge and justification fields.
+  const form = page.getByRole("region", { name: "Award a badge manually" });
+  await form.getByRole("combobox", { name: "Badge" }).click();
+  await page.getByRole("option", { name: "Seminar Participation" }).first().click();
   await choose(page, "Learner", target);
-  await page.getByLabel(/Justification/).fill("Contributed to six of eight seminars, observed by the tutor.");
-  await page.getByRole("button", { name: /Award/ }).last().click();
+  await form.getByLabel(/Justification/).fill("Contributed to six of eight seminars, observed by the tutor.");
+  await form.getByRole("button", { name: /Award/ }).last().click();
   await expect(page.getByText(/awarded|issued|recorded/i).first()).toBeVisible();
   await eventually(async () => {
     const a = (await achievementsOf(page, target)).find((x) => x.title === "Seminar Participation");

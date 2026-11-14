@@ -68,6 +68,8 @@ def canvas_tool_config(
         "custom_fields": {
             "canvas_course_id": "$Canvas.course.id",
             "canvas_user_id": "$Canvas.user.id",
+            # The student ID number (SIS user id), so providers can award badges from a list.
+            "canvas_user_sis_id": "$Person.sourcedId",
         },
     }
     if include_public_jwk:
