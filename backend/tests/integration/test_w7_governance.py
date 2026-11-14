@@ -665,7 +665,7 @@ def test_personal_data_export_and_erasure_are_separate_from_revocation(
     r = world.post("admin", path, {"confirm": "ERASE"})
     assert r.status_code == 200, r.text
     counts = r.json()
-    assert counts["credentials_kept"] == 1 and counts["active_share_links"] == 1
+    assert counts["credentials_kept"] == 1 and counts["share_links_withdrawn"] == 1
     assert counts["identities_deleted"] == 1 and counts["roles_ended"] == 1
     assert world.post("admin", path, {"confirm": "ERASE"}).status_code == 409
 
@@ -680,10 +680,56 @@ def test_personal_data_export_and_erasure_are_separate_from_revocation(
         )
         assert status is None or status.state == "active"
         share = db.scalar(select(m.ShareGrant).where(m.ShareGrant.credential_id == cred.id))
-        assert share is not None and share.revoked_at is None  # sharing is withdrawn separately
+        assert share is not None and share.revoked_at is not None  # public page taken down
     rows = world.get("admin", "/api/v1/admin/credentials").json()
     assert rows[0]["learner_name"] is None
     assert "privacy.erase" in _actions(world)
+
+
+def test_session_stops_working_once_the_account_is_erased(
+    world: World, signer_available: bool
+) -> None:
+    """Outside review finding 3 (14 Nov 2026): a token issued before erasure must not keep
+    working until it expires. Nothing is allowed with it afterwards, including sharing."""
+    definition_id = _manual_badge(world, _authorised_issuer(world))
+    cred_id = _issue_to(world, definition_id, "s1")
+    share = f"/api/v1/credentials/{cred_id}/share"
+    # The same token, issued before the erasure, works now...
+    assert world.get("s1", "/api/v1/learners/me/credentials").status_code == 200
+    r = world.put("s1", share, {"show_name": False, "show_evidence": False})
+    assert r.status_code == 200, r.text
+    with world.db() as db:
+        share_id = db.scalar(
+            select(m.ShareGrant.share_id).where(m.ShareGrant.credential_id == uuid.UUID(cred_id))
+        )
+    assert world.client.get(f"/verify/{share_id}").status_code == 200
+
+    r = world.post("admin", f"/api/v1/admin/people/{world.users['s1']}/erase", {"confirm": "ERASE"})
+    assert r.status_code == 200, r.text
+
+    # ...and is refused everywhere afterwards.
+    attempts = [
+        world.get("s1", "/api/v1/learners/me"),
+        world.get("s1", "/api/v1/learners/me/credentials"),
+        world.get("s1", "/api/v1/learners/me/data-export"),
+        world.get("s1", share),
+        world.put("s1", share, {"show_name": True, "show_evidence": True}),
+        world.delete("s1", share),
+        world.get("s1", f"/api/v1/credentials/{cred_id}/export"),
+    ]
+    for resp in attempts:
+        assert resp.status_code == 401, (resp.request.url, resp.text)
+        assert resp.json()["code"] == "ACCOUNT_INACTIVE"
+    with world.db() as db:
+        grant = db.scalar(
+            select(m.ShareGrant).where(m.ShareGrant.credential_id == uuid.UUID(cred_id))
+        )
+        assert grant is not None and grant.show_name is False  # the PUT above changed nothing
+        assert grant.revoked_at is not None  # erasure took the public page down
+    assert world.client.get(f"/verify/{share_id}").status_code == 404
+    # Other people are unaffected.
+    assert world.get("s2", "/api/v1/learners/me/credentials").status_code == 200
+    assert world.get("admin", "/api/v1/admin/credentials").status_code == 200
 
 
 def test_retention_purges_expired_data_but_keeps_credentials(

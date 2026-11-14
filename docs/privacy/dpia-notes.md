@@ -74,7 +74,7 @@ suspect. The student guide explains this.
 |---|---|
 | Access (art. 15) | Learners download their own data (`GET /api/v1/learners/me/data-export`) and their credentials. Administrators export any person's data (Administration, Personal data). |
 | Rectification (art. 16) | Names come from Canvas; correct them there and they update at the next launch or sync. A credential with a wrong achievement is revoked and reissued. |
-| Erasure (art. 17) | Administration, Personal data, **Erase**. Separate from revocation and from withdrawing sharing ([erasure.md](../administration/erasure.md)). Issued credentials are retained under art. 17(3); the institution must confirm this. |
+| Erasure (art. 17) | Administration, Personal data, **Erase**. Separate from revocation; it also takes down the person's public share pages ([erasure.md](../administration/erasure.md)). Issued credentials are retained under art. 17(3); the institution must confirm this. |
 | Restriction, objection | Handled by the institution's process. Administrators can cancel pending awards, and staff can switch a course off. |
 | Portability (art. 20) | Credentials are standard, signed Open Badges 3.0 files that work in other wallets and verifiers. The data export is JSON. |
 

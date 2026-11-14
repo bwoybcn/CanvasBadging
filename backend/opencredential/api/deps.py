@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from opencredential.api.errors import ApiError
 from opencredential.authz import policy, sessions
+from opencredential.db.models import User
 from opencredential.db.session import tenant_session
 from opencredential.settings import Settings, get_settings
 from opencredential.signer_client import SignerClient
@@ -34,8 +35,20 @@ ClaimsDep = Annotated[sessions.SessionClaims, Depends(current_claims)]
 
 
 def tenant_db(claims: ClaimsDep) -> Iterator[Session]:
-    """One transaction per request, scoped to the caller's institution (never the body's)."""
+    """One transaction per request, scoped to the caller's institution (never the body's).
+
+    Every authenticated route goes through here, so this is also where a session stops working
+    once its account is no longer active. After an erasure (``status == "deleted"``) nothing at
+    all is allowed with an earlier session: not the collection, not sharing, not data export.
+    Public share links and the verifier are unauthenticated and are unaffected; an administrator
+    withdraws those separately.
+    """
     with tenant_session(claims.institution_id) as session:
+        user = session.get(User, claims.user_id)
+        if user is None or user.status != "active":
+            raise ApiError(
+                401, "ACCOUNT_INACTIVE", "This account is no longer active. Sign in through Canvas."
+            )
         yield session
 
 
