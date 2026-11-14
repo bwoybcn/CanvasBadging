@@ -9,6 +9,14 @@ interact with immutable credential records and public verification. This is that
 | **Revoke a credential** | A revoker under the institution policy | The credential's bit in the revocation list; verifiers report it revoked, including downloaded copies | The learner's personal data; the signed credential (immutable) |
 | **Withdraw public sharing** | The learner (W6) | The public share page stops working | The credential and its status |
 
+## Signing in after erasure
+
+Erasure takes effect at once. Any session the person already had stops working on its next
+request (it is refused with `ACCOUNT_INACTIVE`), rather than lasting until it expires, so they
+cannot view their collection, change sharing settings or export data afterwards. A new launch
+from Canvas is refused too. Public share pages and public verification do not need a session and
+carry on as described below.
+
 ## Why erasure does not revoke
 
 An issued credential is a signed statement the learner holds independently of OpenCredential

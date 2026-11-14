@@ -76,6 +76,9 @@ All notable changes to this project are documented here. The format follows
 - The data freshness list leaves out courses that are switched off.
 
 ### Security
+- Erasing a person's data now ends their existing sessions at once: every authenticated
+  request checks the account is still active, so a session issued before erasure can no longer
+  read the collection or change sharing settings until it expires (outside review, 14 Nov 2026).
 - The verifier fails closed on revocation: a credential whose status entry is malformed, uses an
   unsupported status method or points at an unreadable list now shows "Unable to verify", never
   "Verified" (outside review, 14 Nov 2026). Suspension entries are checked too. A credential
