@@ -79,9 +79,12 @@ class World:
     def jobs(self, task: str) -> list[dict[str, Any]]:
         with owner_session() as db:
             rows = db.execute(
+                # status::text: tests that re-run migrations recreate the status enum, and a
+                # statement the driver had prepared on a pooled connection would then fail with
+                # "cached plan must not change result type".
                 text(
-                    "SELECT id, status, args FROM jobs.procrastinate_jobs WHERE task_name = :t"
-                    " AND args->>'institution_id' = :iid ORDER BY id"
+                    "SELECT id, status::text AS status, args FROM jobs.procrastinate_jobs"
+                    " WHERE task_name = :t AND args->>'institution_id' = :iid ORDER BY id"
                 ),
                 {"t": task, "iid": str(self.iid)},
             ).mappings()

@@ -23,7 +23,7 @@ from opencredential.db.models import (
 )
 from opencredential.eligibility import bulk
 from opencredential.eligibility import service as eligibility
-from opencredential.errors import Conflict, Invalid, NotFound
+from opencredential.errors import Conflict, DomainError, Forbidden, Invalid, NotFound
 
 router = APIRouter(prefix="/api/v1", tags=["eligibility and awards"])
 
@@ -78,6 +78,30 @@ class ConfirmIn(BaseModel):
 
 class RejectIn(BaseModel):
     reason: str = Field(min_length=5, max_length=2000)
+
+
+#: Most awards one "confirm all" may carry (the list shows up to this many at a time).
+MAX_CONFIRM_ALL = 500
+
+
+class ConfirmAllIn(BaseModel):
+    decision_ids: list[uuid.UUID] = Field(min_length=1, max_length=MAX_CONFIRM_ALL)
+
+
+class ConfirmAllRow(BaseModel):
+    id: uuid.UUID
+    learner_name: str | None
+    badge_title: str
+    confirmed: bool
+    #: Why it was left alone, when it was (the same code and words a single confirm gives).
+    code: str | None = None
+    message: str | None = None
+
+
+class ConfirmAllOut(BaseModel):
+    confirmed: int
+    left: int
+    rows: list[ConfirmAllRow]
 
 
 class Evidence(BaseModel):
@@ -326,6 +350,58 @@ def confirm_award(
 ) -> DecisionOut:
     d = eligibility.confirm_award(db, actor, decision_id, note=body.note, request_id=rid)
     return _decision_out(db, d)
+
+
+@router.post("/awards/confirm-all", response_model=ConfirmAllOut)
+def confirm_all_awards(
+    body: ConfirmAllIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> ConfirmAllOut:
+    """Confirm many waiting awards in one go (a cohort of 200 is otherwise 200 clicks).
+
+    Each award goes through exactly the checks of a single confirm, including the fresh look at
+    the learner's Canvas data, and stands or falls on its own: one that cannot be confirmed is
+    left waiting and reported with its reason, and the rest still go through.
+    """
+    rows: list[ConfirmAllRow] = []
+    for decision_id in dict.fromkeys(body.decision_ids):
+        decision = db.get(AwardDecision, decision_id)
+        if decision is None:
+            # Unknown ids are skipped quietly: nothing about another tenant's awards leaks.
+            continue
+        version = db.get(AchievementVersion, decision.version_id)
+        learner = db.get(User, decision.user_id)
+        row = ConfirmAllRow(
+            id=decision.id,
+            learner_name=learner.display_name if learner else None,
+            badge_title=(version.title if version else None) or "",
+            confirmed=False,
+        )
+        try:
+            with db.begin_nested():
+                if decision.kind == "manual":
+                    # A second approval means reading that award's justification, so it is
+                    # never swept up with the rest (and only its staff learn it exists).
+                    definition = (
+                        db.get(AchievementDefinition, version.definition_id) if version else None
+                    )
+                    if definition is None:
+                        continue
+                    eligibility.require_award_staff(db, actor, definition)
+                    raise Conflict(
+                        "CONFIRM_ONE_AT_A_TIME",
+                        "A manual award is confirmed on its own, after reading its justification.",
+                    )
+                eligibility.confirm_award(db, actor, decision_id, request_id=rid)
+            row.confirmed = True
+        except (Forbidden, NotFound):
+            # Not this person's to confirm: say nothing about it, as for an unknown id.
+            continue
+        except DomainError as exc:
+            row.code = exc.code
+            row.message = " ".join(part for part in (exc.title, exc.detail) if part)
+        rows.append(row)
+    done = sum(1 for r in rows if r.confirmed)
+    return ConfirmAllOut(confirmed=done, left=len(rows) - done, rows=rows)
 
 
 @router.post("/awards/{decision_id}/reject", response_model=DecisionOut)

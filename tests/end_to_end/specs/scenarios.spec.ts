@@ -198,11 +198,14 @@ test("E5 manual award: lecturer awards with justification; decision recorded and
   expect(target, "a learner without Seminar Participation").not.toBe("");
   await signIn(page, STAFF.lecturer);
   await page.goto("/app/awards");
-  // The page also has "Award a badge to a list", with its own badge and justification fields.
-  const form = page.getByRole("region", { name: "Award a badge manually" });
+  // "Award badges" has three tabs; the list tab has its own badge and justification fields.
+  await page.getByRole("tab", { name: "One student" }).click();
+  const form = page.getByRole("region", { name: "Award a badge to one student" });
   await form.getByRole("combobox", { name: "Badge" }).click();
   await page.getByRole("option", { name: "Seminar Participation" }).first().click();
-  await choose(page, "Learner", target);
+  // The student picker is searched by typing part of the name.
+  await form.getByRole("combobox", { name: "Student" }).fill(target.slice(0, 4));
+  await page.getByRole("option", { name: target }).first().click();
   await form.getByLabel(/Justification/).fill("Contributed to six of eight seminars, observed by the tutor.");
   await form.getByRole("button", { name: /Award/ }).last().click();
   await expect(page.getByText(/awarded|issued|recorded/i).first()).toBeVisible();

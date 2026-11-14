@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Form fields that stop a mistake while it is being typed, instead of refusing the form later. */
-import { Button, Flex, ScreenReaderContent, Text, TextArea, TextInput, View } from "@instructure/ui";
+import { Button, Flex, ScreenReaderContent, Select, Text, TextArea, TextInput, View } from "@instructure/ui";
 import { useId, useState, type ComponentProps } from "react";
 
 type TextAreaProps = ComponentProps<typeof TextArea>;
@@ -122,5 +122,86 @@ export function ColourField({ label, value, onChange, optional = false }: Colour
           : "No colour chosen. Select the swatch to pick one."}
       </Text>
     </View>
+  );
+}
+
+/** Most names shown at once in a search box: more than this and typing is quicker than scrolling. */
+const SHOWN_AT_ONCE = 50;
+
+/** The options whose label contains what was typed, ignoring case and stray spaces. */
+export function matching<T extends { label: string }>(options: T[], typed: string): T[] {
+  const needle = typed.trim().toLowerCase();
+  return needle ? options.filter((o) => o.label.toLowerCase().includes(needle)) : options;
+}
+
+interface SearchSelectProps {
+  label: string;
+  /** What is being chosen, in the plural, for the hints ("students"). */
+  things: string;
+  options: { id: string; label: string }[];
+  /** The chosen option's id, or "" for none. */
+  value: string;
+  onChange: (id: string) => void;
+  placeholder?: string;
+}
+
+/**
+ * A picker you can type into: a course of 300 students is found by typing part of a name
+ * instead of scrolling a list of 300. Typing starts a new search, so it clears the choice
+ * until a name is picked.
+ */
+export function SearchSelect({ label, things, options, value, onChange, placeholder }: SearchSelectProps) {
+  const prefix = useId();
+  const [typed, setTyped] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const chosen = options.find((o) => o.id === value);
+  const found = matching(options, typed ?? "");
+  const shown = found.slice(0, SHOWN_AT_ONCE);
+  const domId = (id: string) => `${prefix}${id}`;
+  return (
+    <Select
+      renderLabel={label}
+      placeholder={placeholder}
+      assistiveText={`Type part of a name to search ${options.length} ${things}. Use the arrow keys to choose.`}
+      inputValue={typed ?? chosen?.label ?? ""}
+      isShowingOptions={open}
+      onInputChange={(_e, text) => {
+        setTyped(text);
+        setOpen(true);
+        setHighlighted(null);
+        if (value) onChange("");
+      }}
+      onRequestShowOptions={() => setOpen(true)}
+      onRequestHideOptions={() => {
+        setOpen(false);
+        setHighlighted(null);
+        setTyped(null);
+      }}
+      onRequestHighlightOption={(_e, { id }) => setHighlighted(id ?? null)}
+      onRequestSelectOption={(_e, { id }) => {
+        const picked = options.find((o) => domId(o.id) === id);
+        if (picked) onChange(picked.id);
+        setOpen(false);
+        setHighlighted(null);
+        setTyped(null);
+      }}
+    >
+      {shown.map((o) => (
+        <Select.Option key={o.id} id={domId(o.id)} isHighlighted={highlighted === domId(o.id)} isSelected={o.id === value}>
+          {o.label}
+        </Select.Option>
+      ))}
+      {found.length === 0 && (
+        <Select.Option id={domId("-none")} isDisabled>
+          {options.length ? `No ${things} match "${(typed ?? "").trim()}"` : `No ${things} to choose from`}
+        </Select.Option>
+      )}
+      {found.length > shown.length && (
+        <Select.Option id={domId("-more")} isDisabled>
+          {`And ${found.length - shown.length} more: type more of the name`}
+        </Select.Option>
+      )}
+    </Select>
   );
 }

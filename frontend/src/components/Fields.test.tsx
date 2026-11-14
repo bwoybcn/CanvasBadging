@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ColourField, countText, LimitedTextArea, readColour } from "./Fields";
+import { ColourField, countText, LimitedTextArea, matching, readColour, SearchSelect } from "./Fields";
 
 function Box({ max, start = "" }: { max: number; start?: string }) {
   const [v, setV] = useState(start);
@@ -105,5 +105,51 @@ describe("choosing a colour", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear main colour" }));
     expect(seen).toHaveBeenLastCalledWith("");
     expect(screen.getByText(/No colour chosen/)).toBeInTheDocument();
+  });
+});
+
+function Picker({ names, onPick }: { names: string[]; onPick?: (id: string) => void }) {
+  const [v, setV] = useState("");
+  return (
+    <SearchSelect
+      label="Student"
+      things="students"
+      options={names.map((n, i) => ({ id: `u-${i}`, label: n }))}
+      value={v}
+      onChange={(id) => {
+        setV(id);
+        onPick?.(id);
+      }}
+    />
+  );
+}
+
+describe("a picker you can type into", () => {
+  it("matches any part of the name, whatever the capitals", () => {
+    const people = [{ label: "Sam Student" }, { label: "Priya Patel" }, { label: "Samira Khan" }];
+    expect(matching(people, " SAM ").map((p) => p.label)).toEqual(["Sam Student", "Samira Khan"]);
+    expect(matching(people, "patel")).toHaveLength(1);
+    expect(matching(people, "")).toHaveLength(3);
+  });
+
+  it("narrows as you type, picks with a click, and a new search clears the choice", async () => {
+    const onPick = vi.fn();
+    render(<Picker names={["Sam Student", "Priya Patel", "Samira Khan"]} onPick={onPick} />);
+    const box = screen.getByLabelText("Student");
+    await userEvent.type(box, "pri");
+    expect(screen.queryByRole("option", { name: "Sam Student" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("option", { name: "Priya Patel" }));
+    expect(onPick).toHaveBeenLastCalledWith("u-1");
+    expect(box).toHaveValue("Priya Patel");
+    await userEvent.type(box, "x");
+    expect(onPick).toHaveBeenLastCalledWith("");
+    expect(await screen.findByRole("option", { name: /No students match/ })).toBeInTheDocument();
+  });
+
+  it("shows the first fifty of a long list and asks for more of the name", async () => {
+    render(<Picker names={Array.from({ length: 120 }, (_, i) => `Student ${i + 1}`)} />);
+    await userEvent.click(screen.getByLabelText("Student"));
+    expect(await screen.findByRole("option", { name: "And 70 more: type more of the name" })).toBeInTheDocument();
+    expect(screen.getAllByRole("option")).toHaveLength(51);
   });
 });

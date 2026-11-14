@@ -416,7 +416,7 @@ export function BadgeDetail() {
               : "Submitted for review.",
           publish:
             def?.effective_award_policy === "manual"
-              ? "Published. Award it from the Awards page, to one learner or to a list of student ID numbers or emails."
+              ? "Published. Award it from Award badges, to one student or to a list of student ID numbers or emails."
               : "Published. Learners who meet the requirements will be evaluated shortly.",
           archive:
             "Archived. No new awards will be made; credentials already issued stay valid. You can restore the badge from this page.",

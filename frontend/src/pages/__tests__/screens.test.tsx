@@ -576,7 +576,7 @@ describe("badge page", () => {
 describe("awards and progress", () => {
   it("confirms a lecturer-confirmed award", async () => {
     const calls = stubApi({
-      "GET /api/v1/awards?status=awaiting_confirmation": [
+      "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [
         {
           id: "dec-1",
           version_id: "v-1",
@@ -601,6 +601,89 @@ describe("awards and progress", () => {
     await waitFor(() => expect(calls.some((c) => c.url === "/api/v1/awards/dec-1/confirm")).toBe(true));
   });
 
+  it("awards everyone waiting in one go, and says who was left and why", async () => {
+    const waiting = (id: string, who: string, kind = "confirmed") => ({
+      id,
+      version_id: "v-1",
+      definition_id: "d-1",
+      badge_title: "Academic Writing Foundations",
+      user_id: `u-${id}`,
+      learner_name: who,
+      kind,
+      status: "awaiting_confirmation",
+      justification: null,
+      evidence: [],
+      rejection_reason: null,
+      decided_at: "2026-11-13T10:00:00Z",
+      current_eligibility: null,
+    });
+    const calls = stubApi({
+      "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [
+        waiting("dec-1", "Sam Student"),
+        waiting("dec-2", "Priya Patel"),
+        waiting("dec-3", "Lee Wong"),
+        waiting("dec-4", "Ana Silva", "manual"),
+      ],
+      "GET /api/v1/achievements?state=published": { items: [] },
+      "GET /api/v1/achievements?awardable=true": { items: [] },
+      "POST /api/v1/awards/confirm-all": {
+        confirmed: 2,
+        left: 1,
+        rows: [
+          { id: "dec-1", learner_name: "Sam Student", badge_title: "Academic Writing Foundations", confirmed: true, code: null, message: null },
+          { id: "dec-2", learner_name: "Priya Patel", badge_title: "Academic Writing Foundations", confirmed: true, code: null, message: null },
+          { id: "dec-3", learner_name: "Lee Wong", badge_title: "Academic Writing Foundations", confirmed: false, code: "ELIGIBILITY_CHANGED", message: "The score is now below 70%." },
+        ],
+      },
+    });
+    renderAt("/awards");
+    // The tab carries the count; the first press only asks.
+    expect(await screen.findByRole("tab", { name: "Waiting to confirm (4)" })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Award all 3" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("3 badges will be awarded now");
+    expect(screen.getByRole("alert")).toHaveTextContent("1 manual award is not included");
+    expect(calls.some((c) => c.url === "/api/v1/awards/confirm-all")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Yes, award all 3" }));
+    expect(await screen.findByText(/2 badges awarded\. 1 award was not made and is still on the list/)).toBeInTheDocument();
+    expect(screen.getByText("Lee Wong, Academic Writing Foundations: The score is now below 70%.")).toBeInTheDocument();
+    // The manual award, which needs its justification read, is never sent with the rest.
+    const body = calls.find((c) => c.url === "/api/v1/awards/confirm-all")!.body as { decision_ids: string[] };
+    expect(body.decision_ids).toEqual(["dec-1", "dec-2", "dec-3"]);
+  });
+
+  it("finds a student by typing part of their name", async () => {
+    const calls = stubApi({
+      "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [],
+      "GET /api/v1/achievements?awardable=true": { items: [] },
+      "GET /api/v1/achievements?state=published": {
+        items: [{ id: "d-1", state: "published", course_id: "c-1", course_title: "Writing", title: "Seminar Participation", category: "Participation", version_no: 1, live_version_id: "v-1", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z" }],
+      },
+      "GET /api/v1/courses/c-1/progress": {
+        course: { id: "c-1", title: "Writing" },
+        badges: [],
+        learners: [
+          { user_id: "u-1", name: "Sam Student", cells: [] },
+          { user_id: "u-2", name: "Priya Patel", cells: [] },
+          { user_id: "u-3", name: "Samira Khan", cells: [] },
+        ],
+      },
+      "POST /api/v1/awards/manual": { id: "dec-9", status: "ready" },
+    });
+    renderAt("/awards");
+    await userEvent.click(await screen.findByRole("tab", { name: "One student" }));
+    await userEvent.click(await screen.findByLabelText("Badge"));
+    await userEvent.click(await screen.findByRole("option", { name: "Seminar Participation" }));
+    await userEvent.type(screen.getByLabelText("Student"), "sami");
+    expect(screen.queryByRole("option", { name: "Priya Patel" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Sam Student" })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("option", { name: "Samira Khan" }));
+    expect(screen.getByLabelText("Student")).toHaveValue("Samira Khan");
+    await userEvent.type(screen.getByLabelText(/^Justification \(at least/), "Led two seminars, observed by the tutor.");
+    await userEvent.click(screen.getByRole("button", { name: "Award badge" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/api/v1/awards/manual")).toBe(true));
+    expect((calls.find((c) => c.url === "/api/v1/awards/manual")!.body as { user_id: string }).user_id).toBe("u-3");
+  });
+
   it("previews a list award before awarding", async () => {
     const preview = {
       committed: false,
@@ -612,14 +695,14 @@ describe("awards and progress", () => {
       ],
     };
     const calls = stubApi({
-      "GET /api/v1/awards?status=awaiting_confirmation": [],
+      "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [],
       "GET /api/v1/achievements?awardable=true": {
         items: [{ id: "d-9", state: "published", course_id: "c-1", course_title: "WP Volunteers", title: "WP Volunteer", category: "Participation", version_no: 1, live_version_id: "v-9", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z", can_award: true }],
       },
       "POST /api/v1/awards/bulk": preview,
       "POST /api/v1/courses/c-1/sync": { queued: true, job_id: "j-1" },
     });
-    renderAt("/awards");
+    renderAt("/awards?tab=list");
     await userEvent.click(await screen.findByLabelText("Badge to award"));
     await userEvent.click(await screen.findByRole("option", { name: "WP Volunteer (WP Volunteers)" }));
     await userEvent.type(screen.getByLabelText("Student ID numbers or emails"), "201111111{enter}123");
@@ -631,7 +714,7 @@ describe("awards and progress", () => {
     const body = calls.find((c) => c.url === "/api/v1/awards/bulk")!.body as { confirm: boolean; identifiers: string[] };
     expect(body.confirm).toBe(false);
     expect(body.identifiers).toEqual(["201111111\n123"]);
-    expect(screen.getByRole("button", { name: "Award to 1 learner" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Award to 1 student" })).toBeInTheDocument();
     // Entries nobody matched: offer a roster refresh, for students who joined today.
     await userEvent.click(screen.getByRole("button", { name: "Refresh the course from Canvas" }));
     expect(await screen.findByText("Refresh started. Check the list again in a minute.")).toBeInTheDocument();
@@ -639,7 +722,7 @@ describe("awards and progress", () => {
 
   it("says up front when list awards need a second member of staff", async () => {
     stubApi({
-      "GET /api/v1/awards?status=awaiting_confirmation": [],
+      "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [],
       "GET /api/v1/achievements?awardable=true": {
         items: [{ id: "d-9", state: "published", course_id: "c-1", course_title: null, title: "WP Volunteer", category: "Participation", version_no: 1, live_version_id: "v-9", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z", can_award: true }],
       },
@@ -653,14 +736,14 @@ describe("awards and progress", () => {
         ],
       },
     });
-    renderAt("/awards");
+    renderAt("/awards?tab=list");
     await userEvent.click(await screen.findByLabelText("Badge to award"));
     await userEvent.click(await screen.findByRole("option", { name: "WP Volunteer" }));
     await userEvent.type(screen.getByLabelText("Student ID numbers or emails"), "1, 2");
     await userEvent.type(screen.getByLabelText(/Justification for everyone/), "Logged ten hours of volunteering.");
     await userEvent.click(screen.getByRole("button", { name: "Check the list" }));
     expect(await screen.findByText(/A second member of staff must confirm each award/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Record for 2 learners" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Record for 2 students" })).toBeInTheDocument();
   });
 
   it("shows a student what is confirmed and what is pending", async () => {

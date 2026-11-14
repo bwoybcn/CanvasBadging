@@ -173,10 +173,11 @@ the author to replace.
 
 ## 6. Manual awards
 
-Lecturers make manual awards with a written justification from **Awards to confirm**; with the
-second-approval policy on, a different member of staff confirms them there.
+Lecturers make manual awards with a written justification from **Award badges** (the **One
+student** tab); with the second-approval policy on, a different member of staff confirms them
+on the **Waiting to confirm** tab, one at a time.
 
-**Award a badge to a list** handles evidence kept outside Canvas (volunteering hours, workshop
+The **A list of students** tab handles evidence kept outside Canvas (volunteering hours, workshop
 registers). Staff paste student ID numbers or university emails; OpenCredential shows who
 matches a student in the badge's course, who already has the badge and which entries match no
 student in the course, then makes one manual award per learner with the same

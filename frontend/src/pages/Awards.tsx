@@ -1,32 +1,40 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/** Lecturer-confirmed awards waiting for a decision, and manual awards with justification. */
+/**
+ * Award badges: one page, three ways. Awards waiting for staff to confirm (one at a time or all
+ * at once), an award to one student with a justification, and an award to a pasted list.
+ */
 import {
   Alert,
   Button,
   Checkbox,
   Flex,
   Heading,
+  List,
   SimpleSelect,
   Table,
+  Tabs,
   Text,
   TextArea,
   TextInput,
   View,
 } from "@instructure/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
+import { useSearchParams } from "react-router";
 
 import {
   apiFetch,
   apiSend,
   type BulkAwardResult,
   type BulkRow,
+  type ConfirmAllResult,
   type CourseProgress,
   type Decision,
   type DefinitionSummary,
 } from "../api";
 import { useAuth } from "../auth";
-import { LimitedTextArea } from "../components/Fields";
+import { ConfirmButton } from "../components/ConfirmButton";
+import { LimitedTextArea, SearchSelect } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
 
@@ -35,7 +43,7 @@ export const EVIDENCE_KINDS: Record<string, string> = {
   assessment_result: "Assessment result",
   completion_record: "Completion record",
   evaluation_statement: "Evaluation statement",
-  artefact: "Learner's work (artefact)",
+  artefact: "Student's work (artefact)",
 };
 
 function DecisionRow({ d }: { d: Decision }) {
@@ -48,7 +56,7 @@ function DecisionRow({ d }: { d: Decision }) {
       apiSend<Decision>(`/api/v1/awards/${d.id}/${kind}`, token, "POST", kind === "confirm" ? {} : { reason }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["awards"] }),
   });
-  const who = d.learner_name ?? "Learner";
+  const who = d.learner_name ?? "this student";
   return (
     <Table.Row>
       <Table.RowHeader>{who}</Table.RowHeader>
@@ -118,12 +126,12 @@ function ManualAward() {
   });
   const ok = badge && learner && justification.trim().length >= 20;
   return (
-    <View as="section" aria-labelledby="manual-h" display="block" margin="large 0 0">
+    <View as="section" aria-labelledby="manual-h" display="block">
       <Heading level="h2" id="manual-h">
-        Award a badge manually
+        Award a badge to one student
       </Heading>
       <Text as="p">
-        Use this when a learner has met the outcomes in a way Canvas cannot show. Your justification is kept in the
+        Use this when a student has met the outcomes in a way Canvas cannot show. Your justification is kept in the
         audit record; only evidence you mark as public appears on the credential.
       </Text>
       <SimpleSelect renderLabel="Badge" value={badge || undefined} placeholder="Choose a published badge" onChange={(_e, { value }) => { setBadge(String(value)); setLearner(""); }}>
@@ -133,18 +141,14 @@ function ManualAward() {
           </SimpleSelect.Option>
         ))}
       </SimpleSelect>
-      <SimpleSelect
-        renderLabel="Learner"
-        value={learner || undefined}
-        placeholder={badge ? "Choose a learner" : "Choose a badge first"}
-        onChange={(_e, { value }) => setLearner(String(value))}
-      >
-        {(learners.data?.learners ?? []).map((l) => (
-          <SimpleSelect.Option key={l.user_id} id={`ml-${l.user_id}`} value={l.user_id}>
-            {l.name ?? l.user_id}
-          </SimpleSelect.Option>
-        ))}
-      </SimpleSelect>
+      <SearchSelect
+        label="Student"
+        things="students"
+        placeholder={badge ? "Type a name, or choose from the list" : "Choose a badge first"}
+        options={(learners.data?.learners ?? []).map((l) => ({ id: l.user_id, label: l.name ?? l.user_id }))}
+        value={learner}
+        onChange={setLearner}
+      />
       <LimitedTextArea maxLength={4000}
         label="Justification (at least 20 characters)"
         value={justification}
@@ -220,11 +224,11 @@ function BulkAward() {
   const ok = badge && list.trim() && reasonLength >= 20;
   const toAward = preview && !preview.committed ? (preview.counts.will_award ?? 0) : 0;
   const notFound = preview?.counts.not_found ?? 0;
-  const learners = (n: number) => `${n} ${n === 1 ? "learner" : "learners"}`;
+  const learners = (n: number) => `${n} ${n === 1 ? "student" : "students"}`;
   return (
-    <View as="section" aria-labelledby="bulk-h" display="block" margin="large 0 0">
+    <View as="section" aria-labelledby="bulk-h" display="block">
       <Heading level="h2" id="bulk-h">
-        Award a badge to a list
+        Award a badge to a list of students
       </Heading>
       <Text as="p">
         For evidence kept outside Canvas, such as a volunteering log or a workshop register. Paste student ID numbers
@@ -324,7 +328,7 @@ function BulkAward() {
               <Table.Head>
                 <Table.Row>
                   <Table.ColHeader id="b-id">Entry</Table.ColHeader>
-                  <Table.ColHeader id="b-who">Learner</Table.ColHeader>
+                  <Table.ColHeader id="b-who">Student</Table.ColHeader>
                   <Table.ColHeader id="b-st">Result</Table.ColHeader>
                 </Table.Row>
               </Table.Head>
@@ -348,42 +352,164 @@ function BulkAward() {
   );
 }
 
-export function Awards() {
+/** Most waiting awards the page asks for, and the most one "award all" may carry. */
+const MOST = 500;
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** Awards waiting for staff to confirm: each on its own, or everyone shown in one go. */
+function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
   const { token } = useAuth();
-  const q = useQuery({
-    queryKey: ["awards"],
-    queryFn: () => apiFetch<Decision[]>("/api/v1/awards?status=awaiting_confirmation", token),
+  const qc = useQueryClient();
+  const [badge, setBadge] = useState("");
+  const [done, setDone] = useState<ConfirmAllResult | null>(null);
+  const rows = q.data ?? [];
+  const badges = [...new Map(rows.map((d) => [d.definition_id, d.badge_title])).entries()];
+  // A badge with nothing left waiting drops out of the filter, back to everything.
+  const only = badges.some(([id]) => id === badge) ? badge : "";
+  const shown = only ? rows.filter((d) => d.definition_id === only) : rows;
+  // Manual awards need their justification read by a second person, so they stay one by one.
+  const ready = shown.filter((d) => d.kind !== "manual");
+  const manual = shown.length - ready.length;
+  const all = useMutation({
+    mutationFn: () =>
+      apiSend<ConfirmAllResult>("/api/v1/awards/confirm-all", token, "POST", { decision_ids: ready.map((d) => d.id) }),
+    onSuccess: (res) => {
+      setDone(res);
+      qc.invalidateQueries({ queryKey: ["awards"] });
+    },
   });
+  const left = done?.rows.filter((r) => !r.confirmed) ?? [];
   return (
-    <Page title="Awards to confirm">
+    <>
       <Text as="p">
-        These learners meet the requirements of badges that need confirmation by staff. Confirming re-checks the
-        latest Canvas data first.
+        These students meet the requirements of badges that staff confirm. Each award is checked against the latest
+        Canvas data before it is made.
       </Text>
       {q.isPending && <Loading what="awards" />}
       {q.isError && <ErrorAlert error={q.error} />}
-      {q.data && q.data.length === 0 && <Text as="p">Nothing is waiting for confirmation.</Text>}
-      {q.data && q.data.length > 0 && (
-        <TableScroll>
-        <Table caption="Awards waiting for confirmation">
-          <Table.Head>
-            <Table.Row>
-              <Table.ColHeader id="learner">Learner</Table.ColHeader>
-              <Table.ColHeader id="badge">Badge</Table.ColHeader>
-              <Table.ColHeader id="why">Why</Table.ColHeader>
-              <Table.ColHeader id="act">Decision</Table.ColHeader>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            {q.data.map((d) => (
-              <DecisionRow key={d.id} d={d} />
+      {all.isError && <ErrorAlert error={all.error} />}
+      {done && (
+        <div role="status">
+          <Alert variant={left.length ? "warning" : "success"} margin="small 0">
+            {`${plural(done.confirmed, "badge", "badges")} awarded.`}
+            {left.length > 0 &&
+              ` ${plural(left.length, "award was", "awards were")} not made and ${left.length === 1 ? "is" : "are"} still on the list:`}
+            {left.length > 0 && (
+              <List margin="x-small 0 0">
+                {left.map((r) => (
+                  <List.Item key={r.id}>{`${r.learner_name ?? "A student"}, ${r.badge_title}: ${r.message ?? "could not be awarded"}`}</List.Item>
+                ))}
+              </List>
+            )}
+          </Alert>
+        </div>
+      )}
+      {q.data && rows.length === 0 && <Text as="p">Nothing is waiting for confirmation.</Text>}
+      {rows.length >= MOST && (
+        <Text as="p">{`Showing the first ${MOST}. The rest will appear as you work through these.`}</Text>
+      )}
+      {badges.length > 1 && (
+        <View as="div" maxWidth="28rem" margin="0 0 small">
+          <SimpleSelect renderLabel="Show" value={only || "all"} onChange={(_e, { value }) => setBadge(value === "all" ? "" : String(value))}>
+            <SimpleSelect.Option id="wb-all" value="all">
+              {`All badges (${rows.length})`}
+            </SimpleSelect.Option>
+            {badges.map(([id, title]) => (
+              <SimpleSelect.Option key={id} id={`wb-${id}`} value={id}>
+                {`${title} (${rows.filter((d) => d.definition_id === id).length})`}
+              </SimpleSelect.Option>
             ))}
-          </Table.Body>
-        </Table>
+          </SimpleSelect>
+        </View>
+      )}
+      {ready.length > 1 && (
+        <View as="div" margin="0 0 small">
+          {all.isPending ? (
+            <Text as="p" role="status">{`Awarding ${ready.length} badges. This can take a minute.`}</Text>
+          ) : (
+            <ConfirmButton
+              color="primary"
+              confirmColor="primary"
+              label={`Award all ${ready.length}`}
+              consequence={
+                `${ready.length} badges will be awarded now${only ? `, all for ${badges.find(([id]) => id === only)?.[1]}` : ""}. ` +
+                "Each student is checked against the latest Canvas data first, and anyone who no longer qualifies stays on this list." +
+                (manual
+                  ? ` ${plural(manual, "manual award is", "manual awards are")} not included: a second member of staff confirms those one at a time.`
+                  : "")
+              }
+              confirmLabel={`Yes, award all ${ready.length}`}
+              cancelLabel="Not yet"
+              onConfirm={() => all.mutate()}
+            />
+          )}
+        </View>
+      )}
+      {shown.length > 0 && (
+        <TableScroll>
+          <Table caption="Awards waiting for confirmation">
+            <Table.Head>
+              <Table.Row>
+                <Table.ColHeader id="learner">Student</Table.ColHeader>
+                <Table.ColHeader id="badge">Badge</Table.ColHeader>
+                <Table.ColHeader id="why">Why</Table.ColHeader>
+                <Table.ColHeader id="act">Decision</Table.ColHeader>
+              </Table.Row>
+            </Table.Head>
+            <Table.Body>
+              {shown.map((d) => (
+                <DecisionRow key={d.id} d={d} />
+              ))}
+            </Table.Body>
+          </Table>
         </TableScroll>
       )}
-      <ManualAward />
-      <BulkAward />
+    </>
+  );
+}
+
+const TABS = ["waiting", "student", "list"] as const;
+
+export function Awards() {
+  const { token } = useAuth();
+  // The tab lives in the address (/awards?tab=list), so a refresh or a shared link lands on it.
+  const [params, setParams] = useSearchParams();
+  const tab = Math.max(0, TABS.findIndex((t) => t === params.get("tab")));
+  const q = useQuery({
+    queryKey: ["awards"],
+    queryFn: () => apiFetch<Decision[]>(`/api/v1/awards?status=awaiting_confirmation&limit=${MOST}`, token),
+  });
+  const count = q.data?.length ?? 0;
+  const show = (index: number) =>
+    setParams(
+      (before) => {
+        const next = new URLSearchParams(before);
+        if (index) next.set("tab", TABS[index]);
+        else next.delete("tab");
+        return next;
+      },
+      { replace: true },
+    );
+  // Panels stay mounted when hidden, so a half-written justification survives a look at another tab.
+  return (
+    <Page title="Award badges">
+      <Tabs onRequestTabChange={(_e, { index }) => show(index)}>
+        <Tabs.Panel
+          id="awards-waiting"
+          renderTitle={count ? `Waiting to confirm (${count >= MOST ? `${MOST}+` : count})` : "Waiting to confirm"}
+          isSelected={tab === 0}
+          unmountOnExit={false}
+        >
+          <Waiting q={q} />
+        </Tabs.Panel>
+        <Tabs.Panel id="awards-student" renderTitle="One student" isSelected={tab === 1} unmountOnExit={false}>
+          <ManualAward />
+        </Tabs.Panel>
+        <Tabs.Panel id="awards-list" renderTitle="A list of students" isSelected={tab === 2} unmountOnExit={false}>
+          <BulkAward />
+        </Tabs.Panel>
+      </Tabs>
     </Page>
   );
 }

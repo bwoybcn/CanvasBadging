@@ -328,6 +328,13 @@ export interface Decision {
   current_eligibility: Json | null;
 }
 
+/** What "award all" did: how many went through, and why each of the rest was left waiting. */
+export interface ConfirmAllResult {
+  confirmed: number;
+  left: number;
+  rows: { id: string; learner_name: string | null; badge_title: string; confirmed: boolean; code: string | null; message: string | null }[];
+}
+
 export interface Requirement {
   rule_id: string;
   type: string;
