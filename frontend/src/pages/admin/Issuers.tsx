@@ -7,6 +7,7 @@ import { useState } from "react";
 import { apiDelete, apiFetch, apiSend, type AdminCourse, type AdminIssuer, type OrgUnit } from "../../api";
 import { useAuth } from "../../auth";
 import { LimitedTextArea } from "../../components/Fields";
+import { ConfirmButton } from "../../components/ConfirmButton";
 import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
 
@@ -102,9 +103,15 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
           {issuer.delegations.map((d) => (
             <li key={d.id}>
               {d.scope_type === "course" ? "Course" : "Unit"}: {d.scope_name ?? d.scope_id}{" "}
-              <Button size="small" onClick={() => remove.mutate(d.id)}>
-                Remove {d.scope_name ?? "delegation"}
-              </Button>
+              <ConfirmButton
+                size="small"
+                label={`Remove ${d.scope_name ?? "delegation"}`}
+                consequence={`Stop ${d.scope_name ?? "this course or unit"} from creating badges for ${issuer.name}? Badges already published keep working. You can add it again above.`}
+                confirmLabel="Remove it"
+                cancelLabel="Keep it"
+                busy={remove.isPending}
+                onConfirm={() => remove.mutate(d.id)}
+              />
             </li>
           ))}
         </ul>

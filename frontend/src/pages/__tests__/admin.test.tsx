@@ -198,8 +198,43 @@ describe("administration", () => {
     expect(calls.find((c) => c.url.endsWith("/canvas-accounts/link"))!.body).toEqual({
       items: [{ id: "a4", org_unit_id: "ou-1" }],
     });
+    // Unlinking asks first, and says what it does and does not change.
     await userEvent.click(screen.getByRole("button", { name: "Unlink Careers" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/The area and the courses already in it stay as they are/);
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Unlink it" }));
     expect(await screen.findByText("Unlinked Careers. Courses already in Library stay there.")).toBeInTheDocument();
+  });
+
+  it("asks before taking a role away from someone", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/memberships": [
+        {
+          id: "m-1",
+          user_id: "u-rev",
+          user_name: "Rae Reviewer",
+          role: "dept_admin",
+          scope_type: "org_unit",
+          scope_id: "ou-1",
+          scope_name: "Library",
+          source: "delegated",
+          expires_at: null,
+        },
+      ],
+      "GET /api/v1/admin/issuers": [],
+      "GET /api/v1/admin/review/published-without-review": [],
+      "GET /api/v1/admin/canvas-accounts": [],
+      "DELETE /api/v1/admin/memberships/m-1": new Response(null, { status: 204 }),
+    });
+    renderAt("/admin/people");
+    await userEvent.click(await screen.findByRole("button", { name: /^Remove .* from Rae Reviewer$/ }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/from Rae Reviewer for Library\? They lose what the role lets them do straight away/);
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: "Keep the role" }));
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    await userEvent.click(screen.getByRole("button", { name: /^Remove .* from Rae Reviewer$/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove the role" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "DELETE" && c.url.endsWith("/memberships/m-1"))).toBe(true));
   });
 
   it("saves brand colours chosen from a swatch and limits the fields to what the server accepts", async () => {

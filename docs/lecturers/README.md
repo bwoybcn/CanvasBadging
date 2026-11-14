@@ -63,6 +63,14 @@ A published badge cannot be edited, because credentials must always match what w
 To change it, create a **new version**. Credentials already issued keep the version they were
 issued under.
 
+### Archive and restore
+
+**Archive** stops a published badge being awarded and takes it out of students' lists of
+badges to earn. Credentials already issued stay valid. Because that affects students, the
+button asks first and says what will happen. To bring the badge back, open it from **Badges**
+and choose **Restore this badge**: it goes live again exactly as it was published, with no new
+review. **Delete draft** also asks first, because a deleted draft cannot be brought back.
+
 ## Follow your students' progress
 
 **Course progress** shows every student against every published badge:

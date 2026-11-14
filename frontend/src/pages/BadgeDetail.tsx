@@ -35,6 +35,7 @@ import {
 import { useAuth } from "../auth";
 import { LimitedTextArea } from "../components/Fields";
 import { AppLink } from "../components/AppLink";
+import { ConfirmButton } from "../components/ConfirmButton";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 
 export const CHECKLIST_LABELS: Record<string, string> = {
@@ -389,7 +390,7 @@ export function BadgeDetail() {
   const cat = useQuery({ queryKey: ["categories"], queryFn: () => apiFetch<Catalogue>("/api/v1/categories", token) });
 
   const action = useMutation({
-    mutationFn: async (kind: "submit" | "publish" | "archive" | "new-version" | "delete") => {
+    mutationFn: async (kind: "submit" | "publish" | "archive" | "restore" | "new-version" | "delete") => {
       if (kind === "delete") {
         await apiFetch<unknown>(`/api/v1/achievements/${id}`, token, { method: "DELETE" }).catch((e) => {
           if (e instanceof SyntaxError) return null; // 204 has no body
@@ -417,7 +418,12 @@ export function BadgeDetail() {
             def?.effective_award_policy === "manual"
               ? "Published. Award it from the Awards page, to one learner or to a list of student ID numbers or emails."
               : "Published. Learners who meet the requirements will be evaluated shortly.",
-          archive: "Archived. No new awards will be made; credentials already issued stay valid.",
+          archive:
+            "Archived. No new awards will be made; credentials already issued stay valid. You can restore the badge from this page.",
+          restore:
+            def?.state === "published"
+              ? "Restored. The badge is live again, and learners who meet the requirements will be evaluated shortly."
+              : "Restored. The published version is live again, and the newer version you were working on is back as a draft.",
           "new-version": "A new draft version was created. The published version stays live until you publish this one.",
         }[kind as "submit"] ?? null,
       );
@@ -453,6 +459,12 @@ export function BadgeDetail() {
         </Alert>
       )}
       {action.isError && <ErrorAlert error={action.error} />}
+      {def.state === "archived" && !notice && (
+        <Alert variant="info" margin="0 0 small">
+          This badge is archived: no new awards are made, and credentials already issued stay valid.
+          {def.can_edit || def.can_review ? " Restore it to start awarding again." : ""}
+        </Alert>
+      )}
 
       <Flex gap="small" wrap="wrap" margin="0 0 medium">
         {def.can_edit && def.state === "draft" && (
@@ -463,7 +475,16 @@ export function BadgeDetail() {
                 ? "Mark ready to publish"
                 : "Submit for review"}
             </Button>
-            {v.version_no === 1 && <Button onClick={() => action.mutate("delete")}>Delete draft</Button>}
+            {v.version_no === 1 && (
+              <ConfirmButton
+                label="Delete draft"
+                consequence="Delete this draft? Everything entered for it is removed and cannot be brought back."
+                confirmLabel="Delete this draft"
+                cancelLabel="Keep the draft"
+                busy={action.isPending}
+                onConfirm={() => action.mutate("delete")}
+              />
+            )}
           </>
         )}
         {def.can_edit && def.state === "approved" && (
@@ -474,10 +495,25 @@ export function BadgeDetail() {
         {def.can_edit && def.state === "published" && (
           <>
             <Button onClick={() => action.mutate("new-version")}>Start a new version</Button>
-            <Button color="danger" onClick={() => action.mutate("archive")}>
-              Archive
-            </Button>
+            <ConfirmButton
+              label="Archive"
+              color="danger"
+              consequence="Archive this badge? No new awards will be made and learners stop seeing it as something to earn. Credentials already issued stay valid. You can restore it later from this page."
+              confirmLabel="Archive this badge"
+              cancelLabel="Keep it live"
+              busy={action.isPending}
+              onConfirm={() => action.mutate("archive")}
+            />
           </>
+        )}
+        {(def.can_edit || def.can_review) && def.state === "archived" && (
+          <Button
+            color="primary"
+            interaction={action.isPending ? "disabled" : "enabled"}
+            onClick={() => action.mutate("restore")}
+          >
+            Restore this badge
+          </Button>
         )}
         {def.course_id && def.live_version_id && (
           <AppLink to={`/courses/${def.course_id}/progress`}>Learner progress for this course</AppLink>

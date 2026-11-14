@@ -20,6 +20,7 @@ import {
   type UnreviewedBadge,
 } from "../../api";
 import { useAuth } from "../../auth";
+import { ConfirmButton } from "../../components/ConfirmButton";
 import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
 import { TableScroll } from "../../components/TableScroll";
@@ -243,9 +244,15 @@ function CanvasSubAccounts() {
                       {a.org_unit_name ? (
                         <Flex gap="small" alignItems="center" wrap="wrap">
                           <Text>{a.org_unit_name}</Text>
-                          <Button size="small" onClick={() => unlink.mutate(a)}>
-                            Unlink {a.name}
-                          </Button>
+                          <ConfirmButton
+                            size="small"
+                            label={`Unlink ${a.name}`}
+                            consequence={`Unlink ${a.name} from ${a.org_unit_name}? New courses in this Canvas sub-account will no longer be placed in that area. The area and the courses already in it stay as they are.`}
+                            confirmLabel="Unlink it"
+                            cancelLabel="Keep the link"
+                            busy={unlink.isPending}
+                            onConfirm={() => unlink.mutate(a)}
+                          />
                         </Flex>
                       ) : (
                         <Text color="secondary">Not linked</Text>
@@ -591,9 +598,15 @@ function Roles() {
                 {r.expires_at ? `, until ${fmtDate(r.expires_at)}` : ""}
               </Table.Cell>
               <Table.Cell>
-                <Button size="small" onClick={() => revoke.mutate(r.id)}>
-                  Remove {ROLE_LABELS[r.role] ?? r.role} from {r.user_name ?? "this person"}
-                </Button>
+                <ConfirmButton
+                  size="small"
+                  label={`Remove ${ROLE_LABELS[r.role] ?? r.role} from ${r.user_name ?? "this person"}`}
+                  consequence={`Remove the ${ROLE_LABELS[r.role] ?? r.role} role from ${r.user_name ?? "this person"}${r.scope_name ? ` for ${r.scope_name}` : ""}? They lose what the role lets them do straight away.${r.source === "lti" ? " Canvas gives the role back the next time they open the tool from a course where they still hold it." : " You can grant it again below."}`}
+                  confirmLabel="Remove the role"
+                  cancelLabel="Keep the role"
+                  busy={revoke.isPending}
+                  onConfirm={() => revoke.mutate(r.id)}
+                />
               </Table.Cell>
             </Table.Row>
           ))}

@@ -4,8 +4,8 @@
 Lifecycle of a definition's *working* version::
 
     DRAFT --submit--> IN_REVIEW --approve--> APPROVED --publish--> PUBLISHED --archive--> ARCHIVED
-      ^                   |
-      +-----reject--------+
+      ^                   |                                           ^                  |
+      +-----reject--------+                                           +-----restore------+
 
 * Edits are only possible in DRAFT; submitting fixes a ``content_hash``, and publication checks
   the approved content is exactly what is being published.
@@ -913,6 +913,62 @@ def archive(
         actor_user_id=actor.user_id,
         request_id=request_id,
     )
+
+
+def restore(
+    db: Session,
+    actor: authz.Actor,
+    definition: AchievementDefinition,
+    request_id: str | None = None,
+) -> None:
+    """Undo :func:`archive`: the badge goes live again exactly as it was published.
+
+    Archiving only ever happens to a badge with a published version, and it keeps that version,
+    so restoring needs no new review. A newer version that was being worked on when the badge
+    was archived goes back to being a draft: it is checked again before it can replace the
+    published one. Awards start again at the next evaluation of the course.
+    """
+    policy = authz.institution_policy(db, actor.institution_id)
+    if not authz.can_review(db, actor, definition, policy):
+        authz.require_edit(db, actor, definition)
+    if definition.state != "archived":
+        raise Conflict("INVALID_STATE", "Only an archived badge can be restored.")
+    assert definition.current_version_id is not None  # archive() requires a published version
+    issuer = db.get(Issuer, definition.issuer_id)
+    if issuer is None or issuer.status != "active":
+        raise Conflict(
+            "ISSUER_INACTIVE",
+            "The issuer for this badge is not active.",
+            "Ask an administrator to authorise the issuer, then restore the badge.",
+        )
+    authz.require_issuing_allowed(db, issuer, authz.definition_course(db, definition))
+    working = working_version(db, definition)
+    if working.id == definition.current_version_id:
+        definition.state = "published"
+    else:
+        definition.state = "draft"
+        working.content_hash = None
+    audit.record(
+        db,
+        action="achievement.restore",
+        resource_type="achievement_definition",
+        resource_id=definition.id,
+        institution_id=actor.institution_id,
+        actor_user_id=actor.user_id,
+        request_id=request_id,
+        data={"state": definition.state},
+    )
+    if definition.course_id is not None:
+        enqueue.defer(
+            db,
+            enqueue.EVALUATE_COURSE,
+            queue="eligibility",
+            institution_id=actor.institution_id,
+            args={"course_id": str(definition.course_id), "triggered_by": "reeval"},
+            subject_type="course",
+            subject_id=definition.course_id,
+            queueing_lock=f"evaluate_course:{definition.course_id}",
+        )
 
 
 def new_version(
