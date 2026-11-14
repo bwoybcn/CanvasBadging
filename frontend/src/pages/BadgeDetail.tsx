@@ -14,7 +14,6 @@ import {
   SimpleSelect,
   Tabs,
   Text,
-  TextArea,
   View,
 } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +33,7 @@ import {
   type Preview,
 } from "../api";
 import { useAuth } from "../auth";
+import { LimitedTextArea } from "../components/Fields";
 import { AppLink } from "../components/AppLink";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 
@@ -166,7 +166,7 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
           onChange={(e) => setCredit(e.target.checked)}
         />
       )}
-      <TextArea label="Comment to the author" value={comment} onChange={(e) => setComment(e.target.value)} />
+      <LimitedTextArea maxLength={4000} label="Comment to the author" value={comment} onChange={(e) => setComment(e.target.value)} />
       {act.isError && <ErrorAlert error={act.error} />}
       <Flex gap="small" margin="small 0 0">
         <Button color="primary" interaction={all && !act.isPending ? "enabled" : "disabled"} onClick={() => act.mutate("approve")}>

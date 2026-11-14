@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Alert, Flex, Heading, Spinner, View } from "@instructure/ui";
+import { Alert, Flex, Heading, List, Spinner, Text, View } from "@instructure/ui";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { apiFetch, problemText, type Me } from "../api";
+import { apiFetch, problemLines, type Me } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "./AppLink";
 
@@ -82,10 +82,23 @@ export function Loading({ what }: { what: string }) {
   return <Spinner renderTitle={`Loading ${what}`} margin="large" />;
 }
 
+/** Says what went wrong. Several refused fields are listed one per line. */
 export function ErrorAlert({ error }: { error: unknown }) {
+  const lines = problemLines(error);
   return (
     <Alert variant="error" margin="small 0">
-      {problemText(error)}
+      {lines.length === 1 ? (
+        lines[0]
+      ) : (
+        <>
+          <Text weight="bold">Please fix the following:</Text>
+          <List margin="x-small 0 0">
+            {lines.map((line) => (
+              <List.Item key={line}>{line}</List.Item>
+            ))}
+          </List>
+        </>
+      )}
     </Alert>
   );
 }

@@ -19,7 +19,6 @@ import {
   RadioInputGroup,
   SimpleSelect,
   Text,
-  TextArea,
   TextInput,
   View,
 } from "@instructure/ui";
@@ -47,6 +46,7 @@ import {
   ApiError,
 } from "../api";
 import { useAuth } from "../auth";
+import { ColourField, LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { hasScoreRule, RuleBuilder, ruleProblems } from "../components/RuleBuilder";
 
@@ -295,16 +295,15 @@ function ArtworkStep({
               </SimpleSelect.Option>
             ))}
           </SimpleSelect>
-          <Flex gap="small" margin="small 0">
-            <TextInput renderLabel="Main colour (hex)" value={primary} width="9rem" onChange={(_e, v) => setPrimary(v)} />
-            <TextInput
-              renderLabel="Accent colour (hex)"
-              value={secondary}
-              width="9rem"
-              onChange={(_e, v) => setSecondary(v)}
-            />
-            <TextInput renderLabel="Short label" value={label} maxLength={14} onChange={(_e, v) => setLabel(v)} />
-          </Flex>
+          <ColourField label="Main colour" value={primary} onChange={setPrimary} />
+          <ColourField label="Accent colour" value={secondary} onChange={setSecondary} />
+          <TextInput
+            renderLabel="Short label (up to 14 characters)"
+            value={label}
+            maxLength={14}
+            width="16rem"
+            onChange={(_e, v) => setLabel(v)}
+          />
         </View>
       ) : (
         <View as="div" margin="small 0" display="block">
@@ -604,13 +603,13 @@ export function CreateBadge() {
       {step === 1 && cat && (
         <View as="div" display="block">
           <TextInput renderLabel="Title" value={f.title ?? ""} maxLength={120} onChange={(_e, v) => setF({ title: v })} />
-          <TextArea
+          <LimitedTextArea maxLength={280}
             label="Short description (shown on the badge card, up to 280 characters)"
             maxHeight="8rem"
             value={f.short_description ?? ""}
             onChange={(e) => setF({ short_description: e.target.value })}
           />
-          <TextArea
+          <LimitedTextArea maxLength={4000}
             label="Full description (optional)"
             value={f.description ?? ""}
             onChange={(e) => setF({ description: e.target.value })}
@@ -686,12 +685,12 @@ export function CreateBadge() {
           >
             Add outcome
           </Button>
-          <TextArea
+          <LimitedTextArea maxLength={4000}
             label="Criteria: what a learner must do, in plain words"
             value={f.criteria_narrative ?? ""}
             onChange={(e) => setF({ criteria_narrative: e.target.value })}
           />
-          <TextArea
+          <LimitedTextArea maxLength={2000}
             label="Evidence: what the credential records as evidence (optional)"
             value={f.evidence_description}
             onChange={(e) => setF({ evidence_description: e.target.value })}
@@ -701,12 +700,12 @@ export function CreateBadge() {
           </Heading>
           {f.skills.map((k, i) => (
             <Flex key={i} gap="small" alignItems="end" margin="0 0 x-small">
-              <TextInput
+              <TextInput maxLength={120}
                 renderLabel={`Skill ${i + 1}`}
                 value={k.name}
                 onChange={(_e, v) => setF({ skills: f.skills.map((x, j) => (j === i ? { ...x, name: v } : x)) })}
               />
-              <TextInput
+              <TextInput maxLength={120}
                 renderLabel="Framework (optional)"
                 value={k.framework ?? ""}
                 onChange={(_e, v) =>

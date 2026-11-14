@@ -26,6 +26,7 @@ import {
   type DefinitionSummary,
 } from "../api";
 import { useAuth } from "../auth";
+import { LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
 
@@ -57,7 +58,7 @@ function DecisionRow({ d }: { d: Decision }) {
         {act.isError && <ErrorAlert error={act.error} />}
         {rejecting ? (
           <View as="div" display="block">
-            <TextInput renderLabel={`Reason for not awarding to ${who}`} value={reason} onChange={(_e, v) => setReason(v)} />
+            <TextInput maxLength={2000} renderLabel={`Reason for not awarding to ${who}`} value={reason} onChange={(_e, v) => setReason(v)} />
             <Flex gap="x-small" margin="x-small 0 0">
               <Button size="small" interaction={reason.trim().length >= 5 ? "enabled" : "disabled"} onClick={() => act.mutate("reject")}>
                 Confirm not awarding
@@ -144,7 +145,7 @@ function ManualAward() {
           </SimpleSelect.Option>
         ))}
       </SimpleSelect>
-      <TextArea
+      <LimitedTextArea maxLength={4000}
         label="Justification (at least 20 characters)"
         value={justification}
         onChange={(e) => setJustification(e.target.value)}
@@ -156,7 +157,7 @@ function ManualAward() {
           </SimpleSelect.Option>
         ))}
       </SimpleSelect>
-      <TextArea label="Evidence description (optional)" value={narrative} onChange={(e) => setNarrative(e.target.value)} />
+      <LimitedTextArea maxLength={2000} label="Evidence description (optional)" value={narrative} onChange={(e) => setNarrative(e.target.value)} />
       <Checkbox label="Show this evidence on the public credential" checked={pub} onChange={(e) => setPub(e.target.checked)} />
       {award.isError && <ErrorAlert error={award.error} />}
       {award.isSuccess && (
@@ -254,7 +255,7 @@ function BulkAward() {
           reset();
         }}
       />
-      <TextArea
+      <LimitedTextArea maxLength={4000}
         label="Justification for everyone on the list (at least 20 characters)"
         value={justification}
         onChange={(e) => {

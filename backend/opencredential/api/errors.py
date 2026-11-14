@@ -49,6 +49,27 @@ _STATUS_CODES = {
 }
 
 
+def _field_error(e: Any) -> dict[str, Any]:
+    """One entry of a 422's ``errors``: which field, why (``code``), and the limit it broke.
+
+    ``limits`` carries the numbers behind the message (``max_length``, ``min_length``, ``ge``,
+    ``le`` and so on), so a client can say "up to 280 characters" in its own words.
+    """
+    out: dict[str, Any] = {
+        "field": ".".join(str(p) for p in e["loc"]),
+        "code": e["type"],
+        "message": e["msg"],
+    }
+    limits = {
+        k: v
+        for k, v in (e.get("ctx") or {}).items()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    }
+    if limits:
+        out["limits"] = limits
+    return out
+
+
 def install(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
@@ -65,8 +86,5 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(request: Request, exc: RequestValidationError) -> JSONResponse:
-        errors = [
-            {"field": ".".join(str(p) for p in e["loc"]), "code": e["type"], "message": e["msg"]}
-            for e in exc.errors()
-        ]
+        errors = [_field_error(e) for e in exc.errors()]
         return problem(request, 422, "VALIDATION_FAILED", "Request validation failed", None, errors)

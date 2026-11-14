@@ -117,7 +117,7 @@ function AwardRow({ a, onDone }: { a: Recon["awards_not_issued"][number]; onDone
       <Table.Cell>
         {cancelling ? (
           <View as="div">
-            <TextInput renderLabel={`Why ${who} should not get this badge`} value={reason} onChange={(_e, v) => setReason(v)} />
+            <TextInput maxLength={2000} renderLabel={`Why ${who} should not get this badge`} value={reason} onChange={(_e, v) => setReason(v)} />
             <Flex gap="x-small" margin="x-small 0 0">
               <Button size="small" color="danger" interaction={reason.trim().length >= 5 ? "enabled" : "disabled"} onClick={() => act.mutate("cancel")}>
                 Cancel award

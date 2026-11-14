@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { apiFetch, apiSend } from "../../api";
 import { useAuth } from "../../auth";
+import { ColourField, LimitedTextArea } from "../../components/Fields";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage } from "./AdminPage";
 
@@ -64,11 +65,21 @@ function ConfigForm({ initial }: { initial: Config }) {
       <Heading level="h2" margin="0 0 small">
         Identity
       </Heading>
-      <TextInput renderLabel="Institution name" value={c.name} onChange={set("name")} />
-      <TextArea label="Description" value={c.description} onChange={(e) => setC({ ...c, description: e.target.value })} />
-      <TextInput renderLabel="Official website (https://)" value={c.website_url} onChange={set("website_url")} />
-      <TextInput renderLabel="Brand colour (for example #212b58)" value={c.primary_colour} onChange={set("primary_colour")} />
-      <TextInput renderLabel="Second brand colour" value={c.secondary_colour} onChange={set("secondary_colour")} />
+      <TextInput maxLength={200} renderLabel="Institution name" value={c.name} onChange={set("name")} />
+      <LimitedTextArea maxLength={4000} label="Description" value={c.description} onChange={(e) => setC({ ...c, description: e.target.value })} />
+      <TextInput maxLength={500} renderLabel="Official website (https://)" value={c.website_url} onChange={set("website_url")} />
+      <ColourField
+        label="Brand colour"
+        optional
+        value={c.primary_colour}
+        onChange={(v) => setC((p) => ({ ...p, primary_colour: v }))}
+      />
+      <ColourField
+        label="Second brand colour"
+        optional
+        value={c.secondary_colour}
+        onChange={(v) => setC((p) => ({ ...p, secondary_colour: v }))}
+      />
       <Heading level="h2" margin="medium 0 small">
         Verification
       </Heading>
@@ -94,8 +105,8 @@ function ConfigForm({ initial }: { initial: Config }) {
       <Heading level="h2" margin="medium 0 small">
         LinkedIn
       </Heading>
-      <TextInput renderLabel="LinkedIn organisation id" value={c.linkedin_org_id} onChange={set("linkedin_org_id")} />
-      <TextInput renderLabel="LinkedIn organisation name" value={c.linkedin_org_name} onChange={set("linkedin_org_name")} />
+      <TextInput maxLength={40} renderLabel="LinkedIn organisation id" value={c.linkedin_org_id} onChange={set("linkedin_org_id")} />
+      <TextInput maxLength={200} renderLabel="LinkedIn organisation name" value={c.linkedin_org_name} onChange={set("linkedin_org_name")} />
       {save.isError && <ErrorAlert error={save.error} />}
       {save.isSuccess && (
         <Alert variant="success" margin="small 0">

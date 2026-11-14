@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** W7 administration screens: issuer authorisation, revocation, erasure and access. */
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -200,6 +200,37 @@ describe("administration", () => {
     });
     await userEvent.click(screen.getByRole("button", { name: "Unlink Careers" }));
     expect(await screen.findByText("Unlinked Careers. Courses already in Library stay there.")).toBeInTheDocument();
+  });
+
+  it("saves brand colours chosen from a swatch and limits the fields to what the server accepts", async () => {
+    const config = {
+      id: "i-1",
+      slug: "demo",
+      name: "Demo University",
+      description: null,
+      website_url: null,
+      branding: { primary_colour: "#212b58", secondary_colour: null },
+      categories: ["Completion"],
+      verification_host: null,
+      linkedin_org_id: null,
+      linkedin_org_name: null,
+    };
+    const calls = admin({
+      "GET /api/v1/institutions/current": config,
+      "PATCH /api/v1/institutions/current": config,
+    });
+    renderAt("/admin/institution");
+    const brand = await screen.findByLabelText("Brand colour");
+    expect(brand).toHaveAttribute("type", "color");
+    expect(brand).toHaveValue("#212b58");
+    expect(screen.getByLabelText("Institution name")).toHaveAttribute("maxlength", "200");
+    expect(screen.getByLabelText("Description")).toHaveAttribute("maxlength", "4000");
+    // The second colour is optional: nothing is sent until one is chosen.
+    fireEvent.change(screen.getByLabelText("Second brand colour"), { target: { value: "#e8b10d" } });
+    await userEvent.click(screen.getByRole("button", { name: "Save settings" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PATCH")).toBe(true));
+    const sent = calls.find((c) => c.method === "PATCH")!.body as { branding: Record<string, string | null> };
+    expect(sent.branding).toEqual({ primary_colour: "#212b58", secondary_colour: "#e8b10d" });
   });
 
   it("adds the ready-made templates for badges outside modules", async () => {

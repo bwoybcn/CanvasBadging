@@ -23,6 +23,7 @@ administrator cannot be removed. Roles granted with an expiry stop working at th
 ## 1. Institution settings (§10.1)
 
 Name, description, website, brand colours, achievement categories and LinkedIn organisation.
+Brand colours are chosen from a colour swatch, or pasted as a code such as #212b58.
 The settings page also shows the **public verification domain**, read-only. The verification
 domain is where issuers' `did:web` documents and revocation lists are published (ADR-0004).
 

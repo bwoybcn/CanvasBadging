@@ -44,6 +44,14 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- Form errors name the field and say what to change ("Short description is too long: use up
+  to 280 characters") instead of "Request validation failed". A 422's `errors` entries now
+  carry the limit that was broken in `limits`.
+- Text boxes stop at the length the server accepts, on every form, and show a character count
+  (always on short fields, near the limit on long ones).
+- Colours are chosen from a colour swatch instead of typed as hex codes: badge artwork in the
+  wizard, brand colours in institution settings and the artwork colour of a badge template. A
+  code can still be pasted beside the swatch. Brand colours are now checked on the server too.
 - The create-badge wizard saves as it goes. The draft is created when the author leaves step 2
   ("About the badge") and saved again on each **Next** or **Back** and on leaving the wizard,
   so a time-out or a closed tab costs at most the step in hand. A line under the buttons says

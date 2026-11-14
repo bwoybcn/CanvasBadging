@@ -34,7 +34,13 @@ Roles are looked up on the server for every request; nothing in the request can 
    "detail": "No such course.", "request_id": "01a1d5b3-…"}
   ```
 
-  `code` is stable; use it, not `detail`, in programs. Validation errors (422) add `errors`.
+  `code` is stable; use it, not `detail`, in programs. Validation errors (422) add `errors`,
+  one entry per refused field, with the limit it broke where there is one:
+
+  ```json
+  {"field": "body.fields.short_description", "code": "string_too_long",
+   "message": "String should have at most 280 characters", "limits": {"max_length": 280}}
+  ```
 * **Request ids:** every response has `X-Request-ID`. Send your own (a UUID) to correlate logs.
 * **Lists** take `limit` (capped per endpoint, for example 200 for achievements). The
   achievements list also returns `next_cursor` for paging.

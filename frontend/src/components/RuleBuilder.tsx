@@ -12,11 +12,11 @@ import {
   RadioInputGroup,
   SimpleSelect,
   Text,
-  TextArea,
   View,
 } from "@instructure/ui";
 
 import type { CanvasAssignment, CanvasModule, GroupRule, LeafRule, Rule, RuleSet } from "../api";
+import { LimitedTextArea } from "./Fields";
 
 export const RULE_TYPES: { value: LeafRule["type"]; label: string; hint: string }[] = [
   { value: "module_completed", label: "Complete a module", hint: "Uses the module's completion requirements in Canvas." },
@@ -157,7 +157,7 @@ function LeafEditor({
         />
       )}
       {rule.type === "manual_approval" && (
-        <TextArea
+        <LimitedTextArea maxLength={500}
           label="What the lecturer confirms"
           value={rule.instructions ?? ""}
           onChange={(e) => onChange({ ...rule, instructions: e.target.value })}
