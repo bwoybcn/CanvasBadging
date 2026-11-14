@@ -255,3 +255,36 @@ def test_admin_course_list_shows_badge_teams(world: World) -> None:
     _teams(world, "lecturer", True)
     rows = world.get("admin", "/api/v1/admin/courses").json()
     assert [c["badge_teams"] for c in rows if c["id"] == str(world.course_id)] == [True]
+
+
+def _remove_from_course(world: World, who: str) -> None:
+    with world.db() as db:
+        for ms in db.scalars(
+            select(m.Membership).where(
+                m.Membership.user_id == world.users[who],
+                m.Membership.scope_id == world.course_id,
+            )
+        ):
+            ms.revoked_at = datetime.now(UTC)
+
+
+@pytest.mark.parametrize("teams", [False, True])
+def test_owner_removed_from_course_cannot_edit(world: World, teams: bool) -> None:
+    """Owning a course badge gives no rights of its own once the owner's course role has gone
+    (outside review finding, 14 Nov 2026)."""
+    did = _badge(world)
+    _teams(world, "lecturer", teams)
+    _remove_from_course(world, "lecturer")
+    detail = world.get("lecturer", f"/api/v1/achievements/{did}")
+    assert detail.status_code in (403, 404) or detail.json()["can_edit"] is False
+    assert world.post("lecturer", f"/api/v1/achievements/{did}/new-version").status_code in (
+        403,
+        404,
+    )
+    path = f"/api/v1/achievements/{did}/team/{world.users['colleague']}"
+    assert world.put("lecturer", path, {"role": "editor"}).status_code in (403, 404)
+    assert world.post("lecturer", f"/api/v1/achievements/{did}/archive").status_code in (403, 404)
+    assert _award(world, "lecturer", did).status_code in (403, 404)
+    # Staff still in the course carry on (with teams on, admins over the course do).
+    who = "reviewer" if teams else "colleague"
+    assert world.post(who, f"/api/v1/achievements/{did}/new-version").status_code == 200

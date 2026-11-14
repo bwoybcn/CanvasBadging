@@ -76,6 +76,9 @@ All notable changes to this project are documented here. The format follows
 - The data freshness list leaves out courses that are switched off.
 
 ### Security
+- Owning a course badge no longer grants rights of its own: an owner whose staff role in the
+  course has gone can no longer edit, archive, version or manage the team of the badge (outside
+  review, 14 Nov 2026). Badges without a course keep owner editing.
 - Fixes from the 14 Nov 2026 review of the extracurricular features
   (https://claude.ai/artifact/M8kJDBBuTNBtJyzs4PDUeF):
   - Award to a list matches entries only against the badge's course's students. Anyone else
