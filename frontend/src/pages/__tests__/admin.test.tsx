@@ -132,6 +132,49 @@ describe("administration", () => {
     });
   });
 
+  it("links ticked Canvas sub-accounts to areas", async () => {
+    const acct = (id: string, name: string, depth: number, extra: Record<string, unknown> = {}) => ({
+      id,
+      account_id: id,
+      name,
+      parent_account_id: null,
+      depth,
+      org_unit_id: null,
+      org_unit_name: null,
+      courses: 0,
+      refreshed_at: "2026-11-14T17:00:00Z",
+      ...extra,
+    });
+    const calls = admin({
+      "GET /api/v1/admin/memberships": [],
+      "GET /api/v1/admin/issuers": [],
+      "GET /api/v1/admin/review/published-without-review": [],
+      "GET /api/v1/admin/canvas-accounts": [
+        acct("a1", "University of Liverpool", 0),
+        acct("a2", "Faculty of Science", 1, { org_unit_id: "ou-9", org_unit_name: "Faculty of Science", courses: 4 }),
+        acct("a4", "University Library", 1),
+      ],
+      "POST /api/v1/admin/canvas-accounts/refresh": { accounts: 3 },
+      "POST /api/v1/admin/canvas-accounts/link": { linked: 1, courses_placed: 2 },
+    });
+    renderAt("/admin/people");
+    await userEvent.click(await screen.findByRole("button", { name: "Read sub-accounts from Canvas" }));
+    expect(await screen.findByText("Read 3 accounts from Canvas.")).toBeInTheDocument();
+    // A linked sub-account shows its area and can be unlinked rather than ticked.
+    expect(screen.getByRole("button", { name: "Unlink Faculty of Science" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Faculty of Science")).toBeNull();
+    const linkButton = screen.getByRole("button", { name: /Link selected/ });
+    expect(linkButton).toBeDisabled();
+    await userEvent.click(screen.getByLabelText("University Library"));
+    await userEvent.click(screen.getByLabelText("Kind for new areas"));
+    await userEvent.click(await screen.findByRole("option", { name: "service" }));
+    await userEvent.click(screen.getByRole("button", { name: "Link selected (1)" }));
+    expect(await screen.findByText(/Linked 1 sub-account; 2 existing courses joined its area/)).toBeInTheDocument();
+    expect(calls.find((c) => c.url.endsWith("/canvas-accounts/link"))!.body).toEqual({
+      items: [{ id: "a4", kind: "service" }],
+    });
+  });
+
   it("adds the ready-made templates for badges outside modules", async () => {
     const calls = admin({
       "GET /api/v1/admin/templates?include_archived=true": [

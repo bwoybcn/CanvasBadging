@@ -12,6 +12,7 @@ import {
   type AdminCourse,
   type AdminIssuer,
   type AreaReviewPolicy,
+  type CanvasAccount,
   type OrgUnit,
   type Person,
   ROLE_LABELS,
@@ -27,6 +28,7 @@ export function People() {
   return (
     <AdminPage title="Departments and roles">
       <OrgUnits />
+      <CanvasSubAccounts />
       <AreaReview />
       <PublishedWithoutReview />
       <Courses />
@@ -126,6 +128,156 @@ function OrgUnits() {
         </Button>
       </Flex>
       {create.isError && <ErrorAlert error={create.error} />}
+    </View>
+  );
+}
+
+/** Tick Canvas sub-accounts to make them areas; their courses then join those areas. */
+function CanvasSubAccounts() {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const f = roleFlags(useMe().data);
+  const q = useQuery({
+    queryKey: ["canvas-accounts"],
+    queryFn: () => apiFetch<CanvasAccount[]>("/api/v1/admin/canvas-accounts", token),
+    enabled: f.isInstAdmin,
+  });
+  const [picked, setPicked] = useState<string[]>([]);
+  const [kind, setKind] = useState("");
+  const [done, setDone] = useState("");
+  const refreshAll = () => {
+    qc.invalidateQueries({ queryKey: ["canvas-accounts"] });
+    qc.invalidateQueries({ queryKey: ["org-units"] });
+    qc.invalidateQueries({ queryKey: ["admin-courses"] });
+  };
+  const read = useMutation({
+    mutationFn: () => apiSend<{ accounts: number }>("/api/v1/admin/canvas-accounts/refresh", token, "POST"),
+    onSuccess: (r) => {
+      setDone(`Read ${r.accounts} accounts from Canvas.`);
+      refreshAll();
+    },
+  });
+  const link = useMutation({
+    mutationFn: () =>
+      apiSend<{ linked: number; courses_placed: number }>("/api/v1/admin/canvas-accounts/link", token, "POST", {
+        items: picked.map((id) => ({ id, kind: kind || null })),
+      }),
+    onSuccess: (r) => {
+      setPicked([]);
+      setDone(
+        `Linked ${r.linked} sub-account${r.linked === 1 ? "" : "s"}; ` +
+          `${r.courses_placed} existing course${r.courses_placed === 1 ? "" : "s"} joined ${r.linked === 1 ? "its area" : "their areas"}.`,
+      );
+      refreshAll();
+    },
+  });
+  const unlink = useMutation({
+    mutationFn: (id: string) => apiDelete(`/api/v1/admin/canvas-accounts/${id}/link`, token),
+    onSuccess: refreshAll,
+  });
+  if (!f.isInstAdmin) return null;
+  const rows = q.data ?? [];
+  const toggle = (id: string, on: boolean) => setPicked(on ? [...picked, id] : picked.filter((x) => x !== id));
+  return (
+    <View as="section" display="block" margin="0 0 large">
+      <Heading level="h2" margin="0 0 small">
+        Canvas sub-accounts
+      </Heading>
+      <Text as="p">
+        Tick the Canvas sub-accounts that should be areas, such as faculties, departments or the Library. Each one
+        becomes an area named after it, nested as in Canvas, and its courses join that area when they are first opened.
+        Sub-accounts you leave unticked, such as sandboxes or terms, are ignored. A course you have already placed is
+        never moved.
+      </Text>
+      <Flex gap="small" alignItems="end" wrap="wrap" margin="0 0 small">
+        <Button onClick={() => read.mutate()} interaction={read.isPending ? "disabled" : "enabled"}>
+          Read sub-accounts from Canvas
+        </Button>
+      </Flex>
+      {done && (
+        <Text as="p" role="status">
+          {done}
+        </Text>
+      )}
+      {read.isError && <ErrorAlert error={read.error} />}
+      {q.isPending && <Loading what="sub-accounts" />}
+      {q.isError && <ErrorAlert error={q.error} />}
+      {rows.length > 0 && (
+        <>
+          <TableScroll>
+            <Table caption="Canvas sub-accounts">
+              <Table.Head>
+                <Table.Row>
+                  <Table.ColHeader id="ca-name">Sub-account</Table.ColHeader>
+                  <Table.ColHeader id="ca-area">Area</Table.ColHeader>
+                  <Table.ColHeader id="ca-courses">Courses opened</Table.ColHeader>
+                </Table.Row>
+              </Table.Head>
+              <Table.Body>
+                {rows.map((a) => (
+                  <Table.Row key={a.id}>
+                    <Table.RowHeader>
+                      <View as="div" padding={`0 0 0 ${a.depth * 1.5}rem`}>
+                        {a.org_unit_id ? (
+                          <Text>{a.name}</Text>
+                        ) : (
+                          <Checkbox
+                            label={a.name}
+                            checked={picked.includes(a.id)}
+                            onChange={(e) => toggle(a.id, e.target.checked)}
+                          />
+                        )}
+                      </View>
+                    </Table.RowHeader>
+                    <Table.Cell>
+                      {a.org_unit_name ? (
+                        <Flex gap="small" alignItems="center" wrap="wrap">
+                          <Text>{a.org_unit_name}</Text>
+                          <Button size="small" onClick={() => unlink.mutate(a.id)}>
+                            Unlink {a.name}
+                          </Button>
+                        </Flex>
+                      ) : (
+                        <Text color="secondary">Not linked</Text>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>{a.courses}</Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table>
+          </TableScroll>
+          {unlink.isError && <ErrorAlert error={unlink.error} />}
+          <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0 0">
+            <SimpleSelect
+              renderLabel="Kind for new areas"
+              value={kind}
+              onChange={(_e, { value }) => setKind(String(value))}
+              width="20rem"
+            >
+              <SimpleSelect.Option id="ca-kind-auto" value="">
+                Automatic: faculty at the top, department below
+              </SimpleSelect.Option>
+              {["faculty", "department", "programme", "service", "other"].map((k) => (
+                <SimpleSelect.Option key={k} id={`ca-kind-${k}`} value={k}>
+                  {k}
+                </SimpleSelect.Option>
+              ))}
+            </SimpleSelect>
+            <Button
+              color="primary"
+              onClick={() => link.mutate()}
+              interaction={picked.length && !link.isPending ? "enabled" : "disabled"}
+            >
+              Link selected ({picked.length})
+            </Button>
+          </Flex>
+          {link.isError && <ErrorAlert error={link.error} />}
+          <Text as="p" size="small">
+            Last read from Canvas {fmtDate(rows[0].refreshed_at)}.
+          </Text>
+        </>
+      )}
     </View>
   );
 }

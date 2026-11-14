@@ -43,13 +43,17 @@ What the configuration contains:
 | Target link / redirect | `<public URL>/lti/launch` | id_token `form_post` |
 | Placement | `course_navigation`, text **Micro-Credentials**, `default: disabled` | Each course opts in (Q15) |
 | Privacy level | `public` | Name for the UI, email for the recipient identifier (Q5) |
-| Custom fields | `canvas_course_id=$Canvas.course.id`, `canvas_user_id=$Canvas.user.id`, `canvas_user_sis_id=$Person.sourcedId` | Link LTI identities to REST ids; the student ID number lets staff award a badge to a list |
+| Custom fields | `canvas_course_id=$Canvas.course.id`, `canvas_user_id=$Canvas.user.id`, `canvas_user_sis_id=$Person.sourcedId`, `canvas_account_id=$Canvas.account.id` | Link LTI identities to REST ids; the student ID number lets staff award a badge to a list; the sub-account places the course in a linked area |
 | Scopes | `contextmembership.readonly` (NRPS) only | Least privilege; no AGS |
 
 Existing installs: add `canvas_user_sis_id=$Person.sourcedId` to the developer key's custom
 fields to use list awards by student ID number. Without it, student IDs are still read from the
 LTI `lis.person_sourcedid` claim and from the Names and Roles roster when Canvas includes them;
-list awards by email work either way.
+list awards by email work either way. Add `canvas_account_id=$Canvas.account.id` too so new
+courses join the area linked to their sub-account on first launch; without it, linking looks each
+course up through `GET /api/v1/courses/:id` instead. Reading the sub-account tree uses
+`GET /api/v1/accounts` and `GET /api/v1/accounts/:id/sub_accounts?recursive=true`, so the
+connected Canvas user must be an account administrator.
 
 ## 2. Install the tool
 

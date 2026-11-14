@@ -186,7 +186,14 @@ def upsert_course(
     if launch.nrps_url:
         course.lti_nrps_url = launch.nrps_url
     course.lti_resource_link_id = launch.resource_link_id
+    if launch.canvas_account_id:
+        course.canvas_account_id = launch.canvas_account_id
     db.flush()
+    if course.org_unit_id is None and course.canvas_account_id:
+        # A course in a linked Canvas sub-account joins that area on its first launch.
+        from opencredential.governance.canvas_accounts import place_course
+
+        place_course(db, course)
     return course, created
 
 

@@ -68,6 +68,8 @@ def canvas_tool_config(
         "custom_fields": {
             "canvas_course_id": "$Canvas.course.id",
             "canvas_user_id": "$Canvas.user.id",
+            # The (sub-)account the course sits in, to place it in a linked area.
+            "canvas_account_id": "$Canvas.account.id",
             # The student ID number (SIS user id), so providers can award badges from a list.
             "canvas_user_sis_id": "$Person.sourcedId",
         },

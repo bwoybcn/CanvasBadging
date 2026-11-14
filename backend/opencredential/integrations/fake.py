@@ -14,6 +14,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from opencredential.integrations.base import (
+    AccountRecord,
     AssignmentRecord,
     LmsError,
     LmsNotFound,
@@ -41,6 +42,9 @@ class FakeLmsAdapter:
         #: Exceptions to raise: keys like ("modules",), ("progress", user), ("submissions",)
         self.failures: dict[tuple[str, ...], LmsError] = {}
         self.calls: list[tuple[str, ...]] = []
+        #: The account tree (sub-account linking) and which account each course sits in.
+        self.accounts: list[AccountRecord] = []
+        self.course_accounts: dict[str, str] = {}
 
     # -- test helpers ---------------------------------------------------------------------
     def course(self, ref: str) -> FakeCourse:
@@ -90,6 +94,14 @@ class FakeLmsAdapter:
         if ref not in self.courses:
             raise LmsNotFound(f"course {ref} not found")
         return self.courses[ref]
+
+    def list_accounts(self) -> Sequence[AccountRecord]:
+        self._fail("accounts")
+        return list(self.accounts)
+
+    def course_account(self, course_ref: str) -> str | None:
+        self._fail("course_account")
+        return self.course_accounts.get(course_ref)
 
     def list_modules(self, course_ref: str) -> Sequence[ModuleRecord]:
         self._fail("modules")

@@ -21,6 +21,7 @@ from opencredential.authz import policy as authz
 from opencredential.db.models.issuers import ISSUER_LEVELS
 from opencredential.governance import (
     audit_log,
+    canvas_accounts,
     institution,
     issuers,
     people,
@@ -159,6 +160,50 @@ def update_org_unit(
         db, actor, unit_id, body.model_dump(exclude_unset=True), request_id=rid
     )
     return people.org_unit_out(db, unit)
+
+
+# ---- Canvas sub-accounts linked to areas ----------------------------------------------------
+
+
+class CanvasAccountLinkItem(BaseModel):
+    id: uuid.UUID
+    #: Link to this existing area instead of creating one named after the sub-account.
+    org_unit_id: uuid.UUID | None = None
+    #: Kind of the new area; default faculty at the top, department below a linked one.
+    kind: Literal["faculty", "department", "programme", "service", "other"] | None = None
+
+
+class CanvasAccountLinkIn(BaseModel):
+    items: list[CanvasAccountLinkItem] = Field(min_length=1, max_length=500)
+
+
+@router.get("/admin/canvas-accounts")
+def list_canvas_accounts(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
+    """Canvas sub-accounts last read from Canvas, as a tree, with their linked area."""
+    return canvas_accounts.listing(db, actor)
+
+
+@router.post("/admin/canvas-accounts/refresh")
+def refresh_canvas_accounts(db: TenantDb, actor: ActorDep, rid: RequestIdDep) -> dict[str, Any]:
+    """Read the sub-account tree from Canvas again."""
+    return canvas_accounts.refresh(db, actor, request_id=rid)
+
+
+@router.post("/admin/canvas-accounts/link")
+def link_canvas_accounts(
+    body: CanvasAccountLinkIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> dict[str, Any]:
+    """Link ticked sub-accounts to areas; their courses join those areas from then on."""
+    return canvas_accounts.link(db, actor, [i.model_dump() for i in body.items], request_id=rid)
+
+
+@router.delete("/admin/canvas-accounts/{account_id}/link", status_code=204)
+def unlink_canvas_account(
+    account_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> Response:
+    """Stop placing new courses from this sub-account; the area and its courses stay."""
+    canvas_accounts.unlink(db, actor, account_id, request_id=rid)
+    return Response(status_code=204)
 
 
 @router.get("/admin/review/published-without-review")

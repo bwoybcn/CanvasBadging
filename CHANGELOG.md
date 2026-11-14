@@ -31,6 +31,12 @@ All notable changes to this project are documented here. The format follows
   placeholder text in [square brackets] before moving on.
 - Org units can be a **service** (a library, careers service), alongside faculty, department and
   programme (migration 0011).
+- Link chosen Canvas sub-accounts to areas (migration 0012): administrators read the
+  sub-account tree from Canvas, tick the ones that should be areas, and each becomes an area
+  nested as in Canvas. Courses in a linked sub-account join its area, now and on first launch
+  (new custom field `canvas_account_id=$Canvas.account.id`). Unticked sub-accounts are ignored
+  and courses already placed are never moved
+  (`GET /api/v1/admin/canvas-accounts`, `POST …/refresh`, `POST …/link`, `DELETE …/{id}/link`).
 
 ### Changed
 - Staff wording is neutral, so it suits librarians and service staff as well as lecturers: the

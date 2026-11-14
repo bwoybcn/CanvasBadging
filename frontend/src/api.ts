@@ -545,6 +545,19 @@ export interface OrgUnit {
   effective_review: Required<AreaReviewPolicy> & { sources: Record<keyof AreaReviewPolicy, string | null> };
 }
 
+/** A Canvas account or sub-account, as last read from Canvas, and the area it is linked to. */
+export interface CanvasAccount {
+  id: string;
+  account_id: string;
+  name: string;
+  parent_account_id: string | null;
+  depth: number;
+  org_unit_id: string | null;
+  org_unit_name: string | null;
+  courses: number;
+  refreshed_at: string;
+}
+
 export interface AreaReviewPolicy {
   definition_review?: ReviewMode;
   self_approval_allowed?: boolean;
