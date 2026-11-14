@@ -28,7 +28,7 @@ from opencredential.authz import policy as authz
 from opencredential.db.models import CanvasAccount, CanvasIntegration, Course, OrgUnit
 from opencredential.errors import DomainError, Invalid, NotFound
 from opencredential.governance import people
-from opencredential.integrations.base import AccountDirectory, LmsError
+from opencredential.integrations.base import AccountDirectory, LmsError, LmsPermissionError
 
 MAX_DEPTH = 50
 
@@ -63,12 +63,21 @@ def refresh(db: Session, actor: authz.Actor, *, request_id: str | None = None) -
             continue
         try:
             accounts = directory.list_accounts()
+        except LmsPermissionError as exc:
+            raise CanvasUnavailable(
+                "CANVAS_ACCOUNTS_FORBIDDEN",
+                "Canvas refused to list its sub-accounts.",
+                "Add the scopes url:GET|/api/v1/accounts and "
+                "url:GET|/api/v1/accounts/:account_id/sub_accounts to the OpenCredential API "
+                "developer key in Canvas, then reconnect Canvas under Canvas connection. The "
+                "person who connects must be a Canvas account administrator.",
+                status=409,
+            ) from exc
         except LmsError as exc:
             raise CanvasUnavailable(
                 "CANVAS_UNAVAILABLE",
                 "Canvas did not return its sub-accounts.",
-                "Check that the Canvas connection belongs to an account administrator, then "
-                f"try again. ({exc.__class__.__name__})",
+                "Canvas did not answer properly. Try again in a few minutes.",
             ) from exc
         connected += 1
         existing = {
