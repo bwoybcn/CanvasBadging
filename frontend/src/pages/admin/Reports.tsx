@@ -42,7 +42,7 @@ export function Reports() {
           <Text as="p">
             {s.issued} issued, {s.revoked} revoked, {s.active} active. {s.pending_awards.awaiting_confirmation} awards
             waiting for confirmation and {s.pending_awards.awaiting_issuance} waiting to be issued.{" "}
-            {s.failed_issuance.credentials_not_issued} credentials not issued and {s.failed_issuance.failed_jobs} failed
+            {s.failed_issuance.credentials_not_issued} badges not issued and {s.failed_issuance.failed_jobs} failed
             jobs.
           </Text>
           <CountTable caption="Issuance by course" rows={s.by_course.map((c) => [c.course_title, c.issued, c.revoked])} />

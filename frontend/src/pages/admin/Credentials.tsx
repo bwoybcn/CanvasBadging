@@ -26,7 +26,7 @@ export function Credentials() {
     queryFn: () => apiFetch<CredentialRecord[]>(`/api/v1/admin/credentials${qs ? `?${qs}` : ""}`, token),
   });
   return (
-    <AdminPage title="Issued credentials">
+    <AdminPage title="Issued badges">
       <Requests />
       <Heading level="h2" margin="medium 0 small">
         Records
@@ -46,20 +46,20 @@ export function Credentials() {
             Revoked
           </SimpleSelect.Option>
         </SimpleSelect>
-        <TextInput renderLabel="Learner name contains" value={learner} onChange={(_e, v) => setLearner(v)} width="16rem" />
+        <TextInput renderLabel="Student name contains" value={learner} onChange={(_e, v) => setLearner(v)} width="16rem" />
         <DownloadButton path={`/api/v1/admin/reports/issuance.csv${status ? `?status=${status}` : ""}`} filename="issuance-records.csv">
           Download CSV
         </DownloadButton>
       </Flex>
       {q.isPending && <Loading what="records" />}
       {q.isError && <ErrorAlert error={q.error} />}
-      {q.data && q.data.length === 0 && <Text as="p">No credentials match.</Text>}
+      {q.data && q.data.length === 0 && <Text as="p">No badges match.</Text>}
       {q.data && q.data.length > 0 && (
         <TableScroll>
-        <Table caption="Issued credentials">
+        <Table caption="Issued badges">
           <Table.Head>
             <Table.Row>
-              <Table.ColHeader id="c-learner">Learner</Table.ColHeader>
+              <Table.ColHeader id="c-learner">Student</Table.ColHeader>
               <Table.ColHeader id="c-badge">Badge</Table.ColHeader>
               <Table.ColHeader id="c-course">Course</Table.ColHeader>
               <Table.ColHeader id="c-date">Issued</Table.ColHeader>
@@ -85,7 +85,7 @@ function RecordRow({ r }: { r: CredentialRecord }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("issued_in_error");
   const [text, setText] = useState("");
-  const who = r.learner_name ?? "Erased learner";
+  const who = r.learner_name ?? "Erased student";
   const revoke = useMutation({
     mutationFn: () =>
       apiSend(`/api/v1/credentials/${r.credential_id}/revoke`, token, "POST", { reason_code: code, reason_text: text }),
@@ -123,7 +123,7 @@ function RecordRow({ r }: { r: CredentialRecord }) {
             </SimpleSelect>
             <TextInput maxLength={2000} renderLabel="Explanation (kept in the record, not shown publicly)" value={text} onChange={(_e, v) => setText(v)} />
             <Alert variant="warning" margin="x-small 0">
-              Verifiers will report this credential as revoked, including copies the learner has already downloaded.
+              Anyone who checks this badge will be told it is revoked, including from copies of the credential file the student has already downloaded.
             </Alert>
             <Flex gap="x-small">
               <Button size="small" color="danger" interaction={text.trim().length >= 3 ? "enabled" : "disabled"} onClick={() => revoke.mutate()}>
@@ -165,7 +165,7 @@ function Requests() {
       {q.data.map((r) => (
         <View key={r.id} as="div" borderWidth="small" borderRadius="medium" padding="small" margin="0 0 small" display="block">
           <Text as="p">
-            {r.requested_by ?? "Staff"} asked to revoke <strong>{r.badge_title}</strong> from {r.learner_name ?? "a learner"}
+            {r.requested_by ?? "Staff"} asked to revoke <strong>{r.badge_title}</strong> from {r.learner_name ?? "a student"}
             {r.course_title ? ` (${r.course_title})` : ""}: “{r.reason}”
           </Text>
           {r.can_decide ? (

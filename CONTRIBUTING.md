@@ -33,3 +33,21 @@ your contribution is licensed the same way.
 - Tenant data is always read through `tenant_session(institution_id)`; never take the tenant
   from a request body.
 - Module boundaries are enforced by import-linter (see `backend/pyproject.toml`).
+
+## Words on the screen
+
+Staff and students are not specialists, so every screen, message and user guide uses one small
+vocabulary. Code, the API, the database and the technical documents keep the standard terms.
+
+| Say | Not | Notes |
+|---|---|---|
+| **badge** | micro-credential, credential, achievement | The thing a student earns and holds, and its definition |
+| **student** | learner, recipient, holder | "Holder" is fine on the public pages, where the reader is a third party |
+| **credential file** | credential, JSON | Only the signed file a student downloads, or that someone uploads to check |
+| **award** | issue (as a verb for people) | Staff award a badge; the system issues it |
+
+Names that belong to someone else stay as they are: **Micro-Credentials** is the item in the
+Canvas course menu (set when the tool is registered), "Credential ID" and "Credential URL" are
+LinkedIn's field names, and "Learner Credential Wallet" is a product. The end-to-end pass over
+every screen (`tests/end_to_end/specs/a11y.spec.ts`) fails if "learner" or "micro-credential"
+comes back.

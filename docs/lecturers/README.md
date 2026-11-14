@@ -1,4 +1,4 @@
-# Creating and awarding micro-credentials (lecturer guide)
+# Creating and awarding badges (lecturer guide)
 
 This guide is for lecturers, teaching assistants and course designers. You need no technical
 knowledge. Everything happens inside your Canvas course.
@@ -7,9 +7,9 @@ knowledge. Everything happens inside your Canvas course.
 
 1. In your Canvas course, open **Micro-Credentials** in the course menu. If you cannot see it,
    turn it on under **Settings → Navigation**, or ask your Canvas administrator.
-2. The first time, you may see **Switch on micro-credentials for this course**. Choose it.
+2. The first time, you may see **Switch on badges for this course**. Choose it.
    OpenCredential then reads your students' progress from Canvas straight away, and again every
-   30 minutes. You can switch it off later. Credentials already issued are not affected.
+   30 minutes. You can switch it off later. Badges already issued are not affected.
 3. Your department needs an **issuer** (the body whose name appears on the badge, for example
    "Academic Skills Centre") that has been delegated to your course. If the wizard says there is
    none, ask your department administrator.
@@ -18,7 +18,7 @@ OpenCredential only reads Canvas. It never changes marks, submissions or modules
 
 ## Create a badge
 
-Choose **Badges → Create micro-credential**. The wizard has seven steps. You cannot move on
+Choose **Badges → Create a badge**. The wizard has seven steps. You cannot move on
 from a step until its problems are fixed, and each problem is explained.
 
 Your work is saved as a draft as you go: from step 2 onwards, each time you choose **Next** or
@@ -34,7 +34,7 @@ server still refuses something, the message names the field and says what to cha
 |---|---|---|
 | 1. Course and issuer | The course and the issuer | Only issuers delegated to your course appear |
 | 2. About the badge | Title, short description, full description, category, and what the badge shows: completing, participating or assessed proficiency | A "completion" badge cannot claim competency. Words such as "credit" or "credits" need a reviewer's explicit approval. |
-| 3. Outcomes and criteria | Learning outcomes and the criteria in plain language | Learners and employers read the criteria on the public page |
+| 3. Outcomes and criteria | Learning outcomes and the criteria in plain language | Students and employers read the criteria on the public page |
 | 4. Artwork | Upload a PNG or SVG, or build one from a template by choosing its two colours from a colour swatch, and write its alt text | Unsafe SVG content is removed. Alt text is required. If you were given a brand colour as a code such as #212b58, paste it in the box beside the swatch. |
 | 5. Requirements | What a student must do: complete a module, complete several modules, submit an assignment, reach a minimum score, or have a lecturer confirm. Combine them with **all** or **any**. | Modules and assignments are picked from your Canvas course. A score counts only once the mark is **released** in Canvas. |
 | 6. Awarding | Automatic, or a lecturer confirms each award | Your institution may require confirmation for badges that use marks |
@@ -42,7 +42,7 @@ server still refuses something, the message names the field and says what to cha
 
 ### Preview
 
-On the badge page, **Preview** shows the badge as a credential would look. It is clearly marked
+On the badge page, **Preview** shows the badge as a student would see it once awarded. It is clearly marked
 **PREVIEW: NOT ISSUED AND NOT VERIFIABLE**, and nobody else can see it.
 
 ### Review and publish
@@ -56,17 +56,17 @@ On the badge page, **Preview** shows the badge as a credential would look. It is
 2. The reviewer works through a checklist (clarity, level, evidence, alignment, accessibility,
    consistency, terminology) and **approves** it, or **rejects** it with comments. A rejected
    badge goes back to draft.
-3. Once it is approved, **Publish** it. From then on, students see it in **My badges** with its
+3. Once it is approved, **Publish** it. From then on, students see it in **Badges in my courses** with its
    requirements, and their progress is checked.
 
-A published badge cannot be edited, because credentials must always match what was published.
-To change it, create a **new version**. Credentials already issued keep the version they were
+A published badge cannot be edited, because badges already awarded must always match what was published.
+To change it, create a **new version**. Badges already issued keep the version they were
 issued under.
 
 ### Archive and restore
 
 **Archive** stops a published badge being awarded and takes it out of students' lists of
-badges to earn. Credentials already issued stay valid. Because that affects students, the
+badges to earn. Badges already issued stay valid. Because that affects students, the
 button asks first and says what will happen. To bring the badge back, open it from **Badges**
 and choose **Restore this badge**: it goes live again exactly as it was published, with no new
 review. **Delete draft** also asks first, because a deleted draft cannot be brought back.
@@ -83,7 +83,7 @@ review. **Delete draft** also asks first, because a deleted draft cannot be brou
 | Pending: Canvas data unavailable | Canvas could not be read. Nothing is awarded on missing data. |
 | Pending: needs your confirmation | The badge needs you to confirm a requirement |
 | Awaiting your confirmation | The requirements are met and the badge is lecturer-confirmed |
-| Issued | The student has the credential |
+| Issued | The student has the badge |
 
 The page shows when Canvas was last read successfully. **Refresh from Canvas** asks for a new
 read. To spare Canvas, you can do this once every five minutes; if you try sooner, the page
@@ -121,18 +121,18 @@ You can move between the tabs without losing what you have typed.
 
 ## If something goes wrong
 
-* **A credential was issued in error.** In **Course progress**, choose **Request revocation for <name>** on the issued cell, with a
-  reason. An administrator approves the request. Revocation never deletes the credential, but
+* **A badge was issued in error.** In **Course progress**, choose **Request revocation for <name>** on the issued cell, with a
+  reason. An administrator approves the request. Revocation never deletes the record, but
   every verifier will then show it as revoked, including for copies the student has downloaded.
 * **Canvas was down.** Nothing is awarded on missing data. Once Canvas is back, the next refresh
   catches up.
-* **An award has not turned into a credential.** Administrators see it under Failed issuance and
+* **An award has not turned into a badge.** Administrators see it under Failed issuance and
   can retry it safely; it can never be issued twice.
 
 ## What students see
 
 Students see the badges in your course, what each requires, and their own progress. When they
-earn a credential, they can download it, share a public link (off until they turn it on), and
+earn a badge, they can download its credential file, share a public link (off until they turn it on), and
 add it to LinkedIn. See the [student guide](../students/README.md).
 
 ## Shared courses: badge teams

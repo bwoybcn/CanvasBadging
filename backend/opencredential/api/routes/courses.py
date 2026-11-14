@@ -147,7 +147,7 @@ def request_sync(
         # Inactive courses take no part (spec §4.1): reading Canvas would evaluate and award.
         raise Conflict(
             "COURSE_NOT_ACTIVE",
-            "Micro-credentials are switched off for this course, so it is not read from Canvas.",
+            "Badges are switched off for this course, so it is not read from Canvas.",
         )
     recent = db.scalar(
         select(SyncRun.started_at)

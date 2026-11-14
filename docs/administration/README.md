@@ -13,7 +13,7 @@ Who can do what:
 | Staff roles | Any role, anywhere | Lecturer, course admin, issuer manager, department admin, inside their units, while the policy allows delegation |
 | Issuers | Create at any level; **authorise**; suspend | Create department or programme issuers in their units; delegate them |
 | Templates | Institution-wide or any unit | Their units |
-| Issued credentials, reports, CSV | Whole institution | Courses and issuers in their units |
+| Issued badges, reports, CSV | Whole institution | Courses and issuers in their units |
 | Revocation | Always | When the policy lists department administrators (default) |
 | Audit log, personal data, failed issuance | Yes | No |
 
@@ -45,7 +45,7 @@ The rules for the domain are:
 
 ## 2. Faculties, departments and courses
 
-Build the hierarchy (faculty → department → programme). Each unit has **May issue credentials**
+Build the hierarchy (faculty → department → programme). Each unit has **May issue badges**
 (spec §10.3 "which departments can issue"). A unit can issue only if it and every unit above it
 may. When a unit may not issue, its issuers are not offered to authors, badges in its courses
 cannot be created or published, and issuers in it cannot be authorised. Place each Canvas
@@ -108,7 +108,7 @@ full sync on the next run.
    `did:web:<verification domain>:issuers:<short name>` with a key held by the signer, or, when
    no domain is configured outside production, a development `did:key`.
 3. **Delegate** it to the departments or courses whose staff may award under it.
-4. **Suspend** stops new awards. Credentials already issued stay valid; revoke them separately
+4. **Suspend** stops new awards. Badges already issued stay valid; revoke them separately
    if they must stop verifying. Key rotation and key-compromise response are in
    [../security/key-compromise.md](../security/key-compromise.md).
 
@@ -180,26 +180,26 @@ on the **Waiting to confirm** tab, one at a time.
 The **A list of students** tab handles evidence kept outside Canvas (volunteering hours, workshop
 registers). Staff paste student ID numbers or university emails; OpenCredential shows who
 matches a student in the badge's course, who already has the badge and which entries match no
-student in the course, then makes one manual award per learner with the same
+student in the course, then makes one manual award per student with the same
 justification. Second approval applies as for single awards. The audit log records one
-`award.bulk` event with the counts, never the list itself. Learners must be enrolled in the
+`award.bulk` event with the counts, never the list itself. Students must be enrolled in the
 course first (self-enrolment link or SIS feed), so a list cannot reach anyone outside it. Entries are only matched against the course's
 students, so the preview never reveals who an email or student number belongs to elsewhere. Administrators see
 every award kind in records and reports (`/api/v1/awards?kind=manual`).
 
-## 7. Issued credentials and revocation
+## 7. Issued badges and revocation
 
-**Issued credentials** lists every credential in your scope with its course, issuer, award kind
+**Issued badges** lists every badge issued in your scope with its course, issuer, award kind
 and status, filterable and exportable to CSV (no email addresses). **Revoke** asks for a reason
 code and an explanation; the revocation list is republished at once (or queued if the signer is
-down), so verifiers, including for copies the learner already downloaded, report it as revoked
+down), so verifiers, including for copies of the credential file the student already downloaded, report it as revoked
 (scenario 8). Course staff who are not revokers can **request** revocation; a revoker approves
 (which revokes) or declines it.
 
 ## 8. Reports (§10.5)
 
 Issued, revoked and active totals; issuance by course, by badge and by month; awards waiting for
-confirmation or issuance; credentials not issued and failed jobs. Filter by issue date and
+confirmation or issuance; badges not issued and failed jobs. Filter by issue date and
 download the summary or all records as CSV. CSV cells that start with `=`, `+`, `-` or `@` are
 prefixed with `'` so spreadsheets do not run them as formulas.
 
@@ -208,7 +208,7 @@ prefixed with `'` so spreadsheets do not run them as formulas.
 Every significant action with actor, action, affected resource and time, grouped into
 categories (issuers, definitions, approval, publication, rule changes, manual and automated
 awards, revocations, permission changes, key management, policy, personal data, operations).
-Staff are named; learners appear only as identifiers, and event details show only an
+Staff are named; students appear only as identifiers, and event details show only an
 allow-listed set of fields (ids, codes, counts). Audit events cannot be changed or deleted, except
 by the retention purge for events older than the configured period (minimum one year), which is
 enforced in the database.
@@ -217,7 +217,7 @@ enforced in the database.
 
 See [erasure.md](erasure.md) for how erasure interacts with credentials.
 
-- **Download** everything held about a person as JSON (learners can download their own from
+- **Download** everything held about a person as JSON (students can download their own from
   `GET /api/v1/learners/me/data-export`).
 - **Erase** a person's personal data (type `ERASE` to confirm).
 - **Retention**: Canvas snapshots after a course is archived, eligibility history not used by
@@ -232,12 +232,12 @@ should never be issued, with a reason. Issued awards cannot be cancelled; revoke
 
 ## 12. Courses taking part
 
-With the policy **Courses take part only after a lecturer switches micro-credentials on** (Administration, Policy; on by default), a course launched from
+With the policy **Courses take part only after course staff switch badges on** (Administration, Policy; on by default), a course launched from
 Canvas for the first time takes no part until a lecturer, course admin or administrator chooses
-**Switch on micro-credentials for this course** on the launch page
+**Switch on badges for this course** on the launch page
 (`POST /api/v1/courses/<id>/activate`). Switching on reads Canvas at once and then every 30
-minutes. `POST /api/v1/courses/<id>/deactivate` stops the scheduled reads; badges and issued
-credentials are not touched. Both actions are in the audit log under *Policy and
+minutes. `POST /api/v1/courses/<id>/deactivate` stops the scheduled reads; badges and the
+awards already made are not touched. Both actions are in the audit log under *Policy and
 configuration*. With the policy off, every course joins at its first launch.
 
 ## 13. Operations

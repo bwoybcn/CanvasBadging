@@ -100,7 +100,7 @@ function SharePanel({ d }: { d: Detail }) {
       {d.share.shared && d.share.url ? (
         <>
           <Text as="p">
-            This credential is shared. Anyone with the link can see the page below and check that the credential is genuine.
+            This badge is shared. Anyone with the link can see the page below and check that the badge is genuine.
           </Text>
           <Flex gap="small" wrap="wrap" alignItems="center" margin="0 0 small">
             <Link href={d.share.url} target="_blank">
@@ -111,7 +111,7 @@ function SharePanel({ d }: { d: Detail }) {
         </>
       ) : (
         <Text as="p">
-          This credential is private. Nobody else can see it until you turn on a public link. Search engines are asked not to index
+          This badge is private. Nobody else can see it until you turn on a public link. Search engines are asked not to index
           shared pages.
         </Text>
       )}
@@ -119,7 +119,7 @@ function SharePanel({ d }: { d: Detail }) {
         <legend style={{ fontWeight: 600 }}>What the public page shows</legend>
         <Checkbox label="Show my name on the page" checked={showName} onChange={() => setShowName(!showName)} />
         {d.evidence.length > 0 && (
-          <Checkbox label="Show the evidence in this credential" checked={showEvidence} onChange={() => setShowEvidence(!showEvidence)} />
+          <Checkbox label="Show the evidence in this badge" checked={showEvidence} onChange={() => setShowEvidence(!showEvidence)} />
         )}
       </fieldset>
       <View as="div" background="secondary" padding="small" borderRadius="medium" display="block" margin="0 0 small">
@@ -163,7 +163,7 @@ function SharePanel({ d }: { d: Detail }) {
       </Flex>
       {d.share.shared && (
         <Text as="p" size="small">
-          Stopping sharing only turns the link off. It does not revoke your credential, and copies you have downloaded stay valid.
+          Stopping sharing only turns the link off. It does not revoke your badge, and copies of the credential file you have downloaded stay valid.
         </Text>
       )}
     </View>
@@ -178,7 +178,7 @@ function LinkedInPanel({ li }: { li: LinkedIn }) {
       </Heading>
       {li.needs_share ? (
         <Alert variant="info" margin="small 0">
-          Turn on the public link first. LinkedIn shows your Credential URL so people can check your credential.
+          Turn on the public link first. LinkedIn shows your Credential URL so people can check your badge.
         </Alert>
       ) : (
         <Text as="p">{li.note}</Text>
@@ -216,9 +216,9 @@ export function CredentialDetail() {
   });
   const d = q.data;
   return (
-    <Page title={d?.name ?? "Credential"}>
-      <AppLink to="/me/credentials">Back to my credentials</AppLink>
-      {q.isPending && <Loading what="the credential" />}
+    <Page title={d?.name ?? "Badge"}>
+      <AppLink to="/me/credentials">Back to my badges</AppLink>
+      {q.isPending && <Loading what="the badge" />}
       {q.isError && <ErrorAlert error={q.error} />}
       {d && (
         <>
@@ -227,7 +227,7 @@ export function CredentialDetail() {
               {d.image.data_url && <Img src={d.image.data_url} alt={d.image.alt_text} width="8rem" height="8rem" constrain="contain" />}
               <Flex.Item shouldGrow shouldShrink>
                 <Heading level="h2" id="about-h">
-                  About this credential
+                  About this badge
                 </Heading>
                 <Pill color={CREDENTIAL_STATE[d.status].color}>{CREDENTIAL_STATE[d.status].label}</Pill>
                 <Text as="p">{d.description}</Text>
@@ -266,7 +266,7 @@ export function CredentialDetail() {
             )}
             {d.evidence.length > 0 && (
               <>
-                <Heading level="h3">Evidence in this credential</Heading>
+                <Heading level="h3">Evidence in this badge</Heading>
                 <List>
                   {d.evidence.map((e) => (
                     <List.Item key={e.narrative}>{e.narrative}</List.Item>
@@ -280,8 +280,8 @@ export function CredentialDetail() {
               Download and keep
             </Heading>
             <Text as="p">
-              The file is the signed Open Badges 3.0 credential. Anyone can check it without Canvas, and it keeps working after you
-              leave. You can also import it into a digital wallet. <AppLink to="/me/keeping">How to keep and use your credentials</AppLink>
+              The credential file is your badge in signed Open Badges 3.0 form. Anyone can check it without Canvas, and it keeps working after you
+              leave. You can also import it into a digital wallet. <AppLink to="/me/keeping">How to keep and use your badges</AppLink>
             </Text>
             <Button
               color="primary"

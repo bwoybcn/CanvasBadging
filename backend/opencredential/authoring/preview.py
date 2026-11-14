@@ -70,8 +70,7 @@ def build(
     host = f"https://{settings.verification_host}"
     example_date = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     evidence = [
-        "The public credential does not include your marks, submissions or other private "
-        "Canvas data.",
+        "The public badge does not include your marks, submissions or other private Canvas data.",
     ]
     if version.evidence_description:
         evidence.insert(0, version.evidence_description)
@@ -148,7 +147,7 @@ def build(
         },
         "example_verification_page": {
             "result": "preview_only",
-            "headline": "This is a preview. It is not a credential and cannot be verified.",
+            "headline": "This is a preview. It is not a real badge and cannot be verified.",
             "explains": [
                 "When a real badge is shared, this page checks the issuer's digital signature, "
                 "whether the badge was revoked and whether it has expired.",

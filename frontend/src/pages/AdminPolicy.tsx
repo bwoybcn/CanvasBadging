@@ -140,7 +140,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           onChange={(v) => set({ approver_roles: v })}
         />
         <RoleChecks
-          legend="Who can revoke credentials"
+          legend="Who can revoke badges"
           options={REVOKERS}
           value={p.revokers}
           onChange={(v) => set({ revokers: v })}
@@ -151,7 +151,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           onChange={(e) => set({ dept_admins_may_delegate: e.target.checked })}
         />
         <Checkbox
-          label="Courses take part only after course staff switch micro-credentials on"
+          label="Courses take part only after course staff switch badges on"
           checked={p.course_activation_required}
           onChange={(e) => set({ course_activation_required: e.target.checked })}
         />

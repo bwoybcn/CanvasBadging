@@ -58,7 +58,7 @@ test.beforeAll(async ({ request }) => {
   screens = [
     { who: student, path: "/app/", ready: "Welcome" },
     { who: student, path: "/app/me/progress", ready: "" },
-    { who: student, path: "/app/me/credentials", ready: "credential" },
+    { who: student, path: "/app/me/credentials", ready: "badge" },
     { who: student, path: `/app/me/credentials/${creds[0].id}`, ready: creds[0].name },
     { who: student, path: "/app/me/keeping", ready: "" },
     { who: STAFF.lecturer, path: "/app/", ready: "Welcome" },
@@ -86,9 +86,15 @@ test.beforeAll(async ({ request }) => {
   ];
 });
 
+/** Words the screens no longer use. "Micro-Credentials" with a capital C is the Canvas menu item. */
+const OLD_WORDS = /\b[Ll]earners?\b|\b[Mm]icro-credentials?\b/;
+/** Other people's product names that happen to contain one. */
+const KEPT_NAMES = /Learner Credential Wallet/g;
+
 test("every signed-in screen passes axe (WCAG 2.2 A/AA rules)", async ({ page }, info) => {
   let current = "";
   const failures: string[] = [];
+  const wording: string[] = [];
   for (const s of screens) {
     if (s.who !== current) {
       await signIn(page, s.who);
@@ -99,7 +105,11 @@ test("every signed-in screen passes axe (WCAG 2.2 A/AA rules)", async ({ page },
     if (s.ready) await expect(page.getByText(s.ready, { exact: false }).first()).toBeVisible();
     const v = await audit(page, `${s.who} ${s.path}`);
     if (v.length) failures.push(`${s.path} (${s.who}): ${v.map((x) => x.id).join(", ")}`);
+    // One vocabulary: staff and students read "student" and "badge" on every screen.
+    const words = (await page.locator("body").innerText()).replaceAll(KEPT_NAMES, "").match(OLD_WORDS);
+    if (words) wording.push(`${s.path} (${s.who}): "${words[0]}"`);
   }
+  expect(wording, `screens still say "learner" or "micro-credential":\n${wording.join("\n")}`).toEqual([]);
   // public pages: no account at all, including a page a student chose to share
   const stu = await Api.as(page.request, screens[0].who);
   const creds = await stu.get<Credential[]>("/api/v1/learners/me/credentials");

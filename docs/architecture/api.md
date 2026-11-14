@@ -74,7 +74,7 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 | GET | `/verify/{share_id}` | HTML page (server-rendered, OG tags, `noindex` unless the student opted in to indexing, which is a LATER option). Shows result, explanation of what verification means, permitted identity and evidence |
 | GET | `/verify/{share_id}/credential.json` | the signed credential, so wallets can "add from URL" (CORS `*`) |
 | GET | `/verify/{share_id}/verification.json` | machine-readable verification result for a share |
-| GET | `/verify` | "Check a credential" page: upload a file, posts to `/api/v1/verify` |
+| GET | `/verify` | "Check a credential file" page: upload a file, posts to `/api/v1/verify` |
 | GET | `/robots.txt` | `Disallow: /` (every response also carries `X-Robots-Tag: noindex`) |
 | POST | `/api/v1/verify` | body: credential JSON (≤256 KB) → `{result: verified|revoked|expired|invalid|unable_to_verify, checks:[{name, ok, detail}], issuer:{id,name}, achievement:{name}}`. Rate-limited |
 | GET | `/issuers/{slug}/did.json` | DID document (did:web resolution path) |

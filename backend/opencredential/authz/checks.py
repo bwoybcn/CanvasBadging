@@ -48,7 +48,7 @@ def may_revoke(db: Session, user_id: uuid.UUID, cred: Credential) -> bool:
 
 def require_revoker(db: Session, user_id: uuid.UUID, cred: Credential) -> None:
     if not may_revoke(db, user_id, cred):
-        raise ApiError(403, "FORBIDDEN", "You are not allowed to revoke this credential")
+        raise ApiError(403, "FORBIDDEN", "You are not allowed to revoke this badge")
 
 
 def require_key_manager(db: Session, user_id: uuid.UUID) -> None:

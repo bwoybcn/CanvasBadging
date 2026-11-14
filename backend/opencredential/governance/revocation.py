@@ -50,7 +50,7 @@ class RevokeResult:
 def issued_credential(db: Session, credential_id: uuid.UUID) -> Credential:
     cred = db.get(Credential, credential_id)
     if cred is None or cred.status != "issued":
-        raise NotFound("NOT_FOUND", "No such credential")
+        raise NotFound("NOT_FOUND", "No such badge")
     return cred
 
 
@@ -65,7 +65,7 @@ def can_revoke(db: Session, actor: authz.Actor, cred: Credential) -> bool:
 
 def require_revoke(db: Session, actor: authz.Actor, cred: Credential) -> None:
     if not can_revoke(db, actor, cred):
-        raise Forbidden("FORBIDDEN", "You are not allowed to revoke this credential.")
+        raise Forbidden("FORBIDDEN", "You are not allowed to revoke this badge.")
 
 
 def can_request(db: Session, actor: authz.Actor, cred: Credential) -> bool:
@@ -87,7 +87,7 @@ def _validate(reason_code: str, reason_text: str) -> str:
         raise Invalid("REASON_INVALID", f"Choose one of: {', '.join(REASON_CODES)}.")
     text = (reason_text or "").strip()
     if len(text) < 3:
-        raise Invalid("REASON_REQUIRED", "Explain why the credential is being revoked.")
+        raise Invalid("REASON_REQUIRED", "Explain why the badge is being revoked.")
     return text
 
 
@@ -161,13 +161,13 @@ def request_revocation(
 ) -> RevocationRequest:
     cred = issued_credential(db, credential_id)
     if not can_request(db, actor, cred):
-        raise NotFound("NOT_FOUND", "No such credential")  # no disclosure to outsiders
+        raise NotFound("NOT_FOUND", "No such badge")  # no disclosure to outsiders
     reason = (reason or "").strip()
     if len(reason) < 5:
-        raise Invalid("REASON_REQUIRED", "Explain why this credential should be revoked.")
+        raise Invalid("REASON_REQUIRED", "Explain why this badge should be revoked.")
     status = db.scalar(select(CredentialStatus).where(CredentialStatus.credential_id == cred.id))
     if status is not None and status.state == "revoked":
-        raise Conflict("ALREADY_REVOKED", "This credential is already revoked.")
+        raise Conflict("ALREADY_REVOKED", "This badge is already revoked.")
     existing = db.scalar(
         select(RevocationRequest).where(
             RevocationRequest.credential_id == cred.id, RevocationRequest.status == "open"

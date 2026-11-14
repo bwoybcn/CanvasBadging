@@ -181,7 +181,7 @@ def cancel(
     d = _decision(db, decision_id)
     if d.status not in ("ready", "awaiting_confirmation") or _issued(db, d):
         raise Conflict(
-            "INVALID_STATE", "Issued awards cannot be cancelled. Revoke the credential instead."
+            "INVALID_STATE", "Issued awards cannot be cancelled. Revoke the badge instead."
         )
     d.status = "rejected"
     d.rejection_reason = reason

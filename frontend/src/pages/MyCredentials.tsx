@@ -64,20 +64,20 @@ export function MyCredentials() {
   });
   const groups = new Map<string, CredentialSummary[]>();
   for (const c of q.data ?? []) {
-    const key = c.course?.title ?? "Other credentials";
+    const key = c.course?.title ?? "Other badges";
     groups.set(key, [...(groups.get(key) ?? []), c]);
   }
   return (
-    <Page title="My credentials">
+    <Page title="My badges">
       <Text as="p">
-        Every credential you have earned, from all of your courses. Credentials are private until you choose to share
-        one. You can download any of them and keep it, even after you leave. <AppLink to="/me/keeping">How to keep your credentials</AppLink>
+        Every badge you have earned, from all of your courses. Badges are private until you choose to share
+        one. You can download any of them and keep it, even after you leave. <AppLink to="/me/keeping">How to keep your badges</AppLink>
       </Text>
-      {q.isPending && <Loading what="your credentials" />}
+      {q.isPending && <Loading what="your badges" />}
       {q.isError && <ErrorAlert error={q.error} />}
       {q.data && q.data.length === 0 && (
         <Text as="p">
-          You have not earned any credentials yet. <AppLink to="/me/progress">See the badges available in your courses</AppLink>.
+          You have not earned any badges yet. <AppLink to="/me/progress">See the badges available in your courses</AppLink>.
         </Text>
       )}
       {[...groups.entries()].map(([course, items]) => (

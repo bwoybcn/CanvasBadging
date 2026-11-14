@@ -129,10 +129,10 @@ def _page(
 
 def _not_shared() -> HTMLResponse:
     return _page(
-        "Credential link not active",
+        "Badge link not active",
         '<div class="card"><h1>This link is not active</h1>'
-        "<p>The credential holder has not shared a credential at this address, or has stopped "
-        "sharing it. Stopping sharing does not affect whether the credential itself is valid.</p>"
+        "<p>The holder has not shared a badge at this address, or has stopped "
+        "sharing it. Stopping sharing does not affect whether the badge itself is valid.</p>"
         '<p>If you have the credential file, you can <a href="/verify">check it here</a>.</p>'
         "</div>",
         status=404,
@@ -193,7 +193,7 @@ def _og(view: dict[str, Any], url: str) -> str:
     """Link-preview tags: badge and issuer only. No learner information, ever."""
     title = f"{view['credential_name']} · {view['issuer']['institution']}"
     desc = (
-        f"A digital credential issued by {view['issuer']['name']}. "
+        f"A digital badge issued by {view['issuer']['name']}. "
         "Open the link to check that it is genuine."
     )
     tags = {
@@ -296,7 +296,7 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
         + evidence
         + '<section class="card"><h2>What verification means</h2>'
         f"<p>{escape(WHAT_IT_MEANS)}</p>"
-        "<p>You can check this credential with any Open Badges 3.0 verifier: download "
+        "<p>You can check this badge with any Open Badges 3.0 verifier: download "
         f'<a href="/verify/{share_id}/credential.json">the signed credential file</a> or use '
         f'<a href="/verify/{share_id}/verification.json">the machine-readable result</a>.</p>'
         f'<p class="muted">Page address: <code>{escape(url)}</code></p></section>'
@@ -356,14 +356,14 @@ async def share_verification(share_id: str, settings: SettingsDep, signer: Signe
 
 
 CHECK_PAGE = """
-<div class="card"><h1>Check a credential</h1>
+<div class="card"><h1>Check a credential file</h1>
 <p>Choose an Open Badges 3.0 credential file (<code>.json</code>) to check its signature, issuer
 and status. You do not need an account. The file is sent to this service only to run the checks
 and is not stored.</p>
 <form id="check-form" novalidate>
 <p><label for="file">Credential file</label><br>
 <input id="file" name="file" type="file" accept=".json,application/json,application/ld+json"></p>
-<p><button type="submit">Check credential</button></p></form>
+<p><button type="submit">Check the file</button></p></form>
 <div id="out" role="status" aria-live="polite"></div></div>
 <section class="card"><h2>What verification means</h2><p>__MEANS__</p></section>
 """
@@ -374,7 +374,7 @@ CHECK_JS = (Path(__file__).parent / "static" / "check.js").read_text(encoding="u
 @router.get("/verify", response_class=HTMLResponse, summary="Check a credential file")
 def check_page() -> HTMLResponse:
     return _page(
-        "Check a credential",
+        "Check a credential file",
         CHECK_PAGE.replace("__MEANS__", escape(WHAT_IT_MEANS)),
         script="/verify-assets/check.js",
     )

@@ -73,7 +73,7 @@ function OrgUnits() {
           <Table.Row>
             <Table.ColHeader id="u-name">Name</Table.ColHeader>
             <Table.ColHeader id="u-parent">Part of</Table.ColHeader>
-            <Table.ColHeader id="u-issue">May issue credentials</Table.ColHeader>
+            <Table.ColHeader id="u-issue">May issue badges</Table.ColHeader>
           </Table.Row>
         </Table.Head>
         <Table.Body>
@@ -85,7 +85,7 @@ function OrgUnits() {
               <Table.Cell>{name(u.parent_id)}</Table.Cell>
               <Table.Cell>
                 <Checkbox
-                  label={`${u.name} may issue credentials`}
+                  label={`${u.name} may issue badges`}
                   checked={u.may_issue}
                   disabled={!f.isInstAdmin}
                   onChange={(e) => patch.mutate({ id: u.id, body: { may_issue: e.target.checked } })}

@@ -1,21 +1,21 @@
-# Keeping and sharing your credentials (student guide)
+# Keeping and sharing your badges (student guide)
 
-This is the long version of the in-app page **My credentials → How to keep your credentials**.
+This is the long version of the in-app page **My badges → How to keep your badges**.
 
 ## What you get
 
-Each credential you earn is a signed **Open Badges 3.0** file. The university's issuer signs it
-with its key, so anyone can check that it is genuine and unchanged, and whether the university
+Each badge you earn comes with a **credential file**: the badge in signed **Open Badges 3.0**
+form. The university's issuer signs it with its key, so anyone can check that it is genuine and unchanged, and whether the university
 has revoked it, without logging in to Canvas or to this service.
 
-In **My credentials** you can, for each credential:
+In **My badges** you can, for each badge:
 
 | Action | What it does |
 |---|---|
 | **Download** | Saves the signed credential file (`.json`). It is yours to keep. |
-| **Turn on public link** | Creates a page anyone with the link can open to check the credential. Off until you turn it on. |
+| **Turn on public link** | Creates a page anyone with the link can open to check the badge. Off until you turn it on. |
 | **Show my name / Show evidence** | Choose what the public page shows. The preview shows exactly what will be visible before you turn the link on. |
-| **Stop sharing** | Turns the link off straight away. Your credential is **not** revoked, and files you downloaded keep verifying. Turning sharing on again creates a new link. |
+| **Stop sharing** | Turns the link off straight away. Your badge is **not** revoked, and credential files you downloaded keep verifying. Turning sharing on again creates a new link. |
 | **Add to LinkedIn** | Copyable values for LinkedIn's "Add license or certification" form, and a button that opens that form pre-filled. |
 
 ## Privacy
@@ -32,7 +32,7 @@ In **My credentials** you can, for each credential:
   salted fingerprint of your university email address. (An institution can change this policy;
   if it does, the sharing preview tells you.)
 
-## Adding a credential to LinkedIn
+## Adding a badge to LinkedIn
 
 1. Turn on the public link (LinkedIn shows it as the **Credential URL**, so people can check it).
 2. Select **Open LinkedIn's Add certification form**. LinkedIn opens in a new tab; you sign in to
@@ -49,9 +49,9 @@ See [wallets.md](wallets.md) for tested import routes and known limits.
 
 ## Before you leave the university
 
-Your Canvas account closes when you leave. Your credentials do not depend on it.
+Your Canvas account closes when you leave. Your badges do not depend on it.
 
-1. Download every credential from **My credentials** and keep the files somewhere personal
+1. Download every badge from **My badges** and keep the credential files somewhere personal
    (cloud storage, a personal email to yourself, a wallet app).
 2. Keep any public link you have used on a CV or LinkedIn turned on. Links keep working after
    your Canvas account closes, unless you or the university turn them off.

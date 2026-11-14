@@ -59,7 +59,7 @@ function BadgeCard({ b }: { b: LearnerBadge }) {
           <Text as="p">{b.short_description}</Text>
           {b.credential_id && (
             <Text as="p">
-              <AppLink to={`/me/credentials/${b.credential_id}`}>View, download or share this credential</AppLink>
+              <AppLink to={`/me/credentials/${b.credential_id}`}>View, download or share this badge</AppLink>
             </Text>
           )}
           <ProgressBar
@@ -104,12 +104,12 @@ export function MyProgress() {
     queryFn: () => apiFetch<LearnerBadge[]>("/api/v1/learners/me/achievements", token),
   });
   return (
-    <Page title="My badges">
+    <Page title="Badges in my courses">
       <Alert variant="info" margin="0 0 medium">
         Progress comes from Canvas and may be up to an hour old. A requirement only counts as confirmed once
         Canvas confirms it; unreleased marks show as pending.
       </Alert>
-      {q.isPending && <Loading what="your badges" />}
+      {q.isPending && <Loading what="the badges in your courses" />}
       {q.isError && <ErrorAlert error={q.error} />}
       {q.data && q.data.length === 0 && <Text as="p">There are no badges available in your courses yet.</Text>}
       {q.data?.map((b) => <BadgeCard key={b.version_id} b={b} />)}

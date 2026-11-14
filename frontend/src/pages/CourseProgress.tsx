@@ -133,13 +133,13 @@ function RevocationRequestModal({ credentialId, learner, badge, onClose }: { cre
         </Heading>
         {send.isSuccess ? (
           <Alert variant="success">
-            Request sent. An administrator will review it. The credential stays valid until they approve.
+            Request sent. An administrator will review it. The badge stays valid until they approve.
           </Alert>
         ) : (
           <>
             <Text as="p">
-              Revocation cannot be undone. Verifiers will show the credential as revoked, including copies the learner has
-              already downloaded. The credential itself is never deleted.
+              Revocation cannot be undone. Anyone who checks the badge will see it as revoked, including from copies of the credential file the student has
+              already downloaded. The record itself is never deleted.
             </Text>
             <LimitedTextArea maxLength={2000}
               label="Why should it be revoked? (at least 5 characters)"
@@ -181,21 +181,21 @@ function IssuedInCourse({ courseId, title }: { courseId: string; title: string }
     <View as="section" aria-labelledby="issued-h" display="block" margin="large 0 0">
       <Flex justifyItems="space-between" alignItems="center" wrap="wrap">
         <Heading level="h2" id="issued-h">
-          Credentials issued in this course
+          Badges issued in this course
         </Heading>
         <DownloadButton path={`/api/v1/courses/${courseId}/credentials.csv`} filename="course-credentials.csv">
           Download as CSV
         </DownloadButton>
       </Flex>
-      {q.isPending && <Loading what="issued credentials" />}
+      {q.isPending && <Loading what="issued badges" />}
       {q.isError && <ErrorAlert error={q.error} />}
-      {q.data && q.data.length === 0 && <Text as="p">No credentials have been issued in this course yet.</Text>}
+      {q.data && q.data.length === 0 && <Text as="p">No badges have been issued in this course yet.</Text>}
       {q.data && q.data.length > 0 && (
         <TableScroll>
-          <Table caption={`Credentials issued in ${title}`} layout="auto">
+          <Table caption={`Badges issued in ${title}`} layout="auto">
             <Table.Head>
               <Table.Row>
-                <Table.ColHeader id="i-learner">Learner</Table.ColHeader>
+                <Table.ColHeader id="i-learner">Student</Table.ColHeader>
                 <Table.ColHeader id="i-badge">Badge</Table.ColHeader>
                 <Table.ColHeader id="i-kind">How awarded</Table.ColHeader>
                 <Table.ColHeader id="i-date">Issued</Table.ColHeader>
@@ -205,7 +205,7 @@ function IssuedInCourse({ courseId, title }: { courseId: string; title: string }
             <Table.Body>
               {q.data.map((r) => (
                 <Table.Row key={r.credential_id}>
-                  <Table.RowHeader>{r.learner_name ?? "Erased learner"}</Table.RowHeader>
+                  <Table.RowHeader>{r.learner_name ?? "Erased student"}</Table.RowHeader>
                   <Table.Cell>
                     {r.badge_title} (version {r.version_no})
                   </Table.Cell>
@@ -264,7 +264,7 @@ export function CourseProgress() {
         )}
         {last && last.failed_learners > 0 && (
           <Alert variant="warning" margin="small 0">
-            Data for {last.failed_learners} learner(s) could not be read in the last refresh.
+            Data for {last.failed_learners} student(s) could not be read in the last refresh.
           </Alert>
         )}
         <Button onClick={() => refresh.mutate()} interaction={refresh.isPending ? "disabled" : "enabled"}>
@@ -293,12 +293,12 @@ export function CourseProgress() {
             </Alert>
           )}
           <TableScroll>
-          <Table caption={`Learner progress in ${p.course.title}`} layout="auto">
+          <Table caption={`Student progress in ${p.course.title}`} layout="auto">
             <Table.Head>
               <Table.Row>
                 {[
                   <Table.ColHeader key="learner" id="learner">
-                    Learner
+                    Student
                   </Table.ColHeader>,
                   ...p.badges.map((b) => (
                     <Table.ColHeader key={b.version_id} id={b.version_id}>
@@ -312,7 +312,7 @@ export function CourseProgress() {
               {p.learners.map((l) => (
                 <Table.Row key={l.user_id}>
                   {[
-                    <Table.RowHeader key="name">{l.name ?? "Learner"}</Table.RowHeader>,
+                    <Table.RowHeader key="name">{l.name ?? "Student"}</Table.RowHeader>,
                     ...l.cells.map((c, i) => (
                     <Table.Cell key={c.version_id}>
                       <Text>{cellText(c.outcome, c.decision_status, c.codes)}</Text>
@@ -330,11 +330,11 @@ export function CourseProgress() {
                               definitionId: p.badges[i].definition_id,
                               versionId: c.version_id,
                               userId: l.user_id,
-                              learner: l.name ?? "learner",
+                              learner: l.name ?? "this student",
                             })
                           }
                         >
-                          Confirm requirement for {l.name ?? "learner"}
+                          Confirm requirement for {l.name ?? "this student"}
                         </Button>
                       )}
                       {c.decision_status === "issued" && c.credential_id && (
@@ -342,10 +342,10 @@ export function CourseProgress() {
                           size="small"
                           margin="xx-small 0 0"
                           onClick={() =>
-                            setRevoke({ credentialId: c.credential_id!, learner: l.name ?? "learner", badge: p.badges[i].title })
+                            setRevoke({ credentialId: c.credential_id!, learner: l.name ?? "this student", badge: p.badges[i].title })
                           }
                         >
-                          Request revocation for {l.name ?? "learner"}
+                          Request revocation for {l.name ?? "this student"}
                         </Button>
                       )}
                     </Table.Cell>

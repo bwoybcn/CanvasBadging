@@ -74,7 +74,7 @@ def owned_credential(db: Session, credential_id: uuid.UUID, user_id: uuid.UUID) 
     """The caller's own issued credential. Anything else is reported as not found (spec E10)."""
     cred = db.get(Credential, credential_id)
     if cred is None or cred.user_id != user_id or cred.status != "issued":
-        raise SharingError("NOT_FOUND", "No such credential")
+        raise SharingError("NOT_FOUND", "No such badge")
     return cred
 
 
@@ -88,7 +88,7 @@ def share(
 ) -> ShareGrant:
     """Turn on (or update) the public page. Re-sharing keeps the same link while it is active."""
     if cred.signed_json is None:
-        raise SharingError("NOT_ISSUED", "This credential has not been issued yet")
+        raise SharingError("NOT_ISSUED", "This badge has not been issued yet")
     grant = active_grant(db, cred.id)
     action = "credential.share_updated"
     if grant is None:
@@ -204,7 +204,7 @@ def public_view(
         "image": {
             "url": image.get("id") if isinstance(image, dict) else None,
             "alt": (image.get("caption") if isinstance(image, dict) else None)
-            or f"Badge image for {achievement.get('name', 'this credential')}",
+            or f"Badge image for {achievement.get('name', 'this badge')}",
         },
         "issued_on": vc.get("validFrom"),
         "valid_until": vc.get("validUntil"),

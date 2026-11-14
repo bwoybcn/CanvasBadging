@@ -47,10 +47,10 @@ router = APIRouter(prefix="/api/v1", tags=["credentials"])
 def export(credential_id: uuid.UUID, claims: ClaimsDep, db: TenantDb) -> Response:
     cred = db.get(Credential, credential_id)
     if cred is None or cred.status != "issued" or cred.signed_json is None:
-        raise ApiError(404, "NOT_FOUND", "No such credential")
+        raise ApiError(404, "NOT_FOUND", "No such badge")
     if cred.user_id != claims.user_id and not may_revoke(db, claims.user_id, cred):
         # Scenario 10: someone else's credential looks exactly like a missing one.
-        raise ApiError(404, "NOT_FOUND", "No such credential")
+        raise ApiError(404, "NOT_FOUND", "No such badge")
     version = db.get(AchievementVersion, cred.version_id)
     stem = "".join(ch if ch.isalnum() else "-" for ch in (version.title if version else "badge"))
     date = cred.issued_at.date().isoformat() if cred.issued_at else "credential"

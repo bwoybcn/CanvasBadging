@@ -588,7 +588,7 @@ def report_summary_csv(
         },
         {
             "section": "failed",
-            "name": "Credentials not issued",
+            "name": "Badges not issued",
             "issued": s["failed_issuance"]["credentials_not_issued"],
         },
         {"section": "failed", "name": "Failed jobs", "issued": s["failed_issuance"]["failed_jobs"]},

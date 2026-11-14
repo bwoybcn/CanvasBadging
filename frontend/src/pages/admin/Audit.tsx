@@ -37,7 +37,7 @@ export function Audit() {
   return (
     <AdminPage title="Audit log" instOnly>
       <Text as="p">
-        Every significant action is recorded with who did it and when. Learners appear only as identifiers; use the
+        Every significant action is recorded with who did it and when. Students appear only as identifiers; use the
         personal data page to answer a request about a specific person.
       </Text>
       <Flex gap="small" alignItems="end" wrap="wrap" margin="0 0 small">

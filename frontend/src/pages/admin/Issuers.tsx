@@ -37,7 +37,7 @@ export function Issuers() {
   return (
     <AdminPage title="Issuers">
       <Text as="p">
-        An issuer is the body named on a credential. Creating one does not make it an awarding body: an institution
+        An issuer is the body named on a badge. Creating one does not make it an awarding body: an institution
         administrator must authorise it and record the basis of its authority before anyone can award under it.
       </Text>
       {q.isError && <ErrorAlert error={q.error} />}
@@ -85,7 +85,7 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
       </Text>
       {!issuer.may_issue && (
         <Alert variant="warning" margin="x-small 0">
-          This issuer's department is not allowed to issue credentials.
+          This issuer's department is not allowed to issue badges.
         </Alert>
       )}
       {issuer.authority_basis && (
@@ -200,7 +200,7 @@ function CreateIssuer() {
       <Heading level="h2" margin="0 0 small">
         New issuer
       </Heading>
-      <TextInput maxLength={200} renderLabel="Name as it appears on credentials" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} />
+      <TextInput maxLength={200} renderLabel="Name as it appears on badges" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} />
       <TextInput
         maxLength={63}
         renderLabel="Short name (lowercase, used in web addresses)"

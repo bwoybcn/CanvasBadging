@@ -39,14 +39,14 @@ Sign in from the development sign-in page. Each step names the user to choose.
 
 | # | As | Do | You should see |
 |---|---|---|---|
-| 1 | Lee Lecturer | **Badges → Create micro-credential**. Complete the seven steps (the module picker lists the fake Canvas modules). **Save draft**, open **Preview**, then **Submit for review**. | A preview marked "not issued and not verifiable" |
+| 1 | Lee Lecturer | **Badges → Create a badge**. Complete the seven steps (the module picker lists the fake Canvas modules). **Save draft**, open **Preview**, then **Submit for review**. | A preview marked "not issued and not verifiable" |
 | 2 | Riley Reviewer | **Review queue**, open the badge, tick every checklist point, **Approve** | The badge moves to Approved |
 | 3 | Lee Lecturer | Open the badge, **Publish**. Then open **Course progress**. | Every student against every badge, with "Pending: mark not released" where marks are hidden |
 | 4 | Lee Lecturer | **Award badges**: confirm one award on **Waiting to confirm**. Then, on **One student**, make a manual award with a justification. | The awards are issued within seconds (the worker signs them) |
-| 5 | A student with an award (for example Chloe Synthetic) | **My credentials** | The credential, Valid and Private |
+| 5 | A student with an award (for example Chloe Synthetic) | **My badges** | The badge, Valid and Private |
 | 6 | Same student | Open it, **Download**; turn on the public link (check the preview first); open **Add to LinkedIn** | A signed `.json` file, a public link, prefilled LinkedIn values |
 | 7 | Nobody (a private window) | Open the public link, or go to <http://localhost:8000/verify> and upload the file | "Verified", with the issuer, criteria and what verification means |
-| 8 | Avery Admin | **Administration → Issued credentials**, revoke that credential with a reason | Uploading the same downloaded file on `/verify` now says "Revoked" |
+| 8 | Avery Admin | **Administration → Issued badges**, revoke that badge with a reason | Uploading the same downloaded file on `/verify` now says "Revoked" |
 | 9 | Avery Admin | **Reports**, **Audit log**, **Policy**, **Issuers** | Everything above, recorded and attributed |
 
 To issue credentials to every qualifying demo student at once, without clicking:

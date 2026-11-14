@@ -292,13 +292,13 @@ describe("administration", () => {
     });
     renderAt("/admin/credentials");
     await userEvent.click(await screen.findByRole("button", { name: "Revoke Seminar Participation from Sam Student" }));
-    expect(screen.getByText(/including copies the learner has already downloaded/)).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText(/Explanation/), "Awarded to the wrong learner");
+    expect(screen.getByText(/copies of the credential file the student has already downloaded/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Explanation/), "Awarded to the wrong student");
     await userEvent.click(screen.getByRole("button", { name: "Confirm revocation" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST")).toBe(true));
     expect(calls.find((c) => c.method === "POST")!.body).toEqual({
       reason_code: "issued_in_error",
-      reason_text: "Awarded to the wrong learner",
+      reason_text: "Awarded to the wrong student",
     });
   });
 
@@ -318,12 +318,12 @@ describe("administration", () => {
     await userEvent.type(await screen.findByLabelText("Find a person by name"), "Sa");
     await userEvent.click(screen.getByLabelText("Person"));
     await userEvent.click(await screen.findByText("Sam Student"));
-    expect(await screen.findByText(/does not revoke credentials already issued/)).toBeInTheDocument();
+    expect(await screen.findByText(/does not revoke badges already issued/)).toBeInTheDocument();
     const erase = screen.getByRole("button", { name: "Erase this person's personal data" });
     expect(erase).toBeDisabled();
     await userEvent.type(screen.getByLabelText("Type ERASE to confirm"), "ERASE");
     await userEvent.click(erase);
-    expect(await screen.findByText(/1 issued credentials kept; 1 public share links taken down/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 issued badges kept; 1 public share links taken down/)).toBeInTheDocument();
     expect(calls.find((c) => c.method === "POST")!.body).toEqual({ confirm: "ERASE" });
   });
 });

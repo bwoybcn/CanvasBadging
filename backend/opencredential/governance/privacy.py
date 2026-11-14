@@ -43,7 +43,7 @@ from opencredential.db.models import (
 )
 from opencredential.errors import Conflict, Forbidden, Invalid, NotFound
 
-ERASED_REASON = "Not issued: the learner's personal data was erased."
+ERASED_REASON = "Not issued: the student's personal data was erased."
 
 
 def _n(result: Any) -> int:

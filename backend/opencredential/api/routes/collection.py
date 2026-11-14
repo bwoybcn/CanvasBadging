@@ -238,8 +238,8 @@ def _preview(db: Session, cred: Credential, body: ShareIn, settings: Settings) -
             "it and pass it on."
         ),
         withdrawing=(
-            "You can stop sharing at any time. The link then stops working. Your credential stays "
-            "valid, and copies you have downloaded keep verifying."
+            "You can stop sharing at any time. The link then stops working. Your badge stays "
+            "valid, and copies of the credential file you have downloaded keep verifying."
         ),
     )
 

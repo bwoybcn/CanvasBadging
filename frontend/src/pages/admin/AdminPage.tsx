@@ -16,7 +16,7 @@ export const SECTIONS: { to: string; label: string; instOnly: boolean }[] = [
   { to: "/admin/issuers", label: "Issuers", instOnly: false },
   { to: "/admin/people", label: "Departments and roles", instOnly: false },
   { to: "/admin/templates", label: "Badge templates", instOnly: false },
-  { to: "/admin/credentials", label: "Issued credentials and revocation", instOnly: false },
+  { to: "/admin/credentials", label: "Issued badges and revocation", instOnly: false },
   { to: "/admin/reports", label: "Reports", instOnly: false },
   { to: "/admin/audit", label: "Audit log", instOnly: true },
   { to: "/admin/privacy", label: "Personal data and retention", instOnly: true },
