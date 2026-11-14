@@ -11,7 +11,7 @@ from __future__ import annotations
 import csv
 import io
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
@@ -59,16 +59,26 @@ def _scope_filter(db: Session, actor: authz.Actor) -> Any:
 
 
 def _base(db: Session, actor: authz.Actor, course_staff_of: uuid.UUID | None = None) -> Any:
+    """One row per issued credential in scope, as plain columns (no ORM objects), so that large
+    exports and reports stay cheap."""
     q = (
         select(
-            Credential,
-            AchievementVersion,
-            AchievementDefinition,
-            Course,
-            Issuer,
-            User,
-            CredentialStatus,
-            AwardDecision,
+            Credential.id.label("credential_id"),
+            Credential.issued_at,
+            Credential.valid_until,
+            AchievementDefinition.id.label("definition_id"),
+            AchievementVersion.title.label("badge_title"),
+            AchievementVersion.version_no,
+            Course.id.label("course_id"),
+            Course.title.label("course_title"),
+            Course.course_code,
+            Issuer.name.label("issuer_name"),
+            User.display_name,
+            User.status.label("user_status"),
+            AwardDecision.kind.label("award_kind"),
+            CredentialStatus.state.label("status_state"),
+            CredentialStatus.changed_at.label("status_changed_at"),
+            CredentialStatus.reason_code.label("status_reason"),
         )
         .join(AchievementVersion, AchievementVersion.id == Credential.version_id)
         .join(AchievementDefinition, AchievementDefinition.id == AchievementVersion.definition_id)
@@ -86,10 +96,18 @@ def _base(db: Session, actor: authz.Actor, course_staff_of: uuid.UUID | None = N
     return q if cond is None else q.where(cond)
 
 
-def _status(cred: Credential, st: CredentialStatus | None, now: datetime) -> str:
-    if st is not None and st.state == "revoked":
+def _is_revoked() -> Any:
+    return func.coalesce(CredentialStatus.state == "revoked", False)
+
+
+def _is_expired(now: datetime) -> Any:
+    return func.coalesce(Credential.valid_until < now, False)
+
+
+def _status(row: Any, now: datetime) -> str:
+    if row.status_state == "revoked":
         return "revoked"
-    if cred.valid_until is not None and cred.valid_until < now:
+    if row.valid_until is not None and row.valid_until < now:
         return "expired"
     return "active"
 
@@ -98,9 +116,10 @@ def _day_start(d: date | None) -> datetime | None:
     return datetime.combine(d, time.min, tzinfo=UTC) if d else None
 
 
-def records(
+def _filtered(
     db: Session,
     actor: authz.Actor,
+    now: datetime,
     *,
     course_id: uuid.UUID | None = None,
     definition_id: uuid.UUID | None = None,
@@ -108,10 +127,8 @@ def records(
     issued_from: date | None = None,
     issued_to: date | None = None,
     learner: str | None = None,
-    limit: int = 200,
-    offset: int = 0,
     course_staff_of: uuid.UUID | None = None,
-) -> list[dict[str, Any]]:
+) -> Any:
     q = _base(db, actor, course_staff_of)
     if course_id:
         q = q.where(AchievementDefinition.course_id == course_id)
@@ -123,48 +140,77 @@ def records(
         q = q.where(Credential.issued_at < _day_start(issued_to) + timedelta(days=1))  # type: ignore[operator]
     if learner:
         q = q.where(User.display_name.ilike(f"%{learner.strip()}%"))
+    # Every status filter is in SQL, so LIMIT/OFFSET pages are always full and consistent.
     if status == "revoked":
-        q = q.where(CredentialStatus.state == "revoked")
+        q = q.where(_is_revoked())
+    elif status == "expired":
+        q = q.where(~_is_revoked(), _is_expired(now))
     elif status == "active":
-        q = q.where(or_(CredentialStatus.state.is_(None), CredentialStatus.state != "revoked"))
-    q = q.order_by(Credential.issued_at.desc()).offset(offset).limit(limit)
+        q = q.where(~_is_revoked(), ~_is_expired(now))
+    return q
+
+
+def _row(r: Any, now: datetime) -> dict[str, Any]:
+    row_status = _status(r, now)
+    return {
+        "credential_id": str(r.credential_id),
+        "definition_id": str(r.definition_id),
+        "course_id": str(r.course_id) if r.course_id else None,
+        "issued_at": r.issued_at,
+        "badge_title": r.badge_title,
+        "version_no": r.version_no,
+        "course_title": r.course_title,
+        "course_code": r.course_code,
+        "issuer_name": r.issuer_name,
+        "learner_name": r.display_name if r.user_status == "active" else None,
+        "award_kind": r.award_kind,
+        "status": row_status,
+        "revoked_at": r.status_changed_at if r.status_state == "revoked" else None,
+        "revocation_reason": r.status_reason,
+        "can_revoke": row_status != "revoked",
+    }
+
+
+def records(
+    db: Session,
+    actor: authz.Actor,
+    *,
+    limit: int = 200,
+    offset: int = 0,
+    **filters: Any,
+) -> list[dict[str, Any]]:
+    """One page of records, newest first. Filters as for :func:`iter_records`."""
     now = datetime.now(UTC)
-    out = []
-    for cred, ver, defn, course, issuer, user, st, decision in db.execute(q):
-        row_status = _status(cred, st, now)
-        if status == "active" and row_status != "active":
-            continue
-        out.append(
-            {
-                "credential_id": str(cred.id),
-                "definition_id": str(defn.id),
-                "course_id": str(course.id) if course else None,
-                "issued_at": cred.issued_at,
-                "badge_title": ver.title,
-                "version_no": ver.version_no,
-                "course_title": course.title if course else None,
-                "course_code": course.course_code if course else None,
-                "issuer_name": issuer.name,
-                "learner_name": user.display_name if user.status == "active" else None,
-                "award_kind": decision.kind,
-                "status": row_status,
-                "revoked_at": st.changed_at if st is not None and st.state == "revoked" else None,
-                "revocation_reason": st.reason_code if st is not None else None,
-                "can_revoke": row_status != "revoked",
-            }
-        )
-    return out
+    q = _filtered(db, actor, now, **filters)
+    q = q.order_by(Credential.issued_at.desc(), Credential.id).offset(offset).limit(limit)
+    return [_row(r, now) for r in db.execute(q)]
+
+
+def iter_records(db: Session, actor: authz.Actor, **filters: Any) -> Iterator[dict[str, Any]]:
+    """Every matching record, newest first, fetched in batches (for CSV export)."""
+    now = datetime.now(UTC)
+    q = _filtered(db, actor, now, **filters).order_by(Credential.issued_at.desc(), Credential.id)
+    for r in db.execute(q.execution_options(yield_per=1000)):
+        yield _row(r, now)
 
 
 def to_csv(rows: Iterable[dict[str, Any]], columns: Iterable[str]) -> str:
     """CSV with formula-injection protection (cells starting with = + - @ are quoted with ')."""
+    return to_csv_counted(rows, columns)[0]
+
+
+def to_csv_counted(rows: Iterable[dict[str, Any]], columns: Iterable[str]) -> tuple[str, int]:
+    """As :func:`to_csv`, also returning the number of data rows. ``rows`` may be a generator:
+    only the CSV text is held in memory, not the records."""
     cols = list(columns)
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(cols)
+    n = 0
     for row in rows:
         w.writerow([_cell(row.get(c)) for c in cols])
-    return buf.getvalue()
+        n += 1
+    return buf.getvalue(), n
 
 
 def _cell(value: Any) -> str:
@@ -189,54 +235,97 @@ def summary(
     issued_to: date | None = None,
 ) -> dict[str, Any]:
     """Counts for the operational report: issued, by course, by badge, by month, revocations,
-    pending awards and failed issuance."""
-    rows = records(
-        db, actor, issued_from=issued_from, issued_to=issued_to, limit=1_000_000, offset=0
+    pending awards and failed issuance. Every count is worked out in PostgreSQL."""
+    now = datetime.now(UTC)
+    base = _filtered(db, actor, now, issued_from=issued_from, issued_to=issued_to).subquery()
+    revoked = func.count().filter(base.c.status_state == "revoked")
+    expired = func.count().filter(
+        func.coalesce(base.c.status_state != "revoked", True), base.c.valid_until < now
     )
-    by_course: dict[str, dict[str, Any]] = {}
-    by_badge: dict[str, dict[str, Any]] = {}
-    by_month: dict[str, int] = {}
-    revoked = 0
-    for r in rows:
-        key = r["course_id"] or "none"
-        c = by_course.setdefault(
-            key,
-            {
-                "course_id": r["course_id"],
-                "course_title": r["course_title"] or "(no course)",
-                "issued": 0,
-                "revoked": 0,
-            },
+    total, n_revoked, n_expired = db.execute(
+        select(func.count(), revoked, expired).select_from(base)
+    ).one()
+
+    by_course = [
+        {
+            "course_id": str(cid) if cid else None,
+            "course_title": title or "(no course)",
+            "issued": int(n),
+            "revoked": int(r),
+        }
+        for cid, title, n, r in db.execute(
+            select(base.c.course_id, base.c.course_title, func.count(), revoked)
+            .select_from(base)
+            .group_by(base.c.course_id, base.c.course_title)
         )
-        b = by_badge.setdefault(
-            r["definition_id"],
-            {
-                "definition_id": r["definition_id"],
-                "badge_title": r["badge_title"],
-                "course_title": r["course_title"],
-                "issued": 0,
-                "revoked": 0,
-            },
+    ]
+
+    badge_rows = db.execute(
+        select(base.c.definition_id, base.c.course_title, func.count(), revoked)
+        .select_from(base)
+        .group_by(base.c.definition_id, base.c.course_title)
+    ).all()
+    titles = _badge_titles(db, [r[0] for r in badge_rows])
+    by_badge = [
+        {
+            "definition_id": str(did),
+            "badge_title": titles.get(did, ""),
+            "course_title": course_title,
+            "issued": int(n),
+            "revoked": int(r),
+        }
+        for did, course_title, n, r in badge_rows
+    ]
+
+    month = func.to_char(func.timezone("UTC", base.c.issued_at), "YYYY-MM")
+    by_month = [
+        {"month": m, "issued": int(n)}
+        for m, n in db.execute(
+            select(month, func.count())
+            .select_from(base)
+            .where(base.c.issued_at.is_not(None))
+            .group_by(month)
+            .order_by(month)
         )
-        c["issued"] += 1
-        b["issued"] += 1
-        if r["status"] == "revoked":
-            revoked += 1
-            c["revoked"] += 1
-            b["revoked"] += 1
-        if r["issued_at"]:
-            month = r["issued_at"].astimezone(UTC).strftime("%Y-%m")
-            by_month[month] = by_month.get(month, 0) + 1
+    ]
     return {
-        "issued": len(rows),
-        "revoked": revoked,
-        "active": sum(1 for r in rows if r["status"] == "active"),
+        "issued": int(total),
+        "revoked": int(n_revoked),
+        "active": int(total) - int(n_revoked) - int(n_expired),
         "pending_awards": pending_awards(db, actor),
         "failed_issuance": failed_issuance(db, actor),
-        "by_course": sorted(by_course.values(), key=lambda x: (-x["issued"], x["course_title"])),
-        "by_badge": sorted(by_badge.values(), key=lambda x: (-x["issued"], x["badge_title"])),
-        "by_month": [{"month": k, "issued": v} for k, v in sorted(by_month.items())],
+        "by_course": sorted(by_course, key=lambda x: (-x["issued"], x["course_title"])),
+        "by_badge": sorted(by_badge, key=lambda x: (-x["issued"], x["badge_title"])),
+        "by_month": by_month,
     }
+
+
+def _badge_titles(db: Session, definition_ids: list[uuid.UUID]) -> dict[uuid.UUID, str]:
+    """Each badge's current title (its latest version when no current version is set)."""
+    if not definition_ids:
+        return {}
+    latest = (
+        select(AchievementVersion.definition_id, func.max(AchievementVersion.version_no).label("n"))
+        .where(AchievementVersion.definition_id.in_(definition_ids))
+        .group_by(AchievementVersion.definition_id)
+        .subquery()
+    )
+    rows = db.execute(
+        select(AchievementDefinition.id, AchievementVersion.title)
+        .join(latest, latest.c.definition_id == AchievementDefinition.id)
+        .join(
+            AchievementVersion,
+            (AchievementVersion.definition_id == AchievementDefinition.id)
+            & (
+                (AchievementVersion.id == AchievementDefinition.current_version_id)
+                | (
+                    AchievementDefinition.current_version_id.is_(None)
+                    & (AchievementVersion.version_no == latest.c.n)
+                )
+            ),
+        )
+    )
+    return {did: title for did, title in rows}
 
 
 def _decision_scope(db: Session, actor: authz.Actor) -> Any:

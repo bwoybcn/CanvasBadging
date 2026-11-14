@@ -279,7 +279,7 @@ def course_credentials(
     course_id: uuid.UUID,
     db: TenantDb,
     actor: ActorDep,
-    status: Literal["active", "revoked"] | None = None,
+    status: Literal["active", "expired", "revoked"] | None = None,
 ) -> list[dict[str, Any]]:
     """Award history for course staff (spec §2.2): every credential issued in this course."""
     return _course_records(db, actor, course_id, status)
@@ -295,12 +295,16 @@ def course_credentials_csv(
     db: TenantDb,
     actor: ActorDep,
     rid: RequestIdDep,
-    status: Literal["active", "revoked"] | None = None,
+    status: Literal["active", "expired", "revoked"] | None = None,
 ) -> Response:
     """Course-level issuance records as CSV for course staff (spec §2.2). No email addresses."""
     from opencredential.governance import records
 
-    rows = _course_records(db, actor, course_id, status)
+    course = _course(db, actor, course_id)  # course staff or an administrator over it; else 404
+    body, n = records.to_csv_counted(
+        records.iter_records(db, actor, course_staff_of=course.id, status=status),
+        records.RECORD_COLUMNS,
+    )
     audit.record(
         db,
         action="course.report_export",
@@ -309,10 +313,10 @@ def course_credentials_csv(
         institution_id=actor.institution_id,
         actor_user_id=actor.user_id,
         request_id=rid,
-        data={"counts": {"rows": len(rows)}},
+        data={"counts": {"rows": n}},
     )
     return Response(
-        records.to_csv(rows, records.RECORD_COLUMNS),
+        body,
         media_type="text/csv; charset=utf-8",
         headers={
             "Content-Disposition": 'attachment; filename="course-credentials.csv"',
