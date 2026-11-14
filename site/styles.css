@@ -18,6 +18,8 @@
   --ok: #4fd69a;
   --btn-ink: #1a1405;
   --shot-shadow: 0 30px 60px -30px rgb(0 0 0 / .7);
+  --aurora-opacity: .55;
+  --verdict-ink: #04130c;
 
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
@@ -40,6 +42,8 @@
     --accent: #1a5fc4;
     --ok: #0c7a4b;
     --shot-shadow: 0 30px 60px -34px rgb(20 40 90 / .45);
+    --aurora-opacity: .28;
+    --verdict-ink: #fff;
   }
 }
 
@@ -173,12 +177,11 @@ code { font-family: var(--mono); font-size: .92em; }
 }
 
 /* Aurora: three blurred blobs, moved with transforms only. */
-.aurora { position: absolute; inset: -20% -10% 0; z-index: -1; filter: blur(70px); opacity: .55; pointer-events: none; }
+.aurora { position: absolute; inset: -20% -10% 0; z-index: -1; filter: blur(70px); opacity: var(--aurora-opacity); pointer-events: none; }
 .aurora i { position: absolute; border-radius: 50%; will-change: transform; }
 .aurora i:nth-child(1) { width: 38rem; height: 38rem; left: -8rem; top: -6rem; background: #1f4e79; }
 .aurora i:nth-child(2) { width: 30rem; height: 30rem; right: -4rem; top: 4rem; background: #7a4dd8; opacity: .55; }
 .aurora i:nth-child(3) { width: 26rem; height: 26rem; right: 22%; bottom: -10rem; background: #c98a12; opacity: .45; }
-@media (prefers-color-scheme: light) { .aurora { opacity: .28; } }
 
 /* Credential card */
 .cred { position: relative; margin: 0; justify-self: center; width: min(100%, 25rem); perspective: 60rem; }
@@ -207,10 +210,9 @@ code { font-family: var(--mono); font-size: .92em; }
 .verdict { margin-top: 1.3rem; }
 .verdict span {
   display: inline-flex; align-items: center; gap: .5rem; padding: .45rem 1rem; border-radius: 999px;
-  background: var(--ok); color: #04130c; font-weight: 800; letter-spacing: .01em;
+  background: var(--ok); color: var(--verdict-ink); font-weight: 800; letter-spacing: .01em;
 }
 .verdict span::before { content: "✓"; font-weight: 900; }
-@media (prefers-color-scheme: light) { .verdict span { color: #fff; } }
 .cred-shadow {
   position: absolute; inset: auto 8% -1.6rem; height: 2rem; z-index: -1;
   background: radial-gradient(closest-side, rgb(0 0 0 / .45), transparent); filter: blur(6px);
