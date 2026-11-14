@@ -99,6 +99,8 @@ class LaunchData:
     context_label: str | None
     resource_link_id: str
     canvas_course_id: str | None
+    #: The Canvas (sub-)account the course sits in (custom field ``canvas_account_id``).
+    canvas_account_id: str | None
     canvas_user_id: str | None
     sis_user_id: str | None
     name: str | None
@@ -146,6 +148,7 @@ def launch_from_claims(claims: dict[str, Any], client_id: str) -> LaunchData:
         context_label=_str(context.get("label")),
         resource_link_id=str((claims.get(CLAIM_RESOURCE_LINK) or {}).get("id")),
         canvas_course_id=custom_id("canvas_course_id"),
+        canvas_account_id=custom_id("canvas_account_id"),
         canvas_user_id=custom_id("canvas_user_id"),
         sis_user_id=custom_id("canvas_user_sis_id")
         or _str((claims.get(CLAIM_LIS) or {}).get("person_sourcedid")),

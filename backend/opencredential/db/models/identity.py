@@ -116,6 +116,9 @@ class Course(TenantMixin, Base):
     #: Badge teams (migration 0010): in a shared course, such as a recognition course for a
     #: library or a faculty's CPD, only each badge's owner and named team can edit or award it.
     badge_teams: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: The Canvas (sub-)account the course sits in, from the launch or the Canvas API. Used to
+    #: place the course in the org unit linked to that sub-account (see ``CanvasAccount``).
+    canvas_account_id: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         choice("inactive", "active", "archived", name="status"), default="inactive"
     )
@@ -153,3 +156,28 @@ class Membership(TenantMixin, Base):
     granted_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CanvasAccount(TenantMixin, Base):
+    """A Canvas account or sub-account, read from Canvas by an administrator.
+
+    Linking one to an org unit (``org_unit_id``) makes courses in it, or in sub-accounts below
+    it that are not linked themselves, join that unit when they are first launched. Sub-accounts
+    nobody links are ignored, so terms, sandboxes and other housekeeping sub-accounts never
+    become areas.
+    """
+
+    __tablename__ = "canvas_accounts"
+    __table_args__ = tenant_args(
+        "canvas_accounts",
+        tenant_fk("canvas_integration_id", "canvas_integrations", ondelete="CASCADE"),
+        tenant_fk("org_unit_id", "org_units"),
+        UniqueConstraint("canvas_integration_id", "account_id"),
+    )
+
+    canvas_integration_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    account_id: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+    parent_account_id: Mapped[str | None] = mapped_column(Text)
+    org_unit_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

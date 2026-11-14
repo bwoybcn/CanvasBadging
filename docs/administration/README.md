@@ -50,6 +50,28 @@ may. When a unit may not issue, its issuers are not offered to authors, badges i
 cannot be created or published, and issuers in it cannot be authorised. Place each Canvas
 course in its department so department administrators and templates apply to it.
 
+### Linking Canvas sub-accounts to areas
+
+Canvas keeps courses in a tree of accounts: the root account, then sub-accounts (often one per
+faculty or service, sometimes deeper for departments), then courses. Instead of building areas by
+hand, an institution administrator can link the sub-accounts that matter:
+
+1. Under **Canvas sub-accounts** on the departments page, choose **Read sub-accounts from
+   Canvas**. The Canvas connection must belong to an account administrator who can see them.
+2. Tick the sub-accounts that should be areas, for example each faculty, its departments and the
+   Library. Choose a kind for the new areas, or leave it automatic (faculty at the top, department
+   below a linked one), then **Link selected**.
+3. Each ticked sub-account becomes an area named after it, nested as in Canvas. Courses already
+   opened from it join that area straight away, and new courses join on their first launch, from
+   the nearest linked sub-account above them.
+
+Sub-accounts nobody ticks, such as sandboxes or terms, are ignored. A course already in an area is
+never moved, so a manual placement always wins. **Unlink** stops placing new courses but keeps the
+area and its courses. Read the tree again after sub-accounts change in Canvas; ones that
+disappear are forgotten unless linked. The launch sends the course's sub-account through the
+`canvas_account_id=$Canvas.account.id` custom field; on installs without it, linking looks the
+course up through the Canvas API instead.
+
 ### Recognition courses and badge teams
 
 Badges that are not tied to a module (volunteering, library workshops, CPD) live in a Canvas

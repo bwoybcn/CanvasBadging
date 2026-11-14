@@ -26,6 +26,7 @@ from opencredential.db.models.awards import (
     StatusListBit,
 )
 from opencredential.db.models.identity import (
+    CanvasAccount,
     Course,
     ExternalIdentity,
     Membership,
@@ -59,6 +60,7 @@ __all__ = [
     "AwardRuleSet",
     "BadgeAsset",
     "BadgeTemplate",
+    "CanvasAccount",
     "CanvasIntegration",
     "CanvasToken",
     "Course",

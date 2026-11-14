@@ -12,6 +12,7 @@ Method map (spec §4.5 name → method → Canvas endpoint):
 ``get_assignments``         :meth:`list_assignments`    ``GET /courses/:id/assignments``
 ``get_submission``          :meth:`list_submissions`    ``GET /courses/:id/students/submissions``
 ``get_grade``               :meth:`get_grade`           same, released (``posted_at``) only
+(sub-account linking)       :meth:`list_accounts`       ``GET /accounts`` + ``/:id/sub_accounts``
 ==========================  ==========================  ==========================================
 
 Every list is fully paginated or the call raises; nothing returns a silently partial result.
@@ -27,6 +28,7 @@ from typing import Any
 
 from opencredential.db.models import CanvasIntegration
 from opencredential.integrations.base import (
+    AccountRecord,
     AssignmentRecord,
     LmsNotFound,
     ModuleProgressRecord,
@@ -53,6 +55,7 @@ class CourseRecord:
     name: str
     course_code: str | None
     workflow_state: str
+    account_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -82,7 +85,35 @@ class CanvasAdapter:
             name=str(data.get("name") or ""),
             course_code=data.get("course_code"),
             workflow_state=str(data.get("workflow_state") or "unknown"),
+            account_id=str(data["account_id"]) if data.get("account_id") else None,
         )
+
+    def course_account(self, course_ref: str) -> str | None:
+        return self.get_course(course_ref).account_id
+
+    # ---- accounts ----------------------------------------------------------------------------
+
+    def list_accounts(self) -> Sequence[AccountRecord]:
+        """Every account the connected Canvas user administers, and all sub-accounts below."""
+        seen: dict[str, AccountRecord] = {}
+
+        def add(a: dict[str, Any]) -> None:
+            parent = a.get("parent_account_id")
+            seen[str(a["id"])] = AccountRecord(
+                account_id=str(a["id"]),
+                name=str(a.get("name") or f"Account {a['id']}"),
+                parent_id=str(parent) if parent else None,
+            )
+
+        tops = list(self.http.paginate("/api/v1/accounts"))
+        for a in tops:
+            add(a)
+        for a in tops:
+            for sub in self.http.paginate(
+                f"/api/v1/accounts/{_id(str(a['id']))}/sub_accounts", {"recursive": "true"}
+            ):
+                add(sub)
+        return list(seen.values())
 
     # ---- modules -----------------------------------------------------------------------------
 

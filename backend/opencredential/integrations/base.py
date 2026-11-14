@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
 class LmsError(Exception):
@@ -77,6 +77,24 @@ class SubmissionRecord:
     grade_matches_current_submission: bool = True
     missing: bool = False
     late: bool = False
+
+
+@dataclass(frozen=True)
+class AccountRecord:
+    """A Canvas account or sub-account. ``parent_id`` is None for a root account."""
+
+    account_id: str
+    name: str
+    parent_id: str | None
+
+
+@runtime_checkable
+class AccountDirectory(Protocol):
+    """Optional adapter capability: read the LMS account tree and where a course sits in it."""
+
+    def list_accounts(self) -> Sequence[AccountRecord]: ...
+
+    def course_account(self, course_ref: str) -> str | None: ...
 
 
 class LmsAdapter(Protocol):

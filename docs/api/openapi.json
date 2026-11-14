@@ -595,6 +595,68 @@
         "title": "BulkRowOut",
         "type": "object"
       },
+      "CanvasAccountLinkIn": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CanvasAccountLinkItem"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CanvasAccountLinkIn",
+        "type": "object"
+      },
+      "CanvasAccountLinkItem": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "faculty",
+                  "department",
+                  "programme",
+                  "service",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "CanvasAccountLinkItem",
+        "type": "object"
+      },
       "CheckOut": {
         "properties": {
           "detail": {
@@ -5664,6 +5726,138 @@
           }
         },
         "summary": "Audit Categories",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/canvas-accounts": {
+      "get": {
+        "description": "Canvas sub-accounts last read from Canvas, as a tree, with their linked area.",
+        "operationId": "list_canvas_accounts_api_v1_admin_canvas_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Canvas Accounts Api V1 Admin Canvas Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Canvas Accounts",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/canvas-accounts/link": {
+      "post": {
+        "description": "Link ticked sub-accounts to areas; their courses join those areas from then on.",
+        "operationId": "link_canvas_accounts_api_v1_admin_canvas_accounts_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CanvasAccountLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Link Canvas Accounts Api V1 Admin Canvas Accounts Link Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Link Canvas Accounts",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/canvas-accounts/refresh": {
+      "post": {
+        "description": "Read the sub-account tree from Canvas again.",
+        "operationId": "refresh_canvas_accounts_api_v1_admin_canvas_accounts_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Refresh Canvas Accounts Api V1 Admin Canvas Accounts Refresh Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Refresh Canvas Accounts",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/canvas-accounts/{account_id}/link": {
+      "delete": {
+        "description": "Stop placing new courses from this sub-account; the area and its courses stay.",
+        "operationId": "unlink_canvas_account_api_v1_admin_canvas_accounts__account_id__link_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unlink Canvas Account",
         "tags": [
           "institutional administration"
         ]
