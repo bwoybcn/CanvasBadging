@@ -62,6 +62,9 @@ class World:
     def put(self, who: str, path: str, json: Any = None) -> Any:
         return self.client.put(path, headers=self.h(who), json=json)
 
+    def delete(self, who: str, path: str) -> Any:
+        return self.client.delete(path, headers=self.h(who))
+
     # -- background work, run inline (what the worker would do) ---------------------------
     def sync(self, kind: str = "scheduled") -> dict[str, Any]:
         return tasks.sync_course_task(str(self.iid), str(self.course_id), kind=kind)

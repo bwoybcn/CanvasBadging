@@ -29,6 +29,11 @@ class CourseOut(BaseModel):
     course_code: str | None
     status: str
     roles: list[str]
+    badge_teams: bool = False
+
+
+class BadgeTeamsIn(BaseModel):
+    enabled: bool
 
 
 def _course(
@@ -59,7 +64,12 @@ def my_courses(db: TenantDb, actor: ActorDep) -> list[CourseOut]:
         if roles:
             out.append(
                 CourseOut(
-                    id=c.id, title=c.title, course_code=c.course_code, status=c.status, roles=roles
+                    id=c.id,
+                    title=c.title,
+                    course_code=c.course_code,
+                    status=c.status,
+                    roles=roles,
+                    badge_teams=c.badge_teams,
                 )
             )
     return out
@@ -315,3 +325,24 @@ def course_credentials_csv(
 def course_progress(course_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
     course = _course(db, actor, course_id)
     return progress.course_progress(db, course)
+
+
+@router.put("/{course_id}/badge-teams", response_model=CourseOut)
+def set_badge_teams(
+    course_id: uuid.UUID, body: BadgeTeamsIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> CourseOut:
+    """Badge teams: each badge in this course is edited and awarded only by its own team."""
+    from opencredential.authoring import team
+
+    course = team.set_course_badge_teams(
+        db, actor, _course(db, actor, course_id), body.enabled, request_id=rid
+    )
+    roles = sorted(actor.course_roles(course.id)) or ["admin"]
+    return CourseOut(
+        id=course.id,
+        title=course.title,
+        course_code=course.course_code,
+        status=course.status,
+        roles=roles,
+        badge_teams=course.badge_teams,
+    )

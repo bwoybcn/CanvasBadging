@@ -104,3 +104,11 @@ select **Award to N learners**.
 Students see the badges in your course, what each requires, and their own progress. When they
 earn a credential, they can download it, share a public link (off until they turn it on), and
 add it to LinkedIn. See the [student guide](../students/README.md).
+
+## Shared courses: badge teams
+
+In a course that many staff share, such as a library or CPD course, switch on **Badge teams**
+from the course home page in OpenCredential. Each badge is then edited and awarded only by its
+owner and the colleagues they add on the badge's **Team** tab, either "edit and award" or
+"award only". Other staff can still see the badge. Ask an administrator if badge teams need
+switching off again.

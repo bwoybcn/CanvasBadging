@@ -165,6 +165,27 @@ class DefinitionReview(TenantMixin, Base):
     without_review: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class AchievementTeamMember(TenantMixin, Base):
+    """A colleague who may work on one badge in a course with badge teams switched on.
+
+    ``editor`` may edit, submit, publish and award; ``awarder`` may only award (confirm, manual
+    and list awards, manual-approval decisions). The badge's owner always counts as an editor.
+    """
+
+    __tablename__ = "achievement_team_members"
+    __table_args__ = tenant_args(
+        "achievement_team_members",
+        tenant_fk("definition_id", "achievement_definitions", ondelete="CASCADE"),
+        tenant_fk("user_id", "users", ondelete="CASCADE"),
+        UniqueConstraint("definition_id", "user_id"),
+    )
+
+    definition_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    role: Mapped[str] = mapped_column(choice("editor", "awarder", name="role"))
+    added_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+
+
 class ManualRuleApproval(TenantMixin, Base):
     """A lecturer's decision on a ``manual_approval`` rule (Rule E) for one learner.
 

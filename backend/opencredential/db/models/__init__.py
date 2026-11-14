@@ -4,6 +4,7 @@
 from opencredential.db.models.audit import AuditEvent, background_jobs
 from opencredential.db.models.authoring import (
     AchievementDefinition,
+    AchievementTeamMember,
     AchievementVersion,
     AwardRule,
     AwardRuleSet,
@@ -50,6 +51,7 @@ from opencredential.db.models.tenancy import (
 
 __all__ = [
     "AchievementDefinition",
+    "AchievementTeamMember",
     "AchievementVersion",
     "AuditEvent",
     "AwardDecision",

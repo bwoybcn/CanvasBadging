@@ -193,6 +193,33 @@ describe("badge page", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
+  it("adds a colleague to a badge's team", async () => {
+    const team = {
+      enabled: true,
+      members: [{ user_id: "u-lec", name: "Lee Lecturer", role: "owner" }],
+      candidates: [{ user_id: "u-rob", name: "Robin Librarian" }],
+      can_manage: true,
+    };
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({ state: "published" }),
+      "GET /api/v1/achievements/d-1/team": team,
+      "PUT /api/v1/achievements/d-1/team/u-rob": {
+        ...team,
+        members: [...team.members, { user_id: "u-rob", name: "Robin Librarian", role: "awarder" }],
+        candidates: [],
+      },
+    });
+    renderAt("/badges/d-1");
+    await userEvent.click(await screen.findByRole("tab", { name: "Team" }));
+    expect(await screen.findByText(/Badge teams are on/)).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("Add a colleague from this course"));
+    await userEvent.click(await screen.findByRole("option", { name: "Robin Librarian" }));
+    await userEvent.click(screen.getByRole("button", { name: "Add to team" }));
+    expect(await screen.findByText("Robin Librarian: Can award")).toBeInTheDocument();
+    expect(calls.find((c) => c.method === "PUT")!.body).toEqual({ role: "awarder" });
+  });
+
   it("lets a reviewer approve only after every checklist point", async () => {
     const calls = stubApi({
       ...COURSE_ROUTES,

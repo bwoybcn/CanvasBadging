@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Alert, Button, Heading, List, Spinner, Text, View } from "@instructure/ui";
+import { Alert, Button, Checkbox, Heading, List, Spinner, Text, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiFetch, apiSend, problemText, type Me } from "../api";
+import { apiFetch, apiSend, problemText, type Course, type Me } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
 import { Nav } from "../components/Page";
@@ -98,6 +98,7 @@ function CourseContext({ course }: { course: NonNullable<Me["launch_course"]> })
             Your lecturer has not switched on micro-credentials for this course yet.
           </Alert>
         ))}
+      {course.view === "lecturer" && course.status === "active" && <BadgeTeamsToggle courseId={course.id} />}
       {course.view === "lecturer" ? (
         <Text as="p">
           <AppLink to={`/courses/${course.id}/progress`}>Course progress</AppLink>
@@ -137,5 +138,35 @@ function ActivateCourse({ courseId }: { courseId: string }) {
         </Text>
       )}
     </Alert>
+  );
+}
+
+/** Badge teams: in a course many staff share (a library or CPD course), each badge is edited and
+ * awarded only by its own team. Lecturers can switch this on; only administrators switch it off. */
+function BadgeTeamsToggle({ courseId }: { courseId: string }) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const courses = useQuery({ queryKey: ["courses"], queryFn: () => apiFetch<Course[]>("/api/v1/courses", token) });
+  const course = courses.data?.find((c) => c.id === courseId);
+  const set = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apiSend<Course>(`/api/v1/courses/${courseId}/badge-teams`, token, "PUT", { enabled }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["courses"] }),
+  });
+  if (!course) return null;
+  return (
+    <View as="div" margin="small 0">
+      <Checkbox
+        label="Badge teams: each badge here is edited and awarded only by its owner and the colleagues they add"
+        checked={!!course.badge_teams}
+        disabled={set.isPending}
+        onChange={(e) => set.mutate(e.target.checked)}
+      />
+      {set.isError && (
+        <Text as="p" color="danger">
+          {problemText(set.error)}
+        </Text>
+      )}
+    </View>
   );
 }

@@ -80,6 +80,15 @@ export interface Course {
   course_code: string | null;
   status: string;
   roles: string[];
+  badge_teams?: boolean;
+}
+
+/** A badge's team where the course has badge teams switched on. */
+export interface BadgeTeam {
+  enabled: boolean;
+  members: { user_id: string; name: string | null; role: "owner" | "editor" | "awarder" }[];
+  candidates: { user_id: string; name: string | null }[];
+  can_manage: boolean;
 }
 
 export interface IssuerRef {
@@ -205,6 +214,7 @@ export interface Definition {
   reviews: Review[];
   can_edit: boolean;
   can_review: boolean;
+  can_award?: boolean;
   effective_award_policy: AwardPolicy | null;
   review: ReviewRequirement;
 }
