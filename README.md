@@ -47,6 +47,7 @@ the pieces without Docker, tests and troubleshooting.
 | `docs/` | Architecture, ADRs, API, development, security, deployment |
 | `tests/` | Cross-cutting suites: end-to-end (Playwright) and standards conformance |
 | `scripts/` | Smoke test and licence gate |
+| `site/` | Static website that explains the project (plain HTML and CSS, no build step) |
 
 ## Contributing and security
 
