@@ -40,7 +40,6 @@ from opencredential.db.models import (
     AwardDecision,
     AwardRule,
     AwardRuleSet,
-    Course,
     EligibilityEvaluation,
     ManualRuleApproval,
     Membership,
@@ -324,10 +323,7 @@ def _definition_for_version(db: Session, version_id: uuid.UUID) -> AchievementDe
 
 
 def require_award_staff(db: Session, actor: authz.Actor, definition: AchievementDefinition) -> None:
-    course = db.get(Course, definition.course_id) if definition.course_id else None
-    if course is not None:
-        authz.require_course_staff(db, actor, course)
-    elif not authz.can_edit_definition(db, actor, definition):
+    if not authz.can_award_definition(db, actor, definition):
         raise Forbidden("FORBIDDEN", "You cannot award this badge.")
 
 

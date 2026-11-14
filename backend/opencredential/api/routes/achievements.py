@@ -98,6 +98,7 @@ class DefinitionOut(BaseModel):
     reviews: list[ReviewOut]
     can_edit: bool
     can_review: bool
+    can_award: bool = False
     effective_award_policy: str | None = Field(
         description="What publication would resolve the awarding method to right now"
     )
@@ -198,6 +199,7 @@ def _out(db: TenantDb, actor: authz.Actor, d: AchievementDefinition) -> Definiti
             for r in reviews
         ],
         can_edit=authz.can_edit_definition(db, actor, d),
+        can_award=authz.can_award_definition(db, actor, d),
         can_review=authz.can_review(db, actor, d, policy)
         and (actor.user_id != d.owner_user_id or authz.may_approve_own(db, d)),
         effective_award_policy=effective,
@@ -432,3 +434,42 @@ def list_categories(db: TenantDb, actor: ActorDep) -> dict[str, Any]:
         "achievement_types": list(ACHIEVEMENT_TYPES),
         "review_checklist": list(authoring.REVIEW_CHECKLIST),
     }
+
+
+class TeamMemberIn(BaseModel):
+    role: Literal["editor", "awarder"]
+
+
+@router.get("/achievements/{definition_id}/team")
+def get_team(definition_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
+    """The badge's team, and course staff who could join it."""
+    from opencredential.authoring import team
+
+    return team.team_out(db, actor, _get(db, actor, definition_id))
+
+
+@router.put("/achievements/{definition_id}/team/{user_id}")
+def set_team_member(
+    definition_id: uuid.UUID,
+    user_id: uuid.UUID,
+    body: TeamMemberIn,
+    db: TenantDb,
+    actor: ActorDep,
+    rid: RequestIdDep,
+) -> dict[str, Any]:
+    from opencredential.authoring import team
+
+    d = _get(db, actor, definition_id)
+    team.set_member(db, actor, d, user_id, body.role, request_id=rid)
+    return team.team_out(db, actor, d)
+
+
+@router.delete("/achievements/{definition_id}/team/{user_id}")
+def remove_team_member(
+    definition_id: uuid.UUID, user_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> dict[str, Any]:
+    from opencredential.authoring import team
+
+    d = _get(db, actor, definition_id)
+    team.remove_member(db, actor, d, user_id, request_id=rid)
+    return team.team_out(db, actor, d)

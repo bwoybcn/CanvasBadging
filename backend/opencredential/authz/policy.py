@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from opencredential.db.models import (
     AchievementDefinition,
+    AchievementTeamMember,
     Course,
     Institution,
     Issuer,
@@ -125,14 +126,53 @@ def definition_course(db: Session, definition: AchievementDefinition) -> Course 
     return db.get(Course, definition.course_id) if definition.course_id else None
 
 
+def team_role(db: Session, actor: Actor, definition: AchievementDefinition) -> str | None:
+    """The actor's place on a badge's team: ``editor`` (the owner counts), ``awarder`` or None."""
+    if actor.user_id == definition.owner_user_id:
+        return "editor"
+    role = db.scalar(
+        select(AchievementTeamMember.role).where(
+            AchievementTeamMember.definition_id == definition.id,
+            AchievementTeamMember.user_id == actor.user_id,
+        )
+    )
+    return str(role) if role else None
+
+
+def _team_allows(
+    db: Session, actor: Actor, definition: AchievementDefinition, course: Course, roles: set[str]
+) -> bool:
+    """Badge teams are on for ``course``: admins over it, the owner, or a team member who is
+    still staff in the course, with one of ``roles``."""
+    if actor.is_inst_admin or is_dept_admin_over(db, actor, course.org_unit_id):
+        return True
+    if actor.user_id == definition.owner_user_id:
+        return True
+    if not actor.course_roles(course.id) & COURSE_STAFF:
+        return False
+    return team_role(db, actor, definition) in roles
+
+
 def can_edit_definition(db: Session, actor: Actor, definition: AchievementDefinition) -> bool:
     if actor.user_id == definition.owner_user_id or actor.is_inst_admin:
         return True
     course = definition_course(db, definition)
     if course is not None:
+        if course.badge_teams:
+            return _team_allows(db, actor, definition, course, {"editor"})
         return is_course_staff(db, actor, course)
     issuer = db.get(Issuer, definition.issuer_id)
     return is_dept_admin_over(db, actor, issuer.org_unit_id if issuer else None)
+
+
+def can_award_definition(db: Session, actor: Actor, definition: AchievementDefinition) -> bool:
+    """Confirm, make or decline awards of this badge, and see who is waiting."""
+    course = definition_course(db, definition)
+    if course is None:
+        return can_edit_definition(db, actor, definition)
+    if course.badge_teams:
+        return _team_allows(db, actor, definition, course, {"editor", "awarder"})
+    return is_course_staff(db, actor, course)
 
 
 def require_edit(db: Session, actor: Actor, definition: AchievementDefinition) -> None:

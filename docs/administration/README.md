@@ -50,6 +50,19 @@ may. When a unit may not issue, its issuers are not offered to authors, badges i
 cannot be created or published, and issuers in it cannot be authorised. Place each Canvas
 course in its department so department administrators and templates apply to it.
 
+### Recognition courses and badge teams
+
+Badges that are not tied to a module (volunteering, library workshops, CPD) live in a Canvas
+"recognition course" per provider or scheme, for example **Library Skills** or **WP
+Volunteers**, placed in the provider's sub-account so its issuer and review settings apply.
+Students join through a self-enrolment link or an SIS feed.
+
+Many staff often share such a course. Switch on **Badge teams** (course home page in
+OpenCredential) so each badge is edited and awarded only by its owner, the colleagues they add
+on the badge's **Team** tab ("edit and award" or "award only") and administrators over the
+course. Other staff in the course can still see every badge. Any lecturer in the course can
+switch badge teams on; only an institution or department administrator can switch them off.
+
 ## 3. Issuers and delegated authority (§10.2)
 
 1. Create the issuer (name, short name, level: university, faculty, department or programme).

@@ -113,6 +113,9 @@ class Course(TenantMixin, Base):
     org_unit_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     activated_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    #: Badge teams (migration 0010): in a shared course, such as a recognition course for a
+    #: library or a faculty's CPD, only each badge's owner and named team can edit or award it.
+    badge_teams: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(
         choice("inactive", "active", "archived", name="status"), default="inactive"
     )

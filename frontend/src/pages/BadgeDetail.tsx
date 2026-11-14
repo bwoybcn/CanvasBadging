@@ -11,6 +11,7 @@ import {
   Img,
   List,
   Pill,
+  SimpleSelect,
   Tabs,
   Text,
   TextArea,
@@ -24,6 +25,7 @@ import {
   apiFetch,
   apiSend,
   POLICY_LABELS,
+  type BadgeTeam,
   type ReviewRequirement,
   STATE_LABELS,
   type Catalogue,
@@ -224,6 +226,77 @@ function ReviewChoice({
   );
 }
 
+const TEAM_ROLE: Record<string, string> = { owner: "Owner", editor: "Can edit and award", awarder: "Can award" };
+
+/** Who works on this badge when its course has badge teams switched on. */
+function TeamPanel({ id }: { id: string }) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const [who, setWho] = useState("");
+  const [role, setRole] = useState<"editor" | "awarder">("awarder");
+  const team = useQuery({ queryKey: ["team", id], queryFn: () => apiFetch<BadgeTeam>(`/api/v1/achievements/${id}/team`, token) });
+  const change = useMutation({
+    mutationFn: ({ user, r }: { user: string; r: "editor" | "awarder" | null }) =>
+      r
+        ? apiSend<BadgeTeam>(`/api/v1/achievements/${id}/team/${user}`, token, "PUT", { role: r })
+        : apiSend<BadgeTeam>(`/api/v1/achievements/${id}/team/${user}`, token, "DELETE"),
+    onSuccess: (t) => {
+      qc.setQueryData(["team", id], t);
+      setWho("");
+    },
+  });
+  if (team.isPending) return <Loading what="team" />;
+  if (team.isError) return <ErrorAlert error={team.error} />;
+  const t = team.data;
+  return (
+    <View as="div" display="block" margin="small 0">
+      <Text as="p">
+        {t.enabled
+          ? "Badge teams are on for this course: only these people (and administrators) can edit or award this badge."
+          : "Badge teams are off for this course, so every lecturer in it can edit and award this badge. You can still name a team now; it applies if badge teams are switched on."}
+      </Text>
+      <List>
+        {t.members.map((mb) => (
+          <List.Item key={mb.user_id}>
+            {mb.name ?? "Unnamed"}: {TEAM_ROLE[mb.role]}
+            {t.can_manage && mb.role !== "owner" && (
+              <Button size="small" margin="0 0 0 small" onClick={() => change.mutate({ user: mb.user_id, r: null })}>
+                Remove {mb.name ?? "this person"} from the team
+              </Button>
+            )}
+          </List.Item>
+        ))}
+      </List>
+      {t.can_manage && t.candidates.length > 0 && (
+        <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0">
+          <SimpleSelect renderLabel="Add a colleague from this course" value={who} onChange={(_e, { value }) => setWho(String(value))} width="16rem">
+            <SimpleSelect.Option id="tm-none" value="">
+              Choose
+            </SimpleSelect.Option>
+            {t.candidates.map((c) => (
+              <SimpleSelect.Option key={c.user_id} id={`tm-${c.user_id}`} value={c.user_id}>
+                {c.name ?? c.user_id}
+              </SimpleSelect.Option>
+            ))}
+          </SimpleSelect>
+          <SimpleSelect renderLabel="They can" value={role} onChange={(_e, { value }) => setRole(value as "editor" | "awarder")} width="14rem">
+            <SimpleSelect.Option id="tr-awarder" value="awarder">
+              Award only
+            </SimpleSelect.Option>
+            <SimpleSelect.Option id="tr-editor" value="editor">
+              Edit and award
+            </SimpleSelect.Option>
+          </SimpleSelect>
+          <Button interaction={who && !change.isPending ? "enabled" : "disabled"} onClick={() => change.mutate({ user: who, r: role })}>
+            Add to team
+          </Button>
+        </Flex>
+      )}
+      {change.isError && <ErrorAlert error={change.error} />}
+    </View>
+  );
+}
+
 export function BadgeDetail() {
   const { id = "" } = useParams();
   const { token } = useAuth();
@@ -373,6 +446,11 @@ export function BadgeDetail() {
         <Tabs.Panel id="preview" renderTitle="Preview" isSelected={tab === 1}>
           {tab === 1 && <PreviewPanel id={id} />}
         </Tabs.Panel>
+        {def.course_id && (
+          <Tabs.Panel id="team" renderTitle="Team" isSelected={tab === 2}>
+            {tab === 2 && <TeamPanel id={id} />}
+          </Tabs.Panel>
+        )}
       </Tabs>
     </Page>
   );

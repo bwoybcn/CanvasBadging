@@ -17,6 +17,9 @@ All notable changes to this project are documented here. The format follows
   anything is awarded (`POST /api/v1/awards/bulk`). Student ID numbers are read from launches
   (`canvas_user_sis_id=$Person.sourcedId` custom field or `lis.person_sourcedid`) and the
   Names and Roles roster.
+- Badge teams for shared courses (migration 0010): with a course's badge teams on, each badge is
+  edited and awarded only by its owner, its named team (editors or awarders) and administrators
+  over the course.
 
 ### Security
 - Fixes from the 13 Nov 2026 code and security review (docs/reports/code-review-2026-11-13.md):

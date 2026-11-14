@@ -291,11 +291,7 @@ def list_awards(
     out = []
     for decision, definition in db.execute(q.order_by(AwardDecision.decided_at).limit(limit)):
         # The SQL scope already applies this rule; the per-row check stays as a safety net.
-        course = authz.definition_course(db, definition)
-        if course is not None:
-            if not authz.is_course_staff(db, actor, course):
-                continue
-        elif not authz.can_edit_definition(db, actor, definition):
+        if not authz.can_award_definition(db, actor, definition):
             continue
         out.append(_decision_out(db, decision, with_eligibility=True))
     return out

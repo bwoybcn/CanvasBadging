@@ -415,6 +415,19 @@
         "title": "AwardPolicyIn",
         "type": "object"
       },
+      "BadgeTeamsIn": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BadgeTeamsIn",
+        "type": "object"
+      },
       "Branding": {
         "properties": {
           "primary_colour": {
@@ -719,6 +732,11 @@
       },
       "CourseOut": {
         "properties": {
+          "badge_teams": {
+            "default": false,
+            "title": "Badge Teams",
+            "type": "boolean"
+          },
           "course_code": {
             "anyOf": [
               {
@@ -1291,6 +1309,11 @@
           "award_policy": {
             "title": "Award Policy",
             "type": "string"
+          },
+          "can_award": {
+            "default": false,
+            "title": "Can Award",
+            "type": "boolean"
           },
           "can_edit": {
             "title": "Can Edit",
@@ -3598,6 +3621,23 @@
         "title": "SubmitOut",
         "type": "object"
       },
+      "TeamMemberIn": {
+        "properties": {
+          "role": {
+            "enum": [
+              "editor",
+              "awarder"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "TeamMemberIn",
+        "type": "object"
+      },
       "TemplateDefaults": {
         "additionalProperties": false,
         "description": "Draft fields a template pre-fills, plus artwork conventions (not a draft field).",
@@ -5137,6 +5177,170 @@
           }
         },
         "summary": "Submit",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/team": {
+      "get": {
+        "description": "The badge's team, and course staff who could join it.",
+        "operationId": "get_team_api_v1_achievements__definition_id__team_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Team Api V1 Achievements  Definition Id  Team Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Team",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/team/{user_id}": {
+      "delete": {
+        "operationId": "remove_team_member_api_v1_achievements__definition_id__team__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Remove Team Member Api V1 Achievements  Definition Id  Team  User Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Team Member",
+        "tags": [
+          "achievements"
+        ]
+      },
+      "put": {
+        "operationId": "set_team_member_api_v1_achievements__definition_id__team__user_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamMemberIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Set Team Member Api V1 Achievements  Definition Id  Team  User Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Team Member",
         "tags": [
           "achievements"
         ]
@@ -7953,6 +8157,60 @@
           }
         },
         "summary": "Activate Course",
+        "tags": [
+          "courses"
+        ]
+      }
+    },
+    "/api/v1/courses/{course_id}/badge-teams": {
+      "put": {
+        "description": "Badge teams: each badge in this course is edited and awarded only by its own team.",
+        "operationId": "set_badge_teams_api_v1_courses__course_id__badge_teams_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "course_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Course Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BadgeTeamsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourseOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Badge Teams",
         "tags": [
           "courses"
         ]
