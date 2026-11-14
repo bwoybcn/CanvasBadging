@@ -39,6 +39,21 @@ All notable changes to this project are documented here. The format follows
   (`GET /api/v1/admin/canvas-accounts`, `POST …/refresh`, `POST …/link`, `DELETE …/{id}/link`).
 
 ### Changed
+- Usability fixes from the 14 Nov 2026 review:
+  - Award to a list: the badge picker lists only live badges you can award, with their course;
+    a character count for the justification; the preview says up front when a second member of
+    staff must confirm; unmatched entries offer **Refresh the course from Canvas** for students
+    who joined today; results are announced to screen readers.
+  - Badge teams: switching on asks for confirmation and explains the effect; administrators can
+    switch teams off from the course or from **Courses** in Departments and roles
+    (`badge_teams` in `/api/v1/admin/courses`).
+  - A badge's owner, or an administrator, can hand a badge to another member of course staff
+    (`PUT /api/v1/achievements/{id}/owner`); the old owner stays on the team as an editor.
+  - Team tab: colleagues without a name no longer show as an internal id, and removing someone
+    asks first.
+  - Colleague review by area says when a setting is saved; **Badges published without review**
+    says so when there are none.
+  - `GET /api/v1/achievements?awardable=true`, and `course_title` and `can_award` on badge lists.
 - "Badges published without review" uses each live version's latest approval, and includes
   live badges with a new draft in progress.
 - An author's explicit request for a colleague's review is honoured where review is not required.

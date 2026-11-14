@@ -65,6 +65,8 @@ class Row:
 class BulkResult:
     rows: list[Row] = field(default_factory=list)
     committed: bool = False
+    #: Each award waits for a second member of staff (the badge's area requires it).
+    second_approval: bool = False
 
     def counts(self) -> dict[str, int]:
         out: dict[str, int] = {}
@@ -161,7 +163,7 @@ def award_list(
     second = bool(
         authz.definition_review_settings(db, definition)["manual_awards_require_second_approval"]
     )
-    result = BulkResult(committed=confirm)
+    result = BulkResult(committed=confirm, second_approval=second)
     seen: set[uuid.UUID] = set()
     for ident in items:
         key = ident.lower() if "@" in ident else ident

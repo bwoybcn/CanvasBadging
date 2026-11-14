@@ -194,8 +194,12 @@ function BulkAward() {
   const [justification, setJustification] = useState("");
   const [preview, setPreview] = useState<BulkAwardResult | null>(null);
   const badges = useQuery({
-    queryKey: ["achievements", "published"],
-    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?state=published", token),
+    queryKey: ["achievements", "awardable"],
+    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?awardable=true", token),
+  });
+  const chosen = badges.data?.items.find((b) => b.id === badge);
+  const refresh = useMutation({
+    mutationFn: () => apiSend<unknown>(`/api/v1/courses/${chosen?.course_id}/sync`, token, "POST"),
   });
   const run = useMutation({
     mutationFn: (confirm: boolean) =>
@@ -211,8 +215,11 @@ function BulkAward() {
     },
   });
   const reset = () => setPreview(null);
-  const ok = badge && list.trim() && justification.trim().length >= 20;
+  const reasonLength = justification.trim().length;
+  const ok = badge && list.trim() && reasonLength >= 20;
   const toAward = preview && !preview.committed ? (preview.counts.will_award ?? 0) : 0;
+  const notFound = preview?.counts.not_found ?? 0;
+  const learners = (n: number) => `${n} ${n === 1 ? "learner" : "learners"}`;
   return (
     <View as="section" aria-labelledby="bulk-h" display="block" margin="large 0 0">
       <Heading level="h2" id="bulk-h">
@@ -226,7 +233,7 @@ function BulkAward() {
       <SimpleSelect
         renderLabel="Badge to award"
         value={badge || undefined}
-        placeholder="Choose a published badge"
+        placeholder="Choose a badge you can award"
         onChange={(_e, { value }) => {
           setBadge(String(value));
           reset();
@@ -234,7 +241,7 @@ function BulkAward() {
       >
         {(badges.data?.items ?? []).map((b) => (
           <SimpleSelect.Option key={b.id} id={`bb-${b.id}`} value={b.id}>
-            {b.title}
+            {b.course_title ? `${b.title} (${b.course_title})` : b.title}
           </SimpleSelect.Option>
         ))}
       </SimpleSelect>
@@ -255,6 +262,16 @@ function BulkAward() {
           reset();
         }}
       />
+      {reasonLength < 20 && (
+        <Text as="p" size="small">
+          {`${reasonLength} of at least 20 characters.`}
+        </Text>
+      )}
+      {chosen && (
+        <Text as="p" size="small">
+          {`Awarded to students of ${chosen.course_title ?? "the badge's course"}.`}
+        </Text>
+      )}
       {run.isError && <ErrorAlert error={run.error} />}
       <Flex gap="small" margin="small 0">
         <Button interaction={ok && !run.isPending ? "enabled" : "disabled"} onClick={() => run.mutate(false)}>
@@ -262,19 +279,45 @@ function BulkAward() {
         </Button>
         {toAward > 0 && (
           <Button color="primary" interaction={run.isPending ? "disabled" : "enabled"} onClick={() => run.mutate(true)}>
-            {`Award to ${toAward} ${toAward === 1 ? "learner" : "learners"}`}
+            {preview?.second_approval ? `Record for ${learners(toAward)}` : `Award to ${learners(toAward)}`}
           </Button>
         )}
       </Flex>
       {preview && (
         <>
-          <Alert variant={preview.committed ? "success" : "info"} margin="small 0">
-            {preview.committed
-              ? `Done: ${preview.counts.awarded ?? 0} awarded, ${preview.counts.awaiting_confirmation ?? 0} waiting for a second member of staff.`
-              : toAward
-                ? `${toAward} of ${preview.rows.length} entries will be awarded. Check the rest below.`
-                : "Nobody on this list can be awarded. Check the entries below."}
-          </Alert>
+          <div role="status">
+            <Alert variant={preview.committed ? "success" : "info"} margin="small 0">
+              {preview.committed
+                ? `Done: ${preview.counts.awarded ?? 0} awarded, ${preview.counts.awaiting_confirmation ?? 0} waiting for a second member of staff.`
+                : toAward
+                  ? `${toAward} of ${preview.rows.length} entries will be awarded.${
+                      preview.second_approval
+                        ? " A second member of staff must confirm each award before it is issued."
+                        : ""
+                    } Check the rest below.`
+                  : "Nobody on this list can be awarded. Check the entries below."}
+            </Alert>
+          </div>
+          {notFound > 0 && chosen?.course_id && (
+            <View as="div" margin="small 0">
+              <Text as="p">
+                Students who joined the course in Canvas today may not be listed yet. Refresh the course from Canvas,
+                wait a minute, then check the list again.
+              </Text>
+              <Button
+                interaction={refresh.isPending || refresh.isSuccess ? "disabled" : "enabled"}
+                onClick={() => refresh.mutate()}
+              >
+                Refresh the course from Canvas
+              </Button>
+              {refresh.isSuccess && (
+                <Text as="p" role="status">
+                  Refresh started. Check the list again in a minute.
+                </Text>
+              )}
+              {refresh.isError && <ErrorAlert error={refresh.error} />}
+            </View>
+          )}
           <TableScroll>
             <Table caption={preview.committed ? "List award results" : "List award preview"}>
               <Table.Head>

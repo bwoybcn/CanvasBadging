@@ -238,6 +238,7 @@ def list_courses(db: Session, actor: authz.Actor) -> list[dict[str, Any]]:
                 "status": c.status,
                 "org_unit_id": str(c.org_unit_id) if c.org_unit_id else None,
                 "org_unit_name": unit.name if unit else None,
+                "badge_teams": bool(c.badge_teams),
             }
         )
     return out

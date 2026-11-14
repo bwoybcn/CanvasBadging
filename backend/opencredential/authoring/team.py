@@ -84,6 +84,7 @@ def team_out(db: Session, actor: authz.Actor, definition: AchievementDefinition)
         "members": members,
         "candidates": sorted(candidates, key=lambda c: (c["name"] or "").lower()),
         "can_manage": authz.can_edit_definition(db, actor, definition),
+        "can_transfer": course is not None and can_transfer(db, actor, definition, course),
     }
 
 
@@ -161,6 +162,68 @@ def remove_member(
         actor_user_id=actor.user_id,
         request_id=request_id,
         data={"user_id": str(user_id)},
+    )
+
+
+def can_transfer(
+    db: Session, actor: authz.Actor, definition: AchievementDefinition, course: Course
+) -> bool:
+    """The owner (while still staff in the course) and administrators over the course."""
+    if actor.is_inst_admin or authz.is_dept_admin_over(db, actor, course.org_unit_id):
+        return True
+    return actor.user_id == definition.owner_user_id and bool(
+        actor.course_roles(course.id) & authz.COURSE_STAFF
+    )
+
+
+def transfer_owner(
+    db: Session,
+    actor: authz.Actor,
+    definition: AchievementDefinition,
+    user_id: uuid.UUID,
+    request_id: str | None = None,
+) -> None:
+    """Make another member of course staff the badge's owner. The previous owner stays on the
+    team as an editor while they are still staff in the course."""
+    course = _course(db, definition)
+    if not can_transfer(db, actor, definition, course):
+        raise Forbidden(
+            "FORBIDDEN", "Only the badge's owner or an administrator can hand it to someone else."
+        )
+    if user_id == definition.owner_user_id:
+        return
+    staff = course_staff(db, course.id)
+    if user_id not in staff:
+        raise Invalid("NOT_COURSE_STAFF", "A badge can only be handed to staff in its course.")
+    previous = definition.owner_user_id
+    row = db.scalar(
+        select(AchievementTeamMember).where(
+            AchievementTeamMember.definition_id == definition.id,
+            AchievementTeamMember.user_id == user_id,
+        )
+    )
+    if row is not None:
+        db.delete(row)
+    definition.owner_user_id = user_id
+    if previous in staff:
+        db.add(
+            AchievementTeamMember(
+                institution_id=actor.institution_id,
+                definition_id=definition.id,
+                user_id=previous,
+                role="editor",
+                added_by=actor.user_id,
+            )
+        )
+    audit.record(
+        db,
+        action="achievement.owner_transfer",
+        resource_type="achievement_definition",
+        resource_id=definition.id,
+        institution_id=actor.institution_id,
+        actor_user_id=actor.user_id,
+        request_id=request_id,
+        data={"from": str(previous), "to": str(user_id)},
     )
 
 

@@ -252,6 +252,44 @@ describe("badge page", () => {
     expect(calls.find((c) => c.method === "PUT")!.body).toEqual({ role: "awarder" });
   });
 
+  it("asks before removing a team member and can hand the badge over", async () => {
+    const team = {
+      enabled: true,
+      members: [
+        { user_id: "u-lec", name: "Lee Lecturer", role: "owner" },
+        { user_id: "u-rob", name: null, role: "editor" },
+      ],
+      candidates: [],
+      can_manage: true,
+      can_transfer: true,
+    };
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({ state: "published" }),
+      "GET /api/v1/achievements/d-1/team": team,
+      "DELETE /api/v1/achievements/d-1/team/u-rob": { ...team, members: [team.members[0]] },
+      "PUT /api/v1/achievements/d-1/owner": {
+        ...team,
+        members: [
+          { user_id: "u-rob", name: null, role: "owner" },
+          { user_id: "u-lec", name: "Lee Lecturer", role: "editor" },
+        ],
+      },
+    });
+    renderAt("/badges/d-1");
+    await userEvent.click(await screen.findByRole("tab", { name: "Team" }));
+    // A colleague without a name never shows as a raw id.
+    expect(await screen.findByText("A colleague without a name in Canvas: Can edit and award")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("New owner"));
+    await userEvent.click(await screen.findByRole("option", { name: "A colleague without a name in Canvas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Hand over" }));
+    expect(await screen.findByText("A colleague without a name in Canvas now owns this badge.")).toBeInTheDocument();
+    expect(calls.find((c) => c.url === "/api/v1/achievements/d-1/owner")!.body).toEqual({ user_id: "u-rob" });
+    await userEvent.click(screen.getByRole("button", { name: "Remove Lee Lecturer from the team" }));
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false); // nothing happens until confirmed
+    expect(screen.getByRole("button", { name: "Keep" })).toBeInTheDocument();
+  });
+
   it("lets a reviewer approve only after every checklist point", async () => {
     const calls = stubApi({
       ...COURSE_ROUTES,
@@ -301,6 +339,7 @@ describe("awards and progress", () => {
   it("previews a list award before awarding", async () => {
     const preview = {
       committed: false,
+      second_approval: false,
       counts: { will_award: 1, not_found: 1 },
       rows: [
         { identifier: "201111111", status: "will_award", user_id: "u-s1", learner_name: "Sam Student", decision_id: null, message: null },
@@ -309,22 +348,54 @@ describe("awards and progress", () => {
     };
     const calls = stubApi({
       "GET /api/v1/awards?status=awaiting_confirmation": [],
-      "GET /api/v1/achievements?state=published": {
-        items: [{ id: "d-9", state: "published", course_id: "c-1", title: "WP Volunteer", category: "Participation", version_no: 1, live_version_id: "v-9", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z" }],
+      "GET /api/v1/achievements?awardable=true": {
+        items: [{ id: "d-9", state: "published", course_id: "c-1", course_title: "WP Volunteers", title: "WP Volunteer", category: "Participation", version_no: 1, live_version_id: "v-9", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z", can_award: true }],
       },
       "POST /api/v1/awards/bulk": preview,
+      "POST /api/v1/courses/c-1/sync": { queued: true, job_id: "j-1" },
     });
     renderAt("/awards");
     await userEvent.click(await screen.findByLabelText("Badge to award"));
-    await userEvent.click(await screen.findByRole("option", { name: "WP Volunteer" }));
+    await userEvent.click(await screen.findByRole("option", { name: "WP Volunteer (WP Volunteers)" }));
     await userEvent.type(screen.getByLabelText("Student ID numbers or emails"), "201111111{enter}123");
-    await userEvent.type(screen.getByLabelText(/Justification for everyone/), "Logged ten hours of volunteering.");
+    await userEvent.type(screen.getByLabelText(/Justification for everyone/), "Logged ten");
+    expect(screen.getByText("10 of at least 20 characters.")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(/Justification for everyone/), " hours of volunteering.");
     await userEvent.click(screen.getByRole("button", { name: "Check the list" }));
     expect(await screen.findByText("No student in this badge's course has this ID or email")).toBeInTheDocument();
     const body = calls.find((c) => c.url === "/api/v1/awards/bulk")!.body as { confirm: boolean; identifiers: string[] };
     expect(body.confirm).toBe(false);
     expect(body.identifiers).toEqual(["201111111\n123"]);
     expect(screen.getByRole("button", { name: "Award to 1 learner" })).toBeInTheDocument();
+    // Entries nobody matched: offer a roster refresh, for students who joined today.
+    await userEvent.click(screen.getByRole("button", { name: "Refresh the course from Canvas" }));
+    expect(await screen.findByText("Refresh started. Check the list again in a minute.")).toBeInTheDocument();
+  });
+
+  it("says up front when list awards need a second member of staff", async () => {
+    stubApi({
+      "GET /api/v1/awards?status=awaiting_confirmation": [],
+      "GET /api/v1/achievements?awardable=true": {
+        items: [{ id: "d-9", state: "published", course_id: "c-1", course_title: null, title: "WP Volunteer", category: "Participation", version_no: 1, live_version_id: "v-9", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z", can_award: true }],
+      },
+      "POST /api/v1/awards/bulk": {
+        committed: false,
+        second_approval: true,
+        counts: { will_award: 2 },
+        rows: [
+          { identifier: "1", status: "will_award", user_id: "u-1", learner_name: "A", decision_id: null, message: null },
+          { identifier: "2", status: "will_award", user_id: "u-2", learner_name: "B", decision_id: null, message: null },
+        ],
+      },
+    });
+    renderAt("/awards");
+    await userEvent.click(await screen.findByLabelText("Badge to award"));
+    await userEvent.click(await screen.findByRole("option", { name: "WP Volunteer" }));
+    await userEvent.type(screen.getByLabelText("Student ID numbers or emails"), "1, 2");
+    await userEvent.type(screen.getByLabelText(/Justification for everyone/), "Logged ten hours of volunteering.");
+    await userEvent.click(screen.getByRole("button", { name: "Check the list" }));
+    expect(await screen.findByText(/A second member of staff must confirm each award/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Record for 2 learners" })).toBeInTheDocument();
   });
 
   it("shows a student what is confirmed and what is pending", async () => {

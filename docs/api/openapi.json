@@ -520,6 +520,12 @@
             },
             "title": "Rows",
             "type": "array"
+          },
+          "second_approval": {
+            "default": false,
+            "description": "true: each award waits for a second member of staff to confirm it.",
+            "title": "Second Approval",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1499,6 +1505,11 @@
             "title": "Award Policy",
             "type": "string"
           },
+          "can_award": {
+            "default": false,
+            "title": "Can Award",
+            "type": "boolean"
+          },
           "category": {
             "title": "Category",
             "type": "string"
@@ -1514,6 +1525,17 @@
               }
             ],
             "title": "Course Id"
+          },
+          "course_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Course Title"
           },
           "id": {
             "format": "uuid",
@@ -3065,6 +3087,20 @@
         "title": "OrgUnitPatch",
         "type": "object"
       },
+      "OwnerIn": {
+        "properties": {
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "OwnerIn",
+        "type": "object"
+      },
       "ReasonIn": {
         "properties": {
           "reason": {
@@ -4607,6 +4643,18 @@
             }
           },
           {
+            "description": "Only live badges this user can award (award pickers)",
+            "in": "query",
+            "name": "awardable",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only live badges this user can award (award pickers)",
+              "title": "Awardable",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "query",
             "name": "limit",
             "required": false,
@@ -5004,6 +5052,62 @@
           }
         },
         "summary": "New Version",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
+    "/api/v1/achievements/{definition_id}/owner": {
+      "put": {
+        "description": "Hand a badge to another member of course staff, e.g. when its owner leaves.",
+        "operationId": "transfer_owner_api_v1_achievements__definition_id__owner_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Transfer Owner Api V1 Achievements  Definition Id  Owner Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Transfer Owner",
         "tags": [
           "achievements"
         ]

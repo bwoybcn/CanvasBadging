@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Alert, Button, Checkbox, Heading, List, Spinner, Text, View } from "@instructure/ui";
+import { Alert, Button, Heading, List, Spinner, Text, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { apiFetch, apiSend, problemText, type Course, type Me } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
-import { Nav } from "../components/Page";
+import { Nav, roleFlags, useMe } from "../components/Page";
 
 const ROLE_LABELS: Record<string, string> = {
   student: "Student",
@@ -147,22 +148,58 @@ function ActivateCourse({ courseId }: { courseId: string }) {
 function BadgeTeamsToggle({ courseId }: { courseId: string }) {
   const { token } = useAuth();
   const qc = useQueryClient();
+  const isAdmin = roleFlags(useMe().data).isAdmin;
+  const [confirming, setConfirming] = useState(false);
   const courses = useQuery({ queryKey: ["courses"], queryFn: () => apiFetch<Course[]>("/api/v1/courses", token) });
   const course = courses.data?.find((c) => c.id === courseId);
   const set = useMutation({
     mutationFn: (enabled: boolean) =>
       apiSend<Course>(`/api/v1/courses/${courseId}/badge-teams`, token, "PUT", { enabled }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["courses"] }),
+    onSuccess: () => {
+      setConfirming(false);
+      qc.invalidateQueries({ queryKey: ["courses"] });
+    },
   });
   if (!course) return null;
+  const on = !!course.badge_teams;
   return (
     <View as="div" margin="small 0">
-      <Checkbox
-        label="Badge teams: each badge here is edited and awarded only by its owner and the colleagues they add"
-        checked={!!course.badge_teams}
-        disabled={set.isPending}
-        onChange={(e) => set.mutate(e.target.checked)}
-      />
+      <Heading level="h3" margin="0 0 x-small">
+        Badge teams
+      </Heading>
+      <Text as="p">
+        {on
+          ? "On: each badge here is edited and awarded only by its owner, the colleagues they add on its Team tab, and administrators."
+          : "Off: every member of staff in this course can edit and award every badge. Switch badge teams on in a course many staff share, such as a library or CPD course."}
+      </Text>
+      {!on && !confirming && (
+        <Button onClick={() => setConfirming(true)}>Switch badge teams on</Button>
+      )}
+      {on && isAdmin && (
+        <Button interaction={set.isPending ? "disabled" : "enabled"} onClick={() => set.mutate(false)}>
+          Switch badge teams off
+        </Button>
+      )}
+      {on && !isAdmin && <Text as="p" size="small">Ask an administrator if badge teams need switching off.</Text>}
+      {confirming && (
+        <Alert variant="warning" margin="small 0">
+          <Text as="p">
+            Colleagues will immediately lose the ability to edit or award badges they do not own until the owner adds
+            them to the badge's team. Only an administrator can switch badge teams off again.
+          </Text>
+          <Button
+            color="primary"
+            margin="small small 0 0"
+            interaction={set.isPending ? "disabled" : "enabled"}
+            onClick={() => set.mutate(true)}
+          >
+            Switch on
+          </Button>
+          <Button margin="small 0 0 0" onClick={() => setConfirming(false)}>
+            Cancel
+          </Button>
+        </Alert>
+      )}
       {set.isError && (
         <Text as="p" color="danger">
           {problemText(set.error)}

@@ -115,6 +115,9 @@ class DefinitionSummary(BaseModel):
     live_version_id: uuid.UUID | None
     award_policy: str
     updated_at: datetime
+    course_title: str | None = None
+    #: Whether the caller may award this badge (badge teams included).
+    can_award: bool = False
 
 
 class DefinitionList(BaseModel):
@@ -227,9 +230,18 @@ def list_achievements(
     course_id: uuid.UUID | None = None,
     state: str | None = None,
     review_queue: bool = Query(False, description="Only badges this user can review now"),
+    awardable: bool = Query(
+        False, description="Only live badges this user can award (award pickers)"
+    ),
     limit: int = Query(50, ge=1, le=200),
 ) -> DefinitionList:
     q = select(AchievementDefinition)
+    if awardable:
+        # Live, even while a new draft version is in progress.
+        q = q.where(
+            AchievementDefinition.current_version_id.is_not(None),
+            AchievementDefinition.state != "archived",
+        )
     if course_id is not None:
         q = q.where(AchievementDefinition.course_id == course_id)
     if state is not None:
@@ -259,7 +271,12 @@ def list_achievements(
             or authz.is_course_staff(db, actor, authz.definition_course(db, d))
         ):
             continue
-        v = authoring.working_version(db, d)
+        can_award = authz.can_award_definition(db, actor, d)
+        if awardable and not can_award:
+            continue
+        live = db.get(AchievementVersion, d.current_version_id) if awardable else None
+        v = live or authoring.working_version(db, d)
+        course = authz.definition_course(db, d)
         items.append(
             DefinitionSummary(
                 id=d.id,
@@ -271,6 +288,8 @@ def list_achievements(
                 live_version_id=d.current_version_id if d.state != "archived" else None,
                 award_policy=d.award_policy,
                 updated_at=d.updated_at,
+                course_title=course.title if course else None,
+                can_award=can_award,
             )
         )
         if len(items) >= limit:
@@ -472,4 +491,20 @@ def remove_team_member(
 
     d = _get(db, actor, definition_id)
     team.remove_member(db, actor, d, user_id, request_id=rid)
+    return team.team_out(db, actor, d)
+
+
+class OwnerIn(BaseModel):
+    user_id: uuid.UUID
+
+
+@router.put("/achievements/{definition_id}/owner")
+def transfer_owner(
+    definition_id: uuid.UUID, body: OwnerIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> dict[str, Any]:
+    """Hand a badge to another member of course staff, e.g. when its owner leaves."""
+    from opencredential.authoring import team
+
+    d = _get(db, actor, definition_id)
+    team.transfer_owner(db, actor, d, body.user_id, request_id=rid)
     return team.team_out(db, actor, d)

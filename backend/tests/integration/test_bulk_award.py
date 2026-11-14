@@ -120,6 +120,7 @@ def test_preview_then_award_a_list(world: World) -> None:
     # Running the list again awards nobody twice.
     again = _bulk(world, did, ["201111111", "202222222"], confirm=True).json()
     assert again["counts"] == {"already_awarded": 2}
+    assert preview["second_approval"] is False
     assert len(world.jobs(ISSUE)) == 3
 
 
@@ -137,6 +138,7 @@ def test_second_approval_applies_to_list_awards(world: World) -> None:
     assert world.jobs(ISSUE) == []
     preview = _bulk(world, did, ["201111111"]).json()
     assert preview["rows"][0]["status"] == "pending_confirmation"
+    assert preview["second_approval"] is True
 
 
 def test_list_awards_are_refused_when_they_should_be(world: World) -> None:

@@ -87,8 +87,9 @@ To award one badge to many people at once, for example everyone on a volunteerin
 workshop register, use **Award a badge to a list**: choose the badge, paste student ID numbers or
 university emails, write one justification, and select **Check the list**. You see who will get
 it, who already has it and which entries match no student in the course (a typo, or someone who
-has not enrolled yet). Then
-select **Award to N learners**.
+has not enrolled yet). If students joined the course in Canvas today, select **Refresh the course
+from Canvas**, wait a minute and check the list again. Then select **Award to N learners** (or
+**Record for N learners** where a second member of staff must confirm each award).
 
 ## If something goes wrong
 
@@ -112,4 +113,5 @@ In a course that many staff share, such as a library or CPD course, switch on **
 from the course home page in OpenCredential. Each badge is then edited and awarded only by its
 owner and the colleagues they add on the badge's **Team** tab, either "edit and award" or
 "award only". Other staff can still see the badge. Ask an administrator if badge teams need
-switching off again.
+switching off again. To pass a badge on, for example when you leave, use **Hand this badge to a
+colleague** on its **Team** tab.
