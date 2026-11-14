@@ -95,7 +95,7 @@ employers' systems.
 
 | Method and path | Returns |
 |---|---|
-| `POST /api/v1/verify` with a credential as the body | `{"result": "verified" \| "revoked" \| "expired" \| "invalid" \| "unable_to_verify", "checks": [...]}`. `unable_to_verify` means something could not be reached; it is never a judgement of fraud. |
+| `POST /api/v1/verify` with a credential as the body | `{"result": "verified" \| "revoked" \| "expired" \| "invalid" \| "unable_to_verify", "checks": [...]}`. `unable_to_verify` means a check could not be completed (something could not be reached, or the credential's revocation details are malformed or use a method this service does not support); it is never a judgement of fraud. `verified` is returned only when no check failed or was unavailable. |
 | `GET /verify` | A page where a person can check a file |
 | `GET /verify/{share_id}` | A learner's shared credential page (only while they share it) |
 | `GET /verify/{share_id}/credential.json` | The signed credential, for wallets |

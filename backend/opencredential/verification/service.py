@@ -9,8 +9,15 @@ achievement. Outcomes, in order of precedence:
 * **Unable to verify** — the signature could not be checked because something was unreachable.
 * **Revoked** — the issuer's signed status list says so.
 * **Expired** — authentic, but past ``validUntil``.
-* **Unable to verify** — authentic and in date, but the status list was unreachable or stale.
-* **Verified** — every required check passed.
+* **Unable to verify** — authentic and in date, but revocation could not be checked: the status
+  list was unreachable or stale, the credential's status entry is malformed, or it uses a status
+  method this service does not support.
+* **Verified** — every check passed. The only exception is a credential that carries no
+  ``credentialStatus`` at all: the issuer offers no way to revoke it, so that check is reported as
+  skipped rather than failed.
+
+``Verified`` is only ever returned when no check failed or was unavailable, so a check that
+could not be completed can never be hidden behind a green result.
 
 Infrastructure failure is never reported as fraud. Whether to *trust* the issuer is a separate,
 human decision; the result reports whether the issuer is one this service knows, but that does
@@ -19,6 +26,7 @@ not change the outcome.
 
 from __future__ import annotations
 
+import zlib
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
@@ -144,16 +152,34 @@ def check_structure(doc: Any) -> Check:
     )
 
 
-def _status_entries(doc: dict[str, Any]) -> list[dict[str, Any]]:
-    cs = doc.get("credentialStatus")
-    entries = cs if isinstance(cs, list) else [cs] if isinstance(cs, dict) else []
-    return [
-        e
-        for e in entries
-        if isinstance(e, dict)
-        and e.get("type") == "BitstringStatusListEntry"
-        and e.get("statusPurpose") == "revocation"
-    ]
+# Status purposes we check. A set bit for either means the credential must not show as verified.
+_CHECKED_PURPOSES = {"revocation", "suspension"}
+# Purposes that carry no validity meaning (Bitstring Status List v1.0 §2.1).
+_IGNORED_PURPOSES = {"refresh", "message"}
+
+
+def _status_entries(doc: dict[str, Any]) -> list[Any] | None:
+    """The credential's status entries, ``[]`` if it has none, or ``None`` if the field is
+    present but is neither an object nor a list of them."""
+    if "credentialStatus" not in doc:
+        return []
+    cs = doc["credentialStatus"]
+    if isinstance(cs, dict):
+        return [cs]
+    if isinstance(cs, list) and cs and all(isinstance(e, dict) for e in cs):
+        return list(cs)
+    return None
+
+
+def _parse_index(value: Any) -> int | None:
+    """``statusListIndex`` is a base-10 string of a non-negative integer (BSL-1)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        return int(value)
+    return None
 
 
 class Verifier:
@@ -270,27 +296,59 @@ class Verifier:
             return self._finish(Outcome.revoked, checks, doc, now)
         if expired:
             return self._finish(Outcome.expired, checks, doc, now)
-        if status_check.status == CheckStatus.unavailable:
+        # Fail closed: anything other than a pass (bar a credential with no status at all) means
+        # we could not complete the checks, so never report it as verified.
+        if any(
+            not c.ok and not (c.name == "status" and c.status == CheckStatus.skipped)
+            for c in checks
+        ):
             return self._finish(Outcome.unable_to_verify, checks, doc, now)
         return self._finish(Outcome.verified, checks, doc, now)
 
     def _check_status(
         self, doc: dict[str, Any], issuer_id: str, now: datetime
     ) -> tuple[Check, bool]:
+        """Return the status check and whether the issuer has revoked the credential.
+
+        Every revocation or suspension entry must be checked successfully for the check to pass.
+        A malformed entry is a failure; an unreachable list or unsupported method is unavailable.
+        """
         entries = _status_entries(doc)
+        if entries is None:
+            return Check(
+                "status", CheckStatus.failed, "credentialStatus is not a status entry."
+            ), False
         if not entries:
             return Check(
-                "status", CheckStatus.skipped, "The issuer gave no revocation list."
+                "status",
+                CheckStatus.skipped,
+                "The issuer gave no revocation list, so this credential cannot be revoked.",
             ), False
+        checked = 0
         for entry in entries:
-            url = entry.get("statusListCredential")
-            try:
-                index = int(str(entry.get("statusListIndex")))
-            except ValueError:
+            purpose = entry.get("statusPurpose")
+            if entry.get("type") != "BitstringStatusListEntry":
                 return Check(
-                    "status", CheckStatus.failed, "statusListIndex is not a number."
+                    "status",
+                    CheckStatus.unavailable,
+                    f"The credential uses a status method this service cannot check "
+                    f"({entry.get('type')!r}).",
                 ), False
-            if not isinstance(url, str):
+            if purpose in _IGNORED_PURPOSES:
+                continue
+            if purpose not in _CHECKED_PURPOSES:
+                return Check(
+                    "status", CheckStatus.failed, f"Unknown statusPurpose {purpose!r}."
+                ), False
+            index = _parse_index(entry.get("statusListIndex"))
+            if index is None:
+                return Check(
+                    "status",
+                    CheckStatus.failed,
+                    "statusListIndex is not a non-negative whole number.",
+                ), False
+            url = entry.get("statusListCredential")
+            if not isinstance(url, str) or not url:
                 return Check("status", CheckStatus.failed, "statusListCredential missing."), False
             try:
                 list_vc = self.sources.status_list(url)
@@ -298,20 +356,31 @@ class Verifier:
                 if problem:
                     return Check("status", CheckStatus.unavailable, problem), False
                 subject = list_vc.get("credentialSubject") or {}
-                if subject.get("statusPurpose") != "revocation":
+                if not isinstance(subject, dict) or subject.get("statusPurpose") != purpose:
                     return Check("status", CheckStatus.unavailable, "Wrong list purpose."), False
                 bits = bitstring.decode(str(subject.get("encodedList", "")))
                 if bitstring.is_set(bits, index):
-                    return (
-                        Check("status", CheckStatus.failed, "The issuer has revoked it."),
-                        True,
-                    )
+                    if purpose == "revocation":
+                        return (
+                            Check("status", CheckStatus.failed, "The issuer has revoked it."),
+                            True,
+                        )
+                    return Check(
+                        "status", CheckStatus.failed, "The issuer has suspended it."
+                    ), False
             except (Unavailable, SignerError) as exc:
                 return Check("status", CheckStatus.unavailable, str(exc)), False
-            except (ValueError, IndexError, OSError) as exc:
+            except (ValueError, IndexError, OSError, EOFError, zlib.error) as exc:
                 return Check(
                     "status", CheckStatus.unavailable, f"Unreadable status list: {exc}"
                 ), False
+            checked += 1
+        if not checked:
+            return Check(
+                "status",
+                CheckStatus.skipped,
+                "The issuer gave no revocation list, so this credential cannot be revoked.",
+            ), False
         return Check(
             "status", CheckStatus.passed, "Not revoked (signed status list checked)."
         ), False
