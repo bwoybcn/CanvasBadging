@@ -20,8 +20,10 @@ All notable changes to this project are documented here. The format follows
     current key (C3).
   - The signer retires or destroys a key only after the database change commits, with a queued
     job as the durable retry (C4).
-  - A verification host can belong to only one institution (unique, migration 0008), and this
-    service only vouches for a did:web issuer under its own institution's host (S3, part 1).
+  - The verification host is operator-only: it is set with `oc admin set-verification-host`, it
+    is read-only on the institution settings page, and it can belong to only one institution
+    (unique, migration 0008). This service only vouches for a did:web issuer under its own
+    institution's host (S3).
   - After any number of failed Canvas reads in a row, the last good snapshot is still treated as
     unavailable, so nothing is awarded from stale data (C5).
   - A rejected manual award no longer blocks a corrected one for the same learner (C6).

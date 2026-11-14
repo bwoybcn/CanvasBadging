@@ -22,11 +22,25 @@ administrator cannot be removed. Roles granted with an expiry stop working at th
 
 ## 1. Institution settings (§10.1)
 
-Name, description, website, brand colours, **public verification domain**, achievement
-categories and LinkedIn organisation. The verification domain is where issuers' `did:web`
-documents and revocation lists are published (ADR-0004). Once any issuer has signed with a
-`did:web` on that host it cannot be changed, because that would break verification of every
-credential already issued; plan new issuers on a new host instead.
+Name, description, website, brand colours, achievement categories and LinkedIn organisation.
+The settings page also shows the **public verification domain**, read-only. The verification
+domain is where issuers' `did:web` documents and revocation lists are published (ADR-0004).
+
+Only the service operator sets the verification domain, after checking that the institution
+controls it:
+
+```sh
+oc admin set-verification-host --institution <slug> --host badges.example.ac.uk
+oc admin set-verification-host --institution <slug> --clear
+```
+
+The rules for the domain are:
+
+- Each domain can belong to only one institution.
+- The change is audited (`institution.verification_host_set`).
+- Once any issuer has signed with a `did:web` on that host, the domain cannot be changed, because
+  that would break verification of every credential already issued. Plan new issuers on a new
+  host instead.
 
 ## 2. Faculties, departments and courses
 

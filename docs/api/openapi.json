@@ -1989,6 +1989,7 @@
                 "type": "null"
               }
             ],
+            "description": "Operator-only. Send the current value or leave it out; a change is refused.",
             "title": "Verification Host"
           },
           "website_url": {

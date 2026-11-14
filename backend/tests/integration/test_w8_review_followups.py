@@ -8,7 +8,8 @@ See docs/reports/code-review-2026-11-13.md:
 * C7: the lecturer's awards list is filtered in SQL, so other courses cannot crowd it out.
 * C8: destroyed keys are recorded, audited and never sent to the signer again.
 * C9: eligibility builds decisions through ``issuance.decisions`` only.
-* S3: a verification host belongs to one institution, and local DID answers respect it.
+* S3: a verification host belongs to one institution, only the operator sets it, and local
+  DID answers respect it.
 """
 
 from __future__ import annotations
@@ -27,6 +28,8 @@ from opencredential.db import models as m
 from opencredential.db.session import owner_session, tenant_session
 from opencredential.eligibility import service as eligibility
 from opencredential.eligibility.snapshots import load_course
+from opencredential.errors import Conflict
+from opencredential.governance.institution import set_verification_host
 from opencredential.institutions import keys as key_service
 from opencredential.integrations import registry
 from opencredential.integrations.base import LmsTransientError
@@ -336,13 +339,66 @@ def test_s3_a_verification_host_belongs_to_one_institution(client: TestClient) -
     a, b = build_world(client), build_world(client)
     host = f"badges-{uuid.uuid4().hex[:6]}.example.ac.uk"
     path = "/api/v1/institutions/current"
-    assert a.patch("admin", path, {"verification_host": host}).status_code == 200
-    r = b.patch("admin", path, {"verification_host": host.upper()})
-    assert r.status_code == 409 and r.json()["code"] == "VERIFICATION_HOST_TAKEN"
-    assert b.get("admin", path).json()["verification_host"] is None
-    # The owner can still save other settings with the same host.
+
+    # Institution admins cannot set or change it: the operator does (Gary's decision, S3).
+    r = a.patch("admin", path, {"verification_host": host})
+    assert r.status_code == 403 and r.json()["code"] == "VERIFICATION_HOST_OPERATOR_ONLY"
+    assert a.get("admin", path).json()["verification_host"] is None
+
+    _operator_sets_host(a.iid, host)
+    assert a.get("admin", path).json()["verification_host"] == host
+    # Resending the current value with other settings (as the settings form does) is fine.
     r = a.patch("admin", path, {"verification_host": host, "name": "Renamed University"})
     assert r.status_code == 200, r.text
+    r = a.patch("admin", path, {"verification_host": None})
+    assert r.status_code == 403
+
+    # Unique across institutions, whatever the case.
+    with pytest.raises(Conflict) as exc:
+        _operator_sets_host(b.iid, host.upper())
+    assert exc.value.code == "VERIFICATION_HOST_TAKEN"
+    assert b.get("admin", path).json()["verification_host"] is None
+
+    with owner_session() as db:
+        actions = list(
+            db.scalars(
+                select(m.AuditEvent.data).where(
+                    m.AuditEvent.action == "institution.verification_host_set",
+                    m.AuditEvent.institution_id == a.iid,
+                )
+            )
+        )
+    assert actions == [{"from": None, "to": host, "via": "cli"}]
+
+
+def test_s3_operator_command_sets_the_host(client: TestClient) -> None:
+    from typer.testing import CliRunner
+
+    from opencredential.cli import app
+
+    w = build_world(client)
+    with owner_session() as db:
+        inst = db.get(m.Institution, w.iid)
+        assert inst is not None
+        slug = inst.slug
+    host = f"badges-{uuid.uuid4().hex[:6]}.example.ac.uk"
+    runner = CliRunner()
+    args = ["admin", "set-verification-host", "--institution", slug]
+    r = runner.invoke(app, [*args, "--host", host])
+    assert r.exit_code == 0, r.output
+    assert w.get("admin", "/api/v1/institutions/current").json()["verification_host"] == host
+    assert runner.invoke(app, [*args, "--host", "https://bad"]).exit_code == 1
+    assert runner.invoke(app, args).exit_code == 1  # neither --host nor --clear
+    r = runner.invoke(app, [*args, "--clear"])
+    assert r.exit_code == 0, r.output
+    assert w.get("admin", "/api/v1/institutions/current").json()["verification_host"] is None
+
+
+def _operator_sets_host(iid: uuid.UUID, host: str | None) -> None:
+    with owner_session() as db:
+        inst = db.get(m.Institution, iid)
+        assert inst is not None
+        set_verification_host(db, inst, host)
 
 
 def test_s3_local_did_answers_only_under_the_owning_host(signer_available: bool) -> None:
