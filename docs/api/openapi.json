@@ -3498,6 +3498,31 @@
         "title": "RuleSet",
         "type": "object"
       },
+      "SessionOut": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "renewable_until": {
+            "format": "date-time",
+            "title": "Renewable Until",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at",
+          "renewable_until"
+        ],
+        "title": "SessionOut",
+        "type": "object"
+      },
       "ShareIn": {
         "properties": {
           "show_evidence": {
@@ -9963,6 +9988,28 @@
         "summary": "My Data Export",
         "tags": [
           "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/session/renew": {
+      "post": {
+        "description": "Needs a token that is still valid. ``TenantDb`` refuses accounts that are no longer active\n(for example after an erasure), so a renewed token is never handed to them.",
+        "operationId": "renew_api_v1_session_renew_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Swap a valid session token for a fresh one",
+        "tags": [
+          "session"
         ]
       }
     },

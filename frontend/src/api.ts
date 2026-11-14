@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Minimal API client. The session token lives in memory only (ADR-0015, no cookies). */
 
+import { currentToken } from "./session";
+
 export interface Problem {
   status: number;
   code: string;
@@ -19,7 +21,8 @@ export async function apiFetch<T>(path: string, token: string | null, init: Requ
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
   if (init.body) headers.set("content-type", "application/json");
-  if (token) headers.set("authorization", `Bearer ${token}`);
+  const bearer = currentToken(token);
+  if (bearer) headers.set("authorization", `Bearer ${bearer}`);
   const res = await fetch(path, { ...init, headers });
   if (!res.ok) {
     let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
@@ -393,8 +396,15 @@ export const POLICY_LABELS: Record<string, string> = {
   manual: "Manual award with justification",
 };
 
+/** Shown wherever a request is refused because the session is over. */
+export const SESSION_ENDED =
+  "Your session has ended. Open Micro-Credentials from the Canvas course menu again to carry on.";
+
 export function problemText(error: unknown): string {
-  if (error instanceof ApiError) return error.problem.detail || error.problem.title;
+  if (error instanceof ApiError) {
+    if (error.problem.status === 401) return SESSION_ENDED;
+    return error.problem.detail || error.problem.title;
+  }
   return "Something went wrong. Please try again.";
 }
 
@@ -511,7 +521,8 @@ export function formatDate(value: string | null | undefined): string {
  */
 export async function downloadFile(path: string, token: string | null, filename: string): Promise<void> {
   const headers = new Headers();
-  if (token) headers.set("authorization", `Bearer ${token}`);
+  const bearer = currentToken(token);
+  if (bearer) headers.set("authorization", `Bearer ${bearer}`);
   const res = await fetch(path, { headers });
   if (!res.ok) {
     let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
@@ -727,7 +738,8 @@ export const ROLE_LABELS: Record<string, string> = {
 /** DELETE that expects 204 No Content. */
 export async function apiDelete(path: string, token: string | null): Promise<void> {
   const headers = new Headers({ accept: "application/json" });
-  if (token) headers.set("authorization", `Bearer ${token}`);
+  const bearer = currentToken(token);
+  if (bearer) headers.set("authorization", `Bearer ${bearer}`);
   const res = await fetch(path, { method: "DELETE", headers });
   if (!res.ok) {
     let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };

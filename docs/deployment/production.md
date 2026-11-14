@@ -39,7 +39,8 @@ removed.
 | `OC_STORAGE_DIR` | `/var/lib/opencredential/assets` | yes |
 | `OC_LTI_PRIVATE_KEY_FILE` | `/var/lib/opencredential/lti/tool_key.pem` | yes |
 | `OC_LOG_JSON` / `OC_LOG_LEVEL` | `true` / `INFO` | no |
-| `OC_SESSION_TTL_MINUTES` | `30` (5 to 240) | no |
+| `OC_SESSION_TTL_MINUTES` | `30` (5 to 240): how long a session lasts without activity | no |
+| `OC_SESSION_MAX_MINUTES` | `480` (5 to 1440): how long after the Canvas launch an active session can keep being renewed. At or below the value above, sessions are never renewed. | no |
 | `OC_SYNC_MIN_INTERVAL_SECONDS` | `300` (how often a course can be refreshed on demand) | no |
 | `OC_CANVAS_TIMEOUT_SECONDS` / `OC_CANVAS_MAX_RETRIES` | `20` / `4` | no |
 

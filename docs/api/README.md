@@ -14,7 +14,7 @@ route, is [../architecture/api.md](../architecture/api.md). Where the two differ
 
 | Caller | How it authenticates |
 |---|---|
-| A person, in Canvas | The LTI 1.3 launch ends at `/app/launch#session=<token>`. The SPA keeps that token in `sessionStorage` and sends `Authorization: Bearer <token>`. Tokens last 30 minutes (`OC_SESSION_TTL_MINUTES`). |
+| A person, in Canvas | The LTI 1.3 launch ends at `/app/launch#session=<token>`. The SPA keeps that token in `sessionStorage` and sends `Authorization: Bearer <token>`. Tokens last 30 minutes (`OC_SESSION_TTL_MINUTES`). While the person is typing or clicking, the SPA swaps a token past half its life for a fresh one with `POST /api/v1/session/renew`, up to 8 hours after the Canvas launch (`OC_SESSION_MAX_MINUTES`). After that, or after 30 idle minutes, the person opens the tool from Canvas again. |
 | A script, in development | `POST /dev/login {"institution": "<slug>", "user_id": "<id>"}` returns a token for a demo user. It is absent when `OC_ENV=production`. |
 | Anyone, for public verification | Nothing. See [Public endpoints](#public-endpoints). |
 
@@ -50,6 +50,7 @@ Roles are looked up on the server for every request; nothing in the request can 
 
 | Tag in `openapi.json` | Paths start with | Who |
 |---|---|---|
+| session | `/session/renew` | anyone signed in (their own session only) |
 | learners, student collection | `/learners/me…`, `/credentials/{id}…` | the signed-in learner (their own data only) |
 | achievements, artwork | `/achievements…`, `/achievement-versions…`, `/assets…`, `/artwork-templates` | course staff (authoring), reviewers (approve, reject) |
 | courses | `/courses…` | course staff; students may read their own course's sync state and request a refresh |

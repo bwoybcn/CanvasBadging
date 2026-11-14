@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/** "Create Micro-Credential": a guided, step-by-step draft editor (spec §5.1, §13.1). */
+/**
+ * "Create Micro-Credential": a guided, step-by-step draft editor (spec §5.1, §13.1).
+ *
+ * The draft is saved as the author goes: it is created when they leave "About the badge" (the
+ * first step with something worth keeping) and saved again each time they choose Next or Back,
+ * and when they leave the wizard. Nothing waits for the last step, so a time-out, a closed tab
+ * or a wrong click costs at most the step in hand.
+ */
 import {
   NumberInput,
   Alert,
@@ -37,6 +44,7 @@ import {
   type IssuerRef,
   type RuleSet,
   type Skill,
+  ApiError,
 } from "../api";
 import { useAuth } from "../auth";
 import { ErrorAlert, Loading, Page } from "../components/Page";
@@ -343,6 +351,11 @@ export function CreateBadge() {
   const [s, setS] = useState<FormState>(EMPTY);
   const [shownProblems, setShownProblems] = useState<string[]>([]);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  /** The saved draft this wizard writes to: the one being edited, or the one it created. */
+  const [draftId, setDraftId] = useState<string | null>(id ?? null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  /** What the server last accepted, so an unchanged step is not saved (or audited) again. */
+  const saved = useRef({ fields: "", rules: "" });
 
   const existing = useQuery({
     queryKey: ["achievement", id],
@@ -353,7 +366,9 @@ export function CreateBadge() {
   useEffect(() => {
     if (existing.data && !loaded.current) {
       loaded.current = true;
-      setS(fromDefinition(existing.data));
+      const form = fromDefinition(existing.data);
+      saved.current = { fields: JSON.stringify(toDraftFields(form.fields)), rules: JSON.stringify(form.rules) };
+      setS(form);
     }
   }, [existing.data]);
 
@@ -393,35 +408,78 @@ export function CreateBadge() {
   });
 
   const save = useMutation({
-    mutationFn: async () => {
+    /** Saves what changed. `finish` (the last step) always sends everything and returns the badge. */
+    mutationFn: async ({ finish }: { finish: boolean }): Promise<Definition | null> => {
       const fields = toDraftFields(s.fields);
-      const rules = s.rules.rules.length ? s.rules : null;
-      if (editing) {
-        await apiSend<Definition>(`/api/v1/achievements/${id}`, token, "PATCH", fields);
-        if (rules) return apiSend<Definition>(`/api/v1/achievements/${id}/rules`, token, "PUT", rules);
-        return apiFetch<Definition>(`/api/v1/achievements/${id}`, token);
+      const fieldsKey = JSON.stringify(fields);
+      const rulesKey = JSON.stringify(s.rules);
+      // Half-built requirements stay in the form until they are complete.
+      const rulesReady = s.rules.rules.length > 0 && ruleProblems(s.rules).length === 0;
+      let did = draftId;
+      let d: Definition | null = null;
+      if (!did) {
+        d = await apiSend<Definition>("/api/v1/achievements", token, "POST", {
+          issuer_id: st.issuer_id,
+          course_id: st.course_id || null,
+          template_id: st.template_id || null,
+          fields,
+          rules: null,
+        });
+        did = d.id;
+        setDraftId(did);
+        saved.current.fields = fieldsKey;
+      } else if (finish || fieldsKey !== saved.current.fields) {
+        d = await apiSend<Definition>(`/api/v1/achievements/${did}`, token, "PATCH", fields);
+        saved.current.fields = fieldsKey;
       }
-      return apiSend<Definition>("/api/v1/achievements", token, "POST", {
-        issuer_id: st.issuer_id,
-        course_id: st.course_id || null,
-        template_id: st.template_id || null,
-        fields,
-        rules,
-      });
+      if (rulesReady && (finish || rulesKey !== saved.current.rules)) {
+        d = await apiSend<Definition>(`/api/v1/achievements/${did}/rules`, token, "PUT", s.rules);
+        saved.current.rules = rulesKey;
+      }
+      if (!d && finish) d = await apiFetch<Definition>(`/api/v1/achievements/${did}`, token);
+      return d;
     },
-    onSuccess: (d) => {
+    onSuccess: (d, { finish }) => {
+      setSavedAt(new Date());
       qc.invalidateQueries({ queryKey: ["achievements"] });
-      qc.setQueryData(["achievement", d.id], d);
-      navigate(`/badges/${d.id}`);
+      if (d) qc.setQueryData(["achievement", d.id], d);
+      if (finish && d) navigate(`/badges/${d.id}`);
     },
   });
 
-  const go = (to: number) => {
+  // Leaving the wizard part-way through a step (the menu, another page): keep that step too.
+  const saveOnLeave = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    saveOnLeave.current = () => {
+      // No baseline means the draft has not loaded yet: there is nothing of the author's to keep,
+      // and saving the empty form would wipe the draft.
+      if (!draftId || !saved.current.fields) return;
+      const fields = toDraftFields(s.fields);
+      if (JSON.stringify(fields) === saved.current.fields) return;
+      void apiSend(`/api/v1/achievements/${draftId}`, token, "PATCH", fields).catch(() => undefined);
+    };
+  });
+  useEffect(() => () => saveOnLeave.current(), []);
+
+  const go = async (to: number) => {
+    if (save.isPending) return;
     if (to > step) {
       const problems = stepProblems(step, st, catalogue.data);
       setShownProblems(problems);
       if (problems.length) return;
-    } else setShownProblems([]);
+      // From "About the badge" onwards there is something worth keeping: save before moving on,
+      // and stay on the step if the server refuses it, so the problem is fixed where it is.
+      if (draftId || step >= 1) {
+        try {
+          await save.mutateAsync({ finish: false });
+        } catch {
+          return;
+        }
+      }
+    } else {
+      setShownProblems([]);
+      if (draftId) save.mutate({ finish: false });
+    }
     setStep(to);
     requestAnimationFrame(() => headingRef.current?.focus());
   };
@@ -436,6 +494,8 @@ export function CreateBadge() {
     );
 
   const f = s.fields;
+  const locked = !!draftId;
+  const sessionEnded = save.error instanceof ApiError && save.error.problem.status === 401;
   const setF = (patch: Partial<FormState["fields"]>) => setS((p) => ({ ...p, fields: { ...p.fields, ...patch } }));
   const cat = catalogue.data;
   const score = hasScoreRule(s.rules);
@@ -475,7 +535,7 @@ export function CreateBadge() {
             renderLabel="Course"
             value={st.course_id || undefined}
             placeholder="Choose a course"
-            interaction={editing ? "readonly" : "enabled"}
+            interaction={locked ? "readonly" : "enabled"}
             onChange={(_e, { value }) => setS((p) => ({ ...p, course_id: String(value), issuer_id: "", template_id: "" }))}
           >
             {staffCourses.map((c) => (
@@ -489,7 +549,7 @@ export function CreateBadge() {
               renderLabel="Issuer"
               value={st.issuer_id || undefined}
               placeholder={st.course_id ? "Choose an issuer" : "Choose a course first"}
-              interaction={editing ? "readonly" : "enabled"}
+              interaction={locked ? "readonly" : "enabled"}
               onChange={(_e, { value }) => setS((p) => ({ ...p, issuer_id: String(value) }))}
             >
               {(issuers.data ?? []).map((i) => (
@@ -509,6 +569,7 @@ export function CreateBadge() {
               <SimpleSelect
                 renderLabel="Start from a badge template (optional)"
                 value={st.template_id}
+                interaction={locked ? "readonly" : "enabled"}
                 onChange={(_e, { value }) => {
                   const t = badgeTemplates.data?.find((x) => x.id === value);
                   setS((p) => (t ? fromTemplate(t, p) : { ...p, template_id: "", fields: { ...EMPTY.fields, asset_id: p.fields.asset_id } }));
@@ -530,6 +591,12 @@ export function CreateBadge() {
                 </Text>
               ) : null}
             </View>
+          )}
+          {locked && !editing && (
+            <Text as="p" size="small">
+              The course, issuer and template are fixed now that your draft is saved. To change them, delete the draft
+              from its badge page and start again.
+            </Text>
           )}
         </View>
       )}
@@ -736,25 +803,49 @@ export function CreateBadge() {
             </List.Item>
           </List>
           <Text as="p">
-            Saving keeps this as a draft. You can preview it, then submit it for review from the badge page. Nothing
-            is issued until it is approved and published.
+            Save draft keeps your last changes and opens the badge page. There you can preview it, then submit it for
+            review. Nothing is issued until it is approved and published.
           </Text>
-          {save.isError && <ErrorAlert error={save.error} />}
         </View>
       )}
 
+      {save.isError && (
+        <Alert variant="error" margin="small 0">
+          {problemText(save.error)}
+          {sessionEnded && draftId
+            ? " Everything up to the last step you finished is saved as a draft: you will find it under Badges."
+            : ""}
+        </Alert>
+      )}
       <Flex gap="small" margin="medium 0 0">
-        {step > 0 && <Button onClick={() => go(step - 1)}>Back</Button>}
+        {step > 0 && (
+          <Button onClick={() => go(step - 1)} interaction={save.isPending ? "disabled" : "enabled"}>
+            Back
+          </Button>
+        )}
         {step < STEPS.length - 1 ? (
-          <Button color="primary" onClick={() => go(step + 1)}>
+          <Button color="primary" onClick={() => go(step + 1)} interaction={save.isPending ? "disabled" : "enabled"}>
             Next
           </Button>
         ) : (
-          <Button color="primary" onClick={() => save.mutate()} interaction={save.isPending ? "disabled" : "enabled"}>
+          <Button
+            color="primary"
+            onClick={() => save.mutate({ finish: true })}
+            interaction={save.isPending ? "disabled" : "enabled"}
+          >
             Save draft
           </Button>
         )}
       </Flex>
+      <Text as="p" size="small" role="status" data-testid="draft-status">
+        {save.isPending
+          ? "Saving your draft…"
+          : savedAt
+            ? `Draft saved at ${savedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. You can leave and come back to it from Badges.`
+            : draftId
+              ? "This draft is saved each time you choose Next or Back."
+              : "Your work is saved as a draft each time you choose Next, from step 2 onwards."}
+      </Text>
     </Page>
   );
 }
