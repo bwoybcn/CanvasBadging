@@ -39,12 +39,22 @@ let screens: Screen[] = [];
 
 test.beforeAll(async ({ request }) => {
   const users = await devUsers(request);
-  const student = users.find((u) => u.roles.includes("student"))!.display_name;
   const lec = await Api.as(request, STAFF.lecturer);
   const badges = (await lec.get<{ items: { id: string; course_id: string }[] }>("/api/v1/achievements")).items;
   const course = badges[0].course_id;
-  const stu = await Api.as(request, student);
-  const creds = await stu.get<Credential[]>("/api/v1/learners/me/credentials");
+  // Seeded students share a family name, so list order is arbitrary: take one who holds a
+  // credential, since the credential detail screen is part of the pass.
+  let student = "";
+  let creds: Credential[] = [];
+  for (const u of users.filter((x) => x.roles.includes("student"))) {
+    const held = await (await Api.as(request, u.display_name)).get<Credential[]>("/api/v1/learners/me/credentials");
+    if (held.length) {
+      student = u.display_name;
+      creds = held;
+      break;
+    }
+  }
+  expect(student, "a student holding a credential").not.toBe("");
   screens = [
     { who: student, path: "/app/", ready: "Welcome" },
     { who: student, path: "/app/me/progress", ready: "" },
