@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Form fields that stop a mistake while it is being typed, instead of refusing the form later. */
-import { Button, Flex, Text, TextArea, TextInput, View } from "@instructure/ui";
+import { Button, Flex, ScreenReaderContent, Text, TextArea, TextInput, View } from "@instructure/ui";
 import { useId, useState, type ComponentProps } from "react";
 
 type TextAreaProps = ComponentProps<typeof TextArea>;
@@ -87,8 +87,12 @@ export function ColourField({ label, value, onChange, optional = false }: Colour
           }}
         />
         <TextInput
-          renderLabel={`${label}: colour code (optional)`}
-          width="13rem"
+          renderLabel={
+            <>
+              <ScreenReaderContent>{`${label}: `}</ScreenReaderContent>or paste a colour code
+            </>
+          }
+          width="14rem"
           maxLength={7}
           value={typed ?? valid ?? ""}
           placeholder="#1f4e79"

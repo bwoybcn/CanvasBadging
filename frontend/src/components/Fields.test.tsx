@@ -65,13 +65,13 @@ describe("choosing a colour", () => {
     fireEvent.change(swatch, { target: { value: "#00AA55" } });
     expect(seen).toHaveBeenLastCalledWith("#00aa55");
     expect(screen.getByText(/Chosen: #00aa55/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Main colour: colour code (optional)")).toHaveValue("#00aa55");
+    expect(screen.getByLabelText("Main colour: or paste a colour code")).toHaveValue("#00aa55");
   });
 
   it("accepts a pasted brand code and never hands back a broken one", async () => {
     const seen = vi.fn();
     render(<Colour seen={seen} />);
-    const code = screen.getByLabelText("Main colour: colour code (optional)");
+    const code = screen.getByLabelText("Main colour: or paste a colour code");
     await userEvent.clear(code);
     await userEvent.type(code, "212b5");
     expect(screen.getByText(/Use a code such as #1f4e79/)).toBeInTheDocument();
