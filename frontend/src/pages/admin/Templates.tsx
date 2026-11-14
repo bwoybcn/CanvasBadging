@@ -69,6 +69,10 @@ export function Templates() {
       apiSend(`/api/v1/admin/templates/${t.id}`, token, "PATCH", { status: t.status === "active" ? "archived" : "active" }),
     onSuccess: refresh,
   });
+  const starters = useMutation({
+    mutationFn: () => apiSend<BadgeTemplate[]>("/api/v1/admin/templates/starters", token, "POST", {}),
+    onSuccess: refresh,
+  });
   return (
     <AdminPage title="Badge templates">
       <Text as="p">
@@ -96,6 +100,26 @@ export function Templates() {
         </View>
       ))}
       {archive.isError && <ErrorAlert error={archive.error} />}
+      <View as="section" display="block" maxWidth="40rem" margin="medium 0 0">
+        <Heading level="h2" margin="0 0 small">
+          Ready-made templates
+        </Heading>
+        <Text as="p">
+          Starting points for badges outside modules: volunteering hours, workshop attendance, event participation and
+          CPD activity. Templates you already have with the same name are left alone.
+        </Text>
+        <Button onClick={() => starters.mutate()} interaction={starters.isPending ? "disabled" : "enabled"}>
+          Add ready-made templates
+        </Button>
+        {starters.isSuccess && (
+          <Text as="p" role="status">
+            {starters.data.length
+              ? `Added ${starters.data.length} template${starters.data.length === 1 ? "" : "s"}.`
+              : "You already have all the ready-made templates."}
+          </Text>
+        )}
+        {starters.isError && <ErrorAlert error={starters.error} />}
+      </View>
       <View as="section" display="block" maxWidth="40rem" margin="medium 0 0">
         <Heading level="h2" margin="0 0 small">
           New template

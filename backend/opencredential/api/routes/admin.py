@@ -20,7 +20,7 @@ from opencredential.api.deps import ActorDep, RequestIdDep, TenantDb
 from opencredential.authz import policy as authz
 from opencredential.db.models import AchievementDefinition, Course, Institution, background_jobs
 from opencredential.errors import Conflict, NotFound
-from opencredential.sync import sync_state
+from opencredential.sync import needs_canvas_data, sync_state
 
 router = APIRouter(prefix="/api/v1", tags=["administration"])
 
@@ -164,12 +164,15 @@ def data_freshness(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
             continue
         state = sync_state(db, cid)
         last = state["last_success_at"]
+        reads_canvas = needs_canvas_data(db, course)
         out.append(
             {
                 "course_id": str(cid),
                 "title": course.title,
                 **state,
-                "stale": last is None or now - last > max_age,
+                # Staff-awarded badges read no Canvas progress, so old data cannot block them.
+                "needs_canvas_data": reads_canvas,
+                "stale": reads_canvas and (last is None or now - last > max_age),
             }
         )
     return sorted(out, key=lambda r: (not r["stale"], r["title"]))

@@ -63,6 +63,12 @@ on the badge's **Team** tab ("edit and award" or "award only") and administrator
 course. Other staff in the course can still see every badge. Any lecturer in the course can
 switch badge teams on; only an institution or department administrator can switch them off.
 
+A recognition course whose live badges are all awarded by staff (manual awards, list awards or
+staff approval, with no module, assignment or score rule) reads nothing from Canvas progress. It
+gets a roster refresh every six hours instead of a full sync every 30 minutes, and the data
+freshness page does not mark it stale. Publishing a badge with a Canvas-data rule brings back the
+full sync on the next run.
+
 ## 3. Issuers and delegated authority (§10.2)
 
 1. Create the issuer (name, short name, level: university, faculty, department or programme).
@@ -126,6 +132,11 @@ Templates pre-fill a new badge: title pattern, descriptions, criteria structure,
 expectations, category, skills terms, standard validity and artwork conventions. They are
 institution-wide or belong to a unit (offered to courses inside it). Authors choose one when
 starting a badge and can change anything before review. Archive a template to stop offering it.
+
+**Add ready-made templates** adds four starting points for badges outside modules: volunteering
+hours, workshop attendance, event participation and CPD activity. They are institution-wide,
+skip any template you already have with the same name, and use placeholders in [brackets] for
+the author to replace.
 
 ## 6. Manual awards
 
