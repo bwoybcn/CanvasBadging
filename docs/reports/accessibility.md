@@ -29,7 +29,7 @@ scenarios and accessibility (Playwright)".
 | Role | Screens |
 |---|---|
 | Student | Home, My badges (progress), My credentials, Credential detail with sharing, Keeping your credentials |
-| Lecturer | Home, Badges, Create micro-credential wizard, Badge detail with preview, Awards to confirm, Course progress |
+| Lecturer | Home, Badges, Create micro-credential wizard, Badge detail with preview, Award badges (all three tabs), Course progress |
 | Reviewer | Review queue |
 | Institution admin | Overview, Institution settings, Policy, Issuers, Departments and roles, Templates, Issued credentials, Reports, Audit log, Personal data and retention, Failed issuance |
 | Public | Verify a credential, a shared credential page, development sign-in |

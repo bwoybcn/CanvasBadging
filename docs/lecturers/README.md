@@ -91,22 +91,33 @@ tells you that the figures are from the earlier read. A warning appears if a bad
 Canvas module or assignment that was removed or changed. Those requirements stay pending until
 you update the badge.
 
-## Confirm awards and make manual awards
+## Award badges
 
-**Awards to confirm** lists students whose requirements are met for lecturer-confirmed badges.
-Confirm or decline each one.
+**Award badges** in the menu has three tabs.
 
-To award a badge that is not earned through Canvas activity, use **Manual award**: choose the
-student and write a **justification**. The justification is recorded and audited. Your
-institution may require a second member of staff to confirm manual awards.
+**Waiting to confirm** lists students whose requirements are met for badges that staff confirm.
+The tab shows how many are waiting. Confirm or decline each one, or select **Award all N** to
+confirm everyone on the list in one go: the page asks first, checks each student against the
+latest Canvas data, and tells you if anyone was left on the list and why. If several badges are
+waiting, **Show** narrows the list to one badge, and **Award all** then covers only that badge.
+The page shows up to 500 at a time; the rest appear as you work through them. Manual awards
+that need a second member of staff are never included in **Award all**: confirm those one at a
+time, after reading the justification.
 
-To award one badge to many people at once, for example everyone on a volunteering log or a
-workshop register, use **Award a badge to a list**: choose the badge, paste student ID numbers or
+**One student** awards a badge that is not earned through Canvas activity. Choose the badge,
+find the student by typing part of their name, and write a **justification**. The justification
+is recorded and audited. Your institution may require a second member of staff to confirm
+manual awards.
+
+**A list of students** awards one badge to many people at once, for example everyone on a
+volunteering log or a workshop register. Choose the badge, paste student ID numbers or
 university emails, write one justification, and select **Check the list**. You see who will get
 it, who already has it and which entries match no student in the course (a typo, or someone who
 has not enrolled yet). If students joined the course in Canvas today, select **Refresh the course
-from Canvas**, wait a minute and check the list again. Then select **Award to N learners** (or
-**Record for N learners** where a second member of staff must confirm each award).
+from Canvas**, wait a minute and check the list again. Then select **Award to N students** (or
+**Record for N students** where a second member of staff must confirm each award).
+
+You can move between the tabs without losing what you have typed.
 
 ## If something goes wrong
 

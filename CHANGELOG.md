@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Award all N** confirms every waiting award on the list in one go
+  (`POST /api/v1/awards/confirm-all`, up to 500). Each award still gets the fresh Canvas check
+  of a single confirm; any that no longer qualify stay on the list and are named with the
+  reason. Manual awards awaiting a second approver are never included. The waiting list can be
+  narrowed to one badge and now shows up to 500 awards (it stopped at 100).
+- The student picker for a single manual award is searched by typing part of a name.
 - An archived badge can be restored (`POST /api/v1/achievements/{id}/restore`, **Restore this
   badge** on the badge page). The published version goes live again as it was, so nothing is
   reviewed again; a newer version that was in progress comes back as a draft. Archiving used to
@@ -48,6 +54,9 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- "Awards to confirm" is now **Award badges**, with three tabs: **Waiting to confirm** (with a
+  count), **One student** and **A list of students**. The tab is kept in the address
+  (`/awards?tab=student`, `?tab=list`), and what is typed on one tab survives a look at another.
 - Actions that cannot simply be undone now ask first and say what will happen: archiving a
   badge, deleting a draft, removing someone's role, unlinking a Canvas sub-account, removing an
   issuer delegation and switching badge teams off from a course. The first press changes nothing, and focus lands on the way out.

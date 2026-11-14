@@ -51,8 +51,9 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 | GET | `/learners/me/credentials` | any | collection across courses |
 | POST | `/evaluations` | `evaluation.run` | `{version_id, user_ids[] or course}` re-evaluates and returns job id |
 | GET | `/evaluations?version_id=&user_id=` | `evaluation.read` | history with per-rule sources |
-| GET | `/awards?status=awaiting_confirmation` | `award.confirm` | lecturer queue |
+| GET | `/awards?status=awaiting_confirmation` | `award.confirm` | lecturer queue; `limit` 1 to 500, default 100 |
 | POST | `/awards/{id}/confirm` · `/awards/{id}/reject` | `award.confirm` | Idempotency-Key |
+| POST | `/awards/confirm-all` | `award.confirm` | `{decision_ids[]}` (1 to 500). Each award gets the checks of a single confirm and stands on its own; returns `{confirmed, left, rows[]}` with a `code` and `message` for each one left waiting. Manual awards are always left (`CONFIRM_ONE_AT_A_TIME`); ids the caller cannot confirm are skipped silently |
 | POST | `/awards/manual` | `award.manual` | `{version_id, user_id, justification, evidence[]}`; may require second approval per policy |
 | GET | `/credentials/{id}` | owner (staff views are W7) | detail + live verification result + share state + LinkedIn values |
 | GET | `/credentials/{id}/export` | owner or `credential.export` | `application/ld+json` download of the exact `signed_json` bytes, filename `<slug>-<date>.json` |

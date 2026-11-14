@@ -66,6 +66,8 @@ test.beforeAll(async ({ request }) => {
     { who: STAFF.lecturer, path: "/app/badges/new", ready: "" },
     { who: STAFF.lecturer, path: `/app/badges/${badges[0].id}`, ready: "" },
     { who: STAFF.lecturer, path: "/app/awards", ready: "" },
+    { who: STAFF.lecturer, path: "/app/awards?tab=student", ready: "Award a badge to one student" },
+    { who: STAFF.lecturer, path: "/app/awards?tab=list", ready: "Award a badge to a list of students" },
     { who: STAFF.lecturer, path: `/app/courses/${course}/progress`, ready: "" },
     { who: STAFF.reviewer, path: "/app/reviews", ready: "" },
     ...[

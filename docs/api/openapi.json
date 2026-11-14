@@ -745,6 +745,109 @@
         "title": "CompromiseOut",
         "type": "object"
       },
+      "ConfirmAllIn": {
+        "properties": {
+          "decision_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Decision Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision_ids"
+        ],
+        "title": "ConfirmAllIn",
+        "type": "object"
+      },
+      "ConfirmAllOut": {
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "integer"
+          },
+          "left": {
+            "title": "Left",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ConfirmAllRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "confirmed",
+          "left",
+          "rows"
+        ],
+        "title": "ConfirmAllOut",
+        "type": "object"
+      },
+      "ConfirmAllRow": {
+        "properties": {
+          "badge_title": {
+            "title": "Badge Title",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "learner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learner Name"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "required": [
+          "id",
+          "learner_name",
+          "badge_title",
+          "confirmed"
+        ],
+        "title": "ConfirmAllRow",
+        "type": "object"
+      },
       "ConfirmIn": {
         "properties": {
           "note": {
@@ -8244,6 +8347,48 @@
           }
         },
         "summary": "Bulk Award",
+        "tags": [
+          "eligibility and awards"
+        ]
+      }
+    },
+    "/api/v1/awards/confirm-all": {
+      "post": {
+        "description": "Confirm many waiting awards in one go (a cohort of 200 is otherwise 200 clicks).\n\nEach award goes through exactly the checks of a single confirm, including the fresh look at\nthe learner's Canvas data, and stands or falls on its own: one that cannot be confirmed is\nleft waiting and reported with its reason, and the rest still go through.",
+        "operationId": "confirm_all_awards_api_v1_awards_confirm_all_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAllIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmAllOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm All Awards",
         "tags": [
           "eligibility and awards"
         ]

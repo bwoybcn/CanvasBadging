@@ -22,6 +22,8 @@ interface Props {
   onConfirm: () => void;
   color?: ComponentProps<typeof Button>["color"];
   size?: ComponentProps<typeof Button>["size"];
+  /** The colour of the button that goes through with it: red unless the action is a good thing. */
+  confirmColor?: ComponentProps<typeof Button>["color"];
   /** True while the action is running: both buttons wait. */
   busy?: boolean;
 }
@@ -34,6 +36,7 @@ export function ConfirmButton({
   onConfirm,
   color = "secondary",
   size = "medium",
+  confirmColor = "danger",
   busy = false,
 }: Props) {
   const [asking, setAsking] = useState(false);
@@ -69,7 +72,7 @@ export function ConfirmButton({
       </Text>
       <Button
         size={size}
-        color="danger"
+        color={confirmColor}
         margin="0 x-small 0 0"
         interaction={busy ? "disabled" : "enabled"}
         onClick={() => {
