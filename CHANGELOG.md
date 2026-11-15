@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- The badge wizard, from the first round of hands-on testing:
+  - Step 4 needs artwork before **Next**, instead of being marked "(done)" and blocking
+    "Submit for review" later.
+  - The list of problems updates as they are fixed, and goes when none are left.
+  - Steps already done can be opened from the step list.
+  - Requirements: a course with no usable modules or assignments says so, instead of an empty
+    list, and the introduction explains that "Staff confirm" is met by staff, not by Canvas.
+  - The awarding default reads "Follow the institution's setting (today: award automatically)",
+    so it is no longer mistaken for a second "Automatic" option.
+  - Plain names for badge types ("Co-curricular activity", "Learning programme", "Short
+    accredited course"), artwork templates without licence codes, and "What a member of staff
+    confirms" instead of "the lecturer".
 - Small fixes from the second round of hands-on testing:
   - The short label on badge artwork is made of whole words of letters and digits, so a title
     with an emoji or "<" no longer prints half a word and a box on the badge.

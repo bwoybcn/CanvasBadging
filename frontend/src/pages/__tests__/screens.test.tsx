@@ -94,6 +94,13 @@ describe("Create Micro-Credential wizard", () => {
     const problems = screen.getByRole("alert");
     expect(problems).toHaveTextContent("Give the badge a title.");
     await waitFor(() => expect(problems).toHaveFocus());
+    // Fixing a problem takes it off the list straight away.
+    await userEvent.type(screen.getByLabelText("Title"), "Lab Safety");
+    expect(screen.queryByText("Give the badge a title.")).toBeNull();
+    expect(screen.getByText("Choose a category.")).toBeInTheDocument();
+    // A step already done can be opened from the step list.
+    await userEvent.click(screen.getByRole("button", { name: /1\. Course and issuer \(done\)/ }));
+    expect(await screen.findByRole("heading", { name: /Step 1 of 7/ })).toBeInTheDocument();
   });
 
   it("starts from a badge template and asks the author to replace its placeholders", async () => {
@@ -129,11 +136,13 @@ describe("Create Micro-Credential wizard", () => {
   });
 
   it("edits a draft through every step and saves fields and rules", async () => {
+    const base = definition();
+    const withArt = { ...base, working_version: { ...base.working_version, asset_id: "a-1" as string | null } };
     const calls = stubApi({
       ...COURSE_ROUTES,
-      "GET /api/v1/achievements/d-1": definition(),
-      "PATCH /api/v1/achievements/d-1": definition(),
-      "PUT /api/v1/achievements/d-1/rules": definition(),
+      "GET /api/v1/achievements/d-1": withArt,
+      "PATCH /api/v1/achievements/d-1": withArt,
+      "PUT /api/v1/achievements/d-1/rules": withArt,
     });
     renderAt("/badges/d-1/edit");
     expect(await screen.findByRole("heading", { name: "Edit badge" })).toBeInTheDocument();
@@ -204,10 +213,12 @@ describe("Create Micro-Credential wizard", () => {
     expect(patch.learning_outcomes).toEqual(["Handle reagents safely"]);
     expect(patch.criteria_narrative).toBe("Pass the lab induction.");
 
-    // A step with no changes is not saved again, and going back does not create a second draft.
+    // The artwork step cannot be passed without artwork, and says so; nothing more is saved.
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
-    await screen.findByRole("heading", { name: /Step 5 of 7/ });
-    for (let back = 4; back >= 1; back--) {
+    expect(await screen.findByText(/Add the badge artwork/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Step 4 of 7/ })).toBeInTheDocument();
+    // Going back does not create a second draft.
+    for (let back = 3; back >= 1; back--) {
       await userEvent.click(screen.getByRole("button", { name: "Back" }));
       await screen.findByRole("heading", { name: new RegExp(`Step ${back} of 7`) });
     }

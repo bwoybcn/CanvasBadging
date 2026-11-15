@@ -35,7 +35,7 @@ const LABELS: Record<string, string> = {
   evidence_description: "Evidence",
   guidance: "Artwork guidance",
   identifiers: "Student ID numbers or emails",
-  instructions: "What the lecturer confirms",
+  instructions: "What a member of staff confirms",
   issuer_id: "Issuer",
   label: "Short label",
   learning_outcomes: "Learning outcomes",
