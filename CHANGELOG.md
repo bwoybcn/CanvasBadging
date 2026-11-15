@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- Small fixes from the second round of hands-on testing:
+  - The short label on badge artwork is made of whole words of letters and digits, so a title
+    with an emoji or "<" no longer prints half a word and a box on the badge.
+  - **Check a credential file** warns "do not rely on" a file's details only when the file is
+    invalid. A revoked or expired badge is genuine, just no longer valid.
+  - A shared badge page names the holder once, not again in the facts table.
+  - When the session has ended, the page shows only how to carry on, not menus and buttons
+    that would fail.
+  - **Administration › Courses** asks before switching badge teams on or off (the course page
+    already did).
+  - A badge waiting only for staff tells students "Waiting for staff to confirm", not "Waiting
+    for information".
 - A withdrawn badge says so plainly to its holder. The badge page names the issuer, the date and
   the reason category ("Reason: Issued in error."); the staff explanation stays in the record. It
   no longer says "Verification confirms that this credential … has not been revoked" under

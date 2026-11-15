@@ -814,6 +814,36 @@ describe("awards and progress", () => {
     expect(within(card).queryByText(/0 of 1 confirmed/)).toBeNull();
     expect(within(card).queryByText(/Awaiting confirmation/)).toBeNull();
   });
+
+  it("says a badge is waiting for staff when that is all that is missing", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": { ...STAFF_ME, memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" }] },
+      "GET /api/v1/learners/me/achievements": [
+        {
+          definition_id: "d-3",
+          version_id: "v-3",
+          course: { id: "c-1", title: "Library Volunteers" },
+          title: "Volunteer hours",
+          short_description: "Ten hours of volunteering.",
+          category: "Participation",
+          issuer: "University Library",
+          image: { data_url: null, alt_text: null },
+          award_policy: "manual",
+          status: "pending",
+          outcome: "unknown",
+          credential_id: null,
+          progress: { completed: 0, total: 1, mode: "ALL" },
+          requirements: [
+            { rule_id: "r1", type: "manual_approval", description: "Check the hours log", outcome: "unknown", status: "pending", confirmed: false, label: "Awaiting confirmation by course staff", explanation_code: "AWAITING_STAFF", message: "", as_of: null },
+          ],
+        },
+      ],
+    });
+    renderAt("/me/progress");
+    const card = await screen.findByRole("region", { name: "Volunteer hours" });
+    expect(within(card).getByText("Waiting for staff to confirm")).toBeInTheDocument();
+    expect(within(card).queryByText("Waiting for information")).toBeNull();
+  });
 });
 
 describe("course activation", () => {

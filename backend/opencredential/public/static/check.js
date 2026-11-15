@@ -48,7 +48,9 @@
         if (name) { dl.appendChild(el("dt", "Badge")); dl.appendChild(el("dd", name)); }
         if (issuer) { dl.appendChild(el("dt", "Issued by")); dl.appendChild(el("dd", issuer)); }
         box.appendChild(dl);
-        if (j.result !== "verified") {
+        // A revoked or expired badge is genuine but no longer valid; only an invalid file
+        // may be forged, so only then are its details not to be trusted.
+        if (j.result === "invalid") {
           box.appendChild(el("p", "These details are what the file says. Because the check did not pass, do not rely on them.")).className = "muted";
         }
       }
