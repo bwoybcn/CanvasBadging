@@ -143,6 +143,8 @@ interface SearchSelectProps {
   value: string;
   onChange: (id: string) => void;
   placeholder?: string;
+  /** What to say when there is nothing to choose from (default "No … to choose from"). */
+  emptyText?: string;
 }
 
 /**
@@ -150,7 +152,7 @@ interface SearchSelectProps {
  * instead of scrolling a list of 300. Typing starts a new search, so it clears the choice
  * until a name is picked.
  */
-export function SearchSelect({ label, things, options, value, onChange, placeholder }: SearchSelectProps) {
+export function SearchSelect({ label, things, options, value, onChange, placeholder, emptyText }: SearchSelectProps) {
   const prefix = useId();
   const [typed, setTyped] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -194,7 +196,7 @@ export function SearchSelect({ label, things, options, value, onChange, placehol
       ))}
       {found.length === 0 && (
         <Select.Option id={domId("-none")} isDisabled>
-          {options.length ? `No ${things} match "${(typed ?? "").trim()}"` : `No ${things} to choose from`}
+          {options.length ? `No ${things} match "${(typed ?? "").trim()}"` : (emptyText ?? `No ${things} to choose from`)}
         </Select.Option>
       )}
       {found.length > shown.length && (

@@ -283,6 +283,16 @@ def test_author_is_warned_when_the_certificate_cannot_print_the_wording(world: W
     assert issues["CERTIFICATE_CHARACTERS"]["severity"] == "warning"
 
 
+def test_badge_lists_show_how_the_listed_version_awards(world: World) -> None:
+    did = _badge(world)  # published as "manual"
+    url = f"/api/v1/achievements/{did}"
+    assert world.post("lecturer", f"{url}/new-version").status_code == 200
+    r = world.patch("lecturer", url, {"award_policy": "lecturer_confirmed"})
+    assert r.status_code == 200, r.text
+    listed = world.get("lecturer", "/api/v1/achievements").json()["items"]
+    assert [i["award_policy"] for i in listed if i["id"] == did] == ["lecturer_confirmed"]
+
+
 def test_admin_course_list_shows_badge_teams(world: World) -> None:
     _teams(world, "lecturer", True)
     rows = world.get("admin", "/api/v1/admin/courses").json()

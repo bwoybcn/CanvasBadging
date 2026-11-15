@@ -277,6 +277,14 @@ def list_achievements(
         live = db.get(AchievementVersion, d.current_version_id) if awardable else None
         v = live or authoring.working_version(db, d)
         course = authz.definition_course(db, d)
+        # How awards are made for the version listed. The definition's own column only changes
+        # on publish, so a badge in review was shown with its old (or default) policy.
+        version_rules = rules_store.load(db, v.id)
+        shown_policy = (
+            authoring.resolve_award_policy(v.award_policy, version_rules, policy)[0]
+            if version_rules is not None
+            else v.award_policy or d.award_policy
+        )
         items.append(
             DefinitionSummary(
                 id=d.id,
@@ -286,7 +294,7 @@ def list_achievements(
                 category=v.category,
                 version_no=v.version_no,
                 live_version_id=d.current_version_id if d.state != "archived" else None,
-                award_policy=d.award_policy,
+                award_policy=shown_policy,
                 updated_at=d.updated_at,
                 course_title=course.title if course else None,
                 can_award=can_award,

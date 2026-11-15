@@ -19,6 +19,15 @@ All notable changes to this project are documented here. The format follows
   - Plain names for badge types ("Co-curricular activity", "Learning programme", "Short
     accredited course"), artwork templates without licence codes, and "What a member of staff
     confirms" instead of "the lecturer".
+- Awarding and review, from the first round of hands-on testing:
+  - Badge lists (including the review queue) show how the listed version awards. A badge in
+    review set to "Staff confirm each award" was listed as "Automatic".
+  - **A list of students**: the award button comes after the results table and says how many
+    entries it covers ("Award to 2 students (of 6 entries)").
+  - **One student**: the student list says "Choose a badge first" until a badge is chosen.
+  - **Publish** asks first, and says what publishing does.
+  - Disabled buttons say what is missing (Award badge, Approve, Return to author).
+  - "1 requirement, which students must meet" instead of "1 requirement(s)".
 - Small fixes from the second round of hands-on testing:
   - The short label on badge artwork is made of whole words of letters and digits, so a title
     with an emoji or "<" no longer prints half a word and a box on the badge.
