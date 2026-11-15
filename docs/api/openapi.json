@@ -5215,6 +5215,50 @@
         ]
       }
     },
+    "/api/v1/achievements/{definition_id}/discard-version": {
+      "post": {
+        "description": "Throw away the version in progress; the published version stays live (undoes\n``new-version``).",
+        "operationId": "discard_version_api_v1_achievements__definition_id__discard_version_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefinitionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discard Version",
+        "tags": [
+          "achievements"
+        ]
+      }
+    },
     "/api/v1/achievements/{definition_id}/new-version": {
       "post": {
         "operationId": "new_version_api_v1_achievements__definition_id__new_version_post",

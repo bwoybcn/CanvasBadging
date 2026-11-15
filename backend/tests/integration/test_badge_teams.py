@@ -251,6 +251,26 @@ def test_award_picker_lists_only_live_badges_you_can_award(world: World) -> None
     assert theirs["items"] == []
 
 
+def test_a_new_version_can_be_discarded_and_the_live_one_stays(world: World) -> None:
+    did = _badge(world)
+    url = f"/api/v1/achievements/{did}"
+    live = world.get("lecturer", url).json()["live_version_id"]
+    # A badge that was never superseded has nothing to discard.
+    assert world.post("lecturer", f"{url}/discard-version").status_code == 409
+    assert world.post("lecturer", f"{url}/new-version").status_code == 200
+    draft = world.get("lecturer", url).json()
+    assert draft["state"] == "draft" and draft["working_version"]["id"] != live
+    assert world.post("s1", f"{url}/discard-version").status_code in (403, 404)
+    r = world.post("lecturer", f"{url}/discard-version")
+    assert r.status_code == 200, r.text
+    back = r.json()
+    assert back["state"] == "published"
+    assert back["working_version"]["id"] == live == back["live_version_id"]
+    assert _award(world, "lecturer", did).status_code == 201
+    # A fresh version can be started again afterwards.
+    assert world.post("lecturer", f"{url}/new-version").status_code == 200
+
+
 def test_admin_course_list_shows_badge_teams(world: World) -> None:
     _teams(world, "lecturer", True)
     rows = world.get("admin", "/api/v1/admin/courses").json()

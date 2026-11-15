@@ -390,7 +390,9 @@ export function BadgeDetail() {
   const cat = useQuery({ queryKey: ["categories"], queryFn: () => apiFetch<Catalogue>("/api/v1/categories", token) });
 
   const action = useMutation({
-    mutationFn: async (kind: "submit" | "publish" | "archive" | "restore" | "new-version" | "delete") => {
+    mutationFn: async (
+      kind: "submit" | "publish" | "archive" | "restore" | "new-version" | "discard-version" | "delete",
+    ) => {
       if (kind === "delete") {
         await apiFetch<unknown>(`/api/v1/achievements/${id}`, token, { method: "DELETE" }).catch((e) => {
           if (e instanceof SyntaxError) return null; // 204 has no body
@@ -425,6 +427,7 @@ export function BadgeDetail() {
               ? "Restored. The badge is live again, and students who meet the requirements will be checked shortly."
               : "Restored. The published version is live again, and the newer version you were working on is back as a draft.",
           "new-version": "A new draft version was created. The published version stays live until you publish this one.",
+          "discard-version": "The new version was discarded. The published version is unchanged and still live.",
         }[kind as "submit"] ?? null,
       );
     },
@@ -492,6 +495,19 @@ export function BadgeDetail() {
             Publish
           </Button>
         )}
+        {def.can_edit &&
+          def.live_version_id &&
+          def.live_version_id !== v.id &&
+          ["draft", "in_review", "approved"].includes(def.state) && (
+            <ConfirmButton
+              label="Discard this version"
+              consequence={`Discard version ${v.version_no}? Its changes are removed and cannot be brought back. The published version stays live, unchanged.`}
+              confirmLabel="Discard this version"
+              cancelLabel="Keep working on it"
+              busy={action.isPending}
+              onConfirm={() => action.mutate("discard-version")}
+            />
+          )}
         {def.can_edit && def.state === "published" && (
           <>
             <Button onClick={() => action.mutate("new-version")}>Start a new version</Button>

@@ -61,7 +61,9 @@ On the badge page, **Preview** shows the badge as a student would see it once aw
 
 A published badge cannot be edited, because badges already awarded must always match what was published.
 To change it, create a **new version**. Badges already issued keep the version they were
-issued under.
+issued under. The published version stays live, and can still be awarded, until the new one is
+published. Changed your mind? **Discard this version** (it asks first) removes the new version
+and leaves the published one exactly as it was.
 
 ### Archive and restore
 
