@@ -136,6 +136,12 @@ jobs:
       - name: Service logs
         if: failure()
         run: cat "$RUNNER_TEMP/signer.log" "$RUNNER_TEMP/api.log"
+      - name: Stop the stack
+        # "uv run" holds a lock on uv's cache for as long as the API runs. setup-uv's post step
+        # prunes that cache when uv.lock has changed, and waits five minutes for the lock before
+        # failing the job. Stop what this job started so the cache can be saved.
+        if: always()
+        run: pkill -f "[o]c api" || true; pkill -f "[o]c worker" || true
 
   e2e:
     # W8 (spec §19.3, §19.5): the twelve end-to-end scenarios and the accessibility suite, in a
@@ -209,6 +215,12 @@ jobs:
       - name: Service logs
         if: failure()
         run: cat "$RUNNER_TEMP/signer.log" "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/worker.log"
+      - name: Stop the stack
+        # "uv run" holds a lock on uv's cache for as long as the API runs. setup-uv's post step
+        # prunes that cache when uv.lock has changed, and waits five minutes for the lock before
+        # failing the job. Stop what this job started so the cache can be saved.
+        if: always()
+        run: pkill -f "[o]c api" || true; pkill -f "[o]c worker" || true
 
   signer:
     name: Signer (lint, Vitest, build)
