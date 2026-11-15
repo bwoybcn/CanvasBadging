@@ -271,6 +271,18 @@ def test_a_new_version_can_be_discarded_and_the_live_one_stays(world: World) -> 
     assert world.post("lecturer", f"{url}/new-version").status_code == 200
 
 
+def test_author_is_warned_when_the_certificate_cannot_print_the_wording(world: World) -> None:
+    did = _badge(world)
+    url = f"/api/v1/achievements/{did}"
+    assert world.post("lecturer", f"{url}/new-version").status_code == 200
+    plain = world.get("lecturer", url).json()["readiness"]
+    assert "CERTIFICATE_CHARACTERS" not in {i["code"] for i in plain}
+    r = world.patch("lecturer", url, {"title": "Gwyl Dewi 🎓"})
+    assert r.status_code == 200, r.text
+    issues = {i["code"]: i for i in world.get("lecturer", url).json()["readiness"]}
+    assert issues["CERTIFICATE_CHARACTERS"]["severity"] == "warning"
+
+
 def test_admin_course_list_shows_badge_teams(world: World) -> None:
     _teams(world, "lecturer", True)
     rows = world.get("admin", "/api/v1/admin/courses").json()
