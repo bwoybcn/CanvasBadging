@@ -20,6 +20,32 @@ Who can do what:
 Students always come from Canvas enrolments and cannot be granted here. The last institution
 administrator cannot be removed. Roles granted with an expiry stop working at that time.
 
+## Getting set up
+
+The **Administration** overview opens with a checklist for institution administrators. It reads
+the current state, so a step is ticked when the thing itself is true, in any order:
+
+| Step | Ticked when | Where |
+| --- | --- | --- |
+| Canvas is connected | A registered Canvas is active and the tool may read it | The service operator: [Connecting OpenCredential to Canvas](../integrations/canvas.md), step 6 |
+| The public address for checking badges is set | The verification domain is set | The service operator: section 1 below |
+| A faculty, department or service may issue badges | At least one area, and every area above it, has **May issue badges** | **Faculties and departments** |
+| An issuer has been created | Any issuer exists | **Issuers** |
+| An issuer is authorised | An issuer is authorised, not suspended, and its area may issue | **Issuers** |
+| An authorised issuer is delegated to a department or course | An authorised issuer has a delegation | **Issuers** |
+
+Each step says what is there now ("Library Skills Centre can sign badges") or what to do, and
+links to its page. The first step still to do is marked **Do this next**. The two operator steps
+say that whoever runs the service does them, because no administration page can. Without the
+last step lecturers have no issuer to choose in the create wizard, which is the usual reason a
+new installation "does nothing". When all six are done the checklist folds away behind **Show
+the setup checklist**; it unticks a step again if, say, the only issuer is suspended.
+`GET /api/v1/admin/setup` returns the same list.
+
+The administration menu follows the same order: **Faculties and departments**, **Courses**,
+**Staff roles**, **Issuers**, then the rules (**Approval and awarding policy**, **Colleague
+review by area**, **Badge templates**) and the records.
+
 ## 1. Institution settings (§10.1)
 
 Name, description, website, brand colours, achievement categories and LinkedIn organisation.
@@ -45,6 +71,11 @@ The rules for the domain are:
 
 ## 2. Faculties, departments and courses
 
+These are three pages in the menu: **Faculties and departments** (areas and Canvas
+sub-accounts), **Courses** (which area each course belongs to, and badge teams) and **Staff
+roles** (who has which role, and granting one). They were one page, "Departments and roles",
+until 15 Nov 2026; old links to it open **Faculties and departments**.
+
 Build the hierarchy (faculty → department → programme). Each unit has **May issue badges**
 (spec §10.3 "which departments can issue"). A unit can issue only if it and every unit above it
 may. When a unit may not issue, its issuers are not offered to authors, badges in its courses
@@ -57,7 +88,7 @@ Canvas keeps courses in a tree of accounts: the root account, then sub-accounts 
 faculty or service, sometimes deeper for departments), then courses. Instead of building areas by
 hand, an institution administrator can link the sub-accounts that matter:
 
-1. Under **Canvas sub-accounts** on the departments page, choose **Read sub-accounts from
+1. Under **Canvas sub-accounts** on **Faculties and departments**, choose **Read sub-accounts from
    Canvas**. The Canvas connection must belong to an account administrator who can see them.
 2. Tick the sub-accounts that should be areas, for example each faculty, its departments and the
    Library. Choose a kind for the new areas, or leave it automatic (faculty at the top, department
@@ -89,7 +120,7 @@ on the badge's **Team** tab ("edit and award" or "award only") and administrator
 course. Other staff in the course can still see every badge. Any lecturer in the course can
 switch badge teams on (after a confirmation that explains colleagues lose access); only an
 institution or department administrator can switch them off, from the course home page or from
-**Departments and roles → Courses**. A badge's owner, or an administrator, can hand the badge to
+**Administration → Courses**. A badge's owner, or an administrator, can hand the badge to
 another member of course staff on its **Team** tab, for example when the owner leaves.
 
 A recognition course whose live badges are all awarded by staff (manual awards, list awards or
@@ -133,7 +164,7 @@ change is audited with the fields changed.
 
 Review, self-approval and second approval of manual awards can differ by faculty, department or
 service, so a volunteering or library workshop badge need not follow the rules for a module
-badge. Set them under **Departments and roles → Colleague review by area**:
+badge. Set them under **Administration → Colleague review by area**:
 
 - **Required**: a reviewer approves every badge before it can be published.
 - **Author decides**: the author chooses "Ask a colleague to review it first" (the default) or

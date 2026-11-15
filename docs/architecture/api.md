@@ -31,6 +31,7 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 |---|---|---|---|
 | GET/PATCH | `/institutions/current` | `institution.read` / `institution.manage` | name, branding, verification_host, linkedin org, policy, retention, categories |
 | GET/POST | `/admin/canvas-integrations` | `integration.manage` | register platform + API key; `POST …/{id}/authorize` starts the OAuth for the integration account |
+| GET | `/admin/setup` | institution administrator | the setup checklist: `{steps:[{key, title, done, detail, to, operator}], done, total, complete, next}`. Keys in order: `canvas`, `address`, `area`, `issuer`, `authorised`, `delegated`. Read-only; each `done` is computed from current state |
 | GET/POST/PATCH | `/admin/org-units`, `/admin/memberships` | `membership.grant` (scoped) | grants cannot exceed the granter's scope |
 | GET/POST/PATCH | `/issuers`, `/issuers/{id}` | `issuer.manage` | `POST /issuers/{id}/approve` (`inst_admin`) |
 | GET/POST | `/issuers/{id}/keys` | `keys.manage` | `POST` generates a key in the signer. `POST /issuers/{id}/keys/{kid}/activate`, `/retire`, `/revoke {reason}` |

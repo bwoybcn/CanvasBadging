@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** W7 administration screens: issuer authorisation, revocation, erasure and access. */
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -104,6 +104,123 @@ describe("administration", () => {
     expect(body.authority_basis).toBe("Senate resolution S/2026/14");
   });
 
+  const STEP = (key: string, title: string, done: boolean, detail: string, to: string | null) => ({
+    key,
+    title,
+    done,
+    detail,
+    to,
+    operator: to === null,
+  });
+  const SUMMARY = {
+    issued: 0,
+    revoked: 0,
+    active: 0,
+    pending_awards: { awaiting_confirmation: 0, awaiting_issuance: 0 },
+    failed_issuance: { credentials_not_issued: 0, failed_jobs: 0 },
+    by_course: [],
+    by_badge: [],
+    by_month: [],
+  };
+
+  it("shows the setup checklist with what is done, what is next and where to go", async () => {
+    admin({
+      "GET /api/v1/admin/reports/summary": SUMMARY,
+      "GET /api/v1/admin/setup": {
+        steps: [
+          STEP("canvas", "Canvas is connected", true, "Connected to Canvas.", null),
+          STEP("address", "The public address for checking badges is set", false, "Not set. This step is done by whoever runs the service, not on these pages.", null),
+          STEP("area", "A faculty, department or service may issue badges", true, "Library may issue badges.", "/admin/areas"),
+          STEP("issuer", "An issuer has been created", true, "Library Skills Centre.", "/admin/issuers"),
+          STEP("authorised", "An issuer is authorised", false, "No issuer can sign badges yet.", "/admin/issuers"),
+          STEP("delegated", "An authorised issuer is delegated to a department or course", false, "Authorise an issuer first.", "/admin/issuers"),
+        ],
+        done: 3,
+        total: 6,
+        complete: false,
+        next: "address",
+      },
+    });
+    renderAt("/admin");
+    const setup = await screen.findByRole("region", { name: "Getting set up" });
+    expect(within(setup).getByText(/3 of 6 done/)).toBeInTheDocument();
+    const items = within(setup).getAllByRole("listitem");
+    expect(items).toHaveLength(6);
+    // Each step says its state in words.
+    expect(within(items[0]).getByText("Done")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Do this next")).toBeInTheDocument();
+    expect(within(items[4]).getByText("To do")).toBeInTheDocument();
+    expect(within(setup).getAllByText("Do this next")).toHaveLength(1);
+    // A step the operator does has nowhere to send the administrator; the others link to their page.
+    expect(within(items[1]).queryByText(/^Open /)).toBeNull();
+    expect(within(items[4]).getByText("Open Issuers")).toBeInTheDocument();
+    // A finished step needs no link.
+    expect(within(items[2]).queryByText(/^Open /)).toBeNull();
+  });
+
+  it("folds the checklist away once everything is done", async () => {
+    admin({
+      "GET /api/v1/admin/reports/summary": SUMMARY,
+      "GET /api/v1/admin/setup": {
+        steps: [STEP("canvas", "Canvas is connected", true, "Connected to Canvas.", null)],
+        done: 1,
+        total: 1,
+        complete: true,
+        next: null,
+      },
+    });
+    renderAt("/admin");
+    const setup = await screen.findByRole("region", { name: "Getting set up" });
+    expect(within(setup).getByText(/Setup is complete/)).toBeInTheDocument();
+    expect(within(setup).queryByText("Canvas is connected")).toBeNull();
+    await userEvent.click(within(setup).getByRole("button", { name: /Show the setup checklist/ }));
+    expect(await within(setup).findByText("Canvas is connected")).toBeInTheDocument();
+  });
+
+  it("does not ask a department administrator to set the institution up", async () => {
+    const calls = stubApi({
+      "GET /api/v1/learners/me": { ...ADMIN_ME, memberships: [{ role: "dept_admin", scope_type: "org_unit", scope_id: "ou-1", scope_name: "Library" }] },
+      "GET /api/v1/admin/reports/summary": SUMMARY,
+    });
+    renderAt("/admin");
+    expect(await screen.findByRole("heading", { name: "Badges" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Getting set up" })).toBeNull();
+    expect(calls.some((c) => c.url.endsWith("/admin/setup"))).toBe(false);
+  });
+
+  it("splits departments and roles into four pages, each in the menu, and keeps the old address working", async () => {
+    admin({
+      "GET /api/v1/admin/memberships": [],
+      "GET /api/v1/admin/issuers": [],
+      "GET /api/v1/admin/courses": [],
+      "GET /api/v1/admin/canvas-accounts": [],
+      "GET /api/v1/admin/review/published-without-review": [],
+    });
+    const view = renderAt("/admin/people");
+    // The old address lands on the first of the new pages.
+    expect(await screen.findByRole("heading", { level: 1, name: "Faculties and departments" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Your areas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Canvas sub-accounts" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Who has which role" })).toBeNull();
+    const menu = screen.getByRole("navigation", { name: "Administration sections" });
+    for (const label of ["Faculties and departments", "Courses", "Staff roles", "Colleague review by area"]) {
+      expect(within(menu).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(menu).queryByText("Departments and roles")).toBeNull();
+    view.unmount();
+    for (const [path, title, section] of [
+      ["/admin/courses", "Courses", "Where each course belongs"],
+      ["/admin/roles", "Staff roles", "Who has which role"],
+      ["/admin/review", "Colleague review by area", "Review rules for each area"],
+    ]) {
+      const page = renderAt(path);
+      expect(await screen.findByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+      expect(await screen.findByRole("heading", { level: 2, name: section })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { level: 2, name: "Your areas" })).toBeNull();
+      page.unmount();
+    }
+  });
+
   it("sets colleague review for one area and lists badges published without review", async () => {
     const calls = admin({
       "GET /api/v1/admin/memberships": [],
@@ -122,7 +239,7 @@ describe("administration", () => {
       ],
       "PATCH /api/v1/admin/org-units/ou-1": {},
     });
-    renderAt("/admin/people");
+    renderAt("/admin/review");
     expect(await screen.findByText("WP Volunteer (version 1)")).toBeInTheDocument();
     await userEvent.click(await screen.findByLabelText("Badge review in Library"));
     await userEvent.click(await screen.findByRole("option", { name: "Not required" }));
@@ -157,7 +274,7 @@ describe("administration", () => {
       "POST /api/v1/admin/canvas-accounts/refresh": { accounts: 3 },
       "POST /api/v1/admin/canvas-accounts/link": { linked: 1, courses_placed: 2 },
     });
-    renderAt("/admin/people");
+    renderAt("/admin/areas");
     await userEvent.click(await screen.findByRole("button", { name: "Read sub-accounts from Canvas" }));
     expect(await screen.findByText("Read 3 accounts from Canvas.")).toBeInTheDocument();
     // The root account (the whole of Canvas) cannot be ticked.
@@ -189,7 +306,7 @@ describe("administration", () => {
       "POST /api/v1/admin/canvas-accounts/link": { linked: 1, courses_placed: 0 },
       "DELETE /api/v1/admin/canvas-accounts/a5/link": new Response(null, { status: 204 }),
     });
-    renderAt("/admin/people");
+    renderAt("/admin/areas");
     await userEvent.click(await screen.findByLabelText("Library"));
     await userEvent.click(screen.getByLabelText("Link to"));
     await userEvent.click(await screen.findByRole("option", { name: "Existing area: Library" }));
@@ -226,7 +343,7 @@ describe("administration", () => {
       "GET /api/v1/admin/canvas-accounts": [],
       "DELETE /api/v1/admin/memberships/m-1": new Response(null, { status: 204 }),
     });
-    renderAt("/admin/people");
+    renderAt("/admin/roles");
     await userEvent.click(await screen.findByRole("button", { name: /^Remove .* from Rae Reviewer$/ }));
     expect(screen.getByRole("alert")).toHaveTextContent(/from Rae Reviewer for Library\? They lose what the role lets them do straight away/);
     expect(calls.some((c) => c.method === "DELETE")).toBe(false);
