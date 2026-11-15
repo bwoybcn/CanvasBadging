@@ -181,6 +181,12 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
           Return to author
         </Button>
       </Flex>
+      {(!all || comment.trim().length < 5) && (
+        <Text as="p" size="small">
+          {!all ? "Tick every point above to approve. " : ""}
+          {comment.trim().length < 5 ? "Write a comment to the author to return it." : ""}
+        </Text>
+      )}
     </View>
   );
 }
@@ -491,9 +497,19 @@ export function BadgeDetail() {
           </>
         )}
         {def.can_edit && def.state === "approved" && (
-          <Button color="primary" onClick={() => action.mutate("publish")}>
-            Publish
-          </Button>
+          <ConfirmButton
+            label="Publish"
+            color="primary"
+            consequence={
+              def.live_version_id
+                ? "Publish this version? It replaces the version students see now. Badges already issued keep the version they were issued under."
+                : "Publish this badge? Students can then earn it, and it can be awarded from Award badges."
+            }
+            confirmLabel="Publish"
+            cancelLabel="Not yet"
+            busy={action.isPending}
+            onConfirm={() => action.mutate("publish")}
+          />
         )}
         {def.can_edit &&
           def.live_version_id &&
@@ -551,8 +567,10 @@ export function BadgeDetail() {
           <Heading level="h3">Requirements</Heading>
           {def.rules ? (
             <Text as="p">
-              {def.rules.rules.length} requirement(s); students must meet {def.rules.mode === "ALL" ? "all" : "any one"}{" "}
-              of them. See the preview for the wording students will see.
+              {def.rules.rules.length === 1
+                ? "1 requirement, which students must meet."
+                : `${def.rules.rules.length} requirements; students must meet ${def.rules.mode === "ALL" ? "all" : "any one"} of them.`}{" "}
+              See the preview for the wording students will see.
             </Text>
           ) : (
             <Text as="p">No requirements yet.</Text>

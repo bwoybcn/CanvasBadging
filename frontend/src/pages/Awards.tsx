@@ -151,6 +151,7 @@ function ManualAward() {
         label="Student"
         things="students"
         placeholder={badge ? "Type a name, or choose from the list" : "Choose a badge first"}
+        emptyText={badge ? "No students in this badge's course yet" : "Choose a badge first"}
         options={(learners.data?.learners ?? []).map((l) => ({ id: l.user_id, label: l.name ?? l.user_id }))}
         value={learner}
         onChange={setLearner}
@@ -180,6 +181,15 @@ function ManualAward() {
       <Button color="primary" margin="small 0" interaction={ok && !award.isPending ? "enabled" : "disabled"} onClick={() => award.mutate()}>
         Award badge
       </Button>
+      {!ok && (
+        <Text as="p" size="small">
+          {!badge
+            ? "Choose a badge to award."
+            : !learner
+              ? "Choose the student."
+              : "Write a justification of at least 20 characters."}
+        </Text>
+      )}
     </View>
   );
 }
@@ -286,11 +296,6 @@ function BulkAward() {
         <Button interaction={ok && !run.isPending ? "enabled" : "disabled"} onClick={() => run.mutate(false)}>
           Check the list
         </Button>
-        {toAward > 0 && (
-          <Button color="primary" interaction={run.isPending ? "disabled" : "enabled"} onClick={() => run.mutate(true)}>
-            {preview?.second_approval ? `Record for ${learners(toAward)}` : `Award to ${learners(toAward)}`}
-          </Button>
-        )}
       </Flex>
       {preview && (
         <>
@@ -350,6 +355,13 @@ function BulkAward() {
               </Table.Body>
             </Table>
           </TableScroll>
+          {/* After the table, so the results are read before anyone awards. */}
+          {toAward > 0 && (
+            <Button color="primary" margin="small 0" interaction={run.isPending ? "disabled" : "enabled"} onClick={() => run.mutate(true)}>
+              {`${preview.second_approval ? "Record for" : "Award to"} ${learners(toAward)}`}
+              {toAward < preview.rows.length ? ` (of ${preview.rows.length} entries)` : ""}
+            </Button>
+          )}
         </>
       )}
     </View>

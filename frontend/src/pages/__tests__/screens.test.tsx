@@ -727,7 +727,10 @@ describe("awards and progress", () => {
     const body = calls.find((c) => c.url === "/api/v1/awards/bulk")!.body as { confirm: boolean; identifiers: string[] };
     expect(body.confirm).toBe(false);
     expect(body.identifiers).toEqual(["201111111\n123"]);
-    expect(screen.getByRole("button", { name: "Award to 1 student" })).toBeInTheDocument();
+    // The award button comes after the results, and says how many of the entries it covers.
+    const award = screen.getByRole("button", { name: "Award to 1 student (of 2 entries)" });
+    const table = screen.getByRole("table", { name: /List award preview/ });
+    expect(table.compareDocumentPosition(award) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // Entries nobody matched: offer a roster refresh, for students who joined today.
     await userEvent.click(screen.getByRole("button", { name: "Refresh the course from Canvas" }));
     expect(await screen.findByText("Refresh started. Check the list again in a minute.")).toBeInTheDocument();
