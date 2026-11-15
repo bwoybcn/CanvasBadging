@@ -16,6 +16,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from joserfc import jwt
 from joserfc.errors import JoseError
@@ -44,6 +45,9 @@ class SessionClaims:
     expires_at: datetime
     #: When the session began (the Canvas launch). Renewed tokens keep the original value.
     started_at: datetime
+    #: The launch came from a Canvas account administrator. Grants nothing (ADR-0013); it only
+    #: lets the app explain how to get administration access.
+    platform_admin: bool = False
 
 
 def _key(settings: Settings) -> OctKey:
@@ -59,13 +63,14 @@ def issue(
     course_id: uuid.UUID | None = None,
     started_at: datetime | None = None,
     now: datetime | None = None,
+    platform_admin: bool = False,
 ) -> tuple[str, datetime]:
     now = now or datetime.now(UTC)
     expires = now + timedelta(minutes=settings.session_ttl_minutes)
     if started_at is not None:
         # A renewed token never runs past the session's absolute limit.
         expires = min(expires, renewable_until(settings, started_at))
-    claims = {
+    claims: dict[str, Any] = {
         "iss": ISSUER,
         "aud": AUDIENCE,
         "sub": str(user_id),
@@ -77,6 +82,8 @@ def issue(
         "auth_time": int((started_at or now).timestamp()),
         "jti": secrets.token_urlsafe(16),
     }
+    if platform_admin:
+        claims["padm"] = True
     token = jwt.encode({"alg": "HS256"}, claims, _key(settings))
     return token, expires
 
@@ -108,6 +115,7 @@ def renew(
         course_id=claims.course_id,
         started_at=claims.started_at,
         now=now,
+        platform_admin=claims.platform_admin,
     )
 
 
@@ -129,6 +137,7 @@ def verify(settings: Settings, token: str) -> SessionClaims:
             expires_at=datetime.fromtimestamp(int(c["exp"]), UTC),
             # Tokens issued before renewal existed carry no ``auth_time``: they began at ``iat``.
             started_at=datetime.fromtimestamp(int(c.get("auth_time") or c["iat"]), UTC),
+            platform_admin=c.get("padm") is True,
         )
     except (JoseError, KeyError, ValueError, TypeError) as exc:
         raise InvalidSession(str(exc)) from exc

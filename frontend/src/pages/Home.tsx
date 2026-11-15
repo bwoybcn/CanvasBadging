@@ -41,6 +41,7 @@ export function Home() {
         Welcome, {user.display_name ?? "there"}
       </Heading>
       <Text as="p">{user.institution.name}</Text>
+      {user.canvas_admin_without_access && <CanvasAdminSetup admins={user.institution_admins ?? []} />}
       {user.launch_course && <CourseContext course={user.launch_course} />}
       {user.institution.is_demo && (
         <Alert variant="info" margin="small 0">
@@ -67,6 +68,39 @@ export function Home() {
           Sign out
         </Button>
       )}
+    </View>
+  );
+}
+
+/**
+ * A Canvas administrator who opens Badges sees no administration until someone gives them a
+ * role here: Canvas roles never carry over (ADR-0013). Say so, and say who can help, rather
+ * than leave them on a page that only reads "No course role".
+ */
+function CanvasAdminSetup({ admins }: { admins: string[] }) {
+  return (
+    <View as="section" aria-labelledby="oc-admin-setup" display="block" margin="medium 0">
+      <Alert variant="info">
+        <Heading level="h2" id="oc-admin-setup" margin="0 0 x-small">
+          Setting up badges
+        </Heading>
+        <Text as="p">
+          You are a Canvas administrator, but you do not have an administrator role in Badges yet. Canvas roles do
+          not carry over, so that only the people your institution chooses can change badge settings.
+        </Text>
+        {admins.length > 0 ? (
+          <Text as="p">
+            Ask one of the Badges administrators to give you a role under Administration, then Staff roles:{" "}
+            {admins.join(", ")}.
+          </Text>
+        ) : (
+          <Text as="p">
+            Nobody is a Badges administrator yet. Whoever runs the Badges service makes the first one, now that you
+            have opened Badges once (step 6 of the Canvas set-up guide). Tell them the email address you use in
+            Canvas. After that, administrators give roles to others under Administration, then Staff roles.
+          </Text>
+        )}
+      </Alert>
     </View>
   );
 }

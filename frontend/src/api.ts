@@ -54,6 +54,10 @@ export interface Me {
   email?: string | null;
   /** Present when the session came from a Canvas launch: the course it was opened in. */
   launch_course?: LaunchCourse | null;
+  /** A Canvas account administrator with no administrator role here yet. Grants nothing. */
+  canvas_admin_without_access?: boolean;
+  /** Institution administrators to ask, given only when `canvas_admin_without_access`. */
+  institution_admins?: string[];
 }
 
 export interface LaunchCourse {

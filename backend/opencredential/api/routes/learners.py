@@ -54,6 +54,11 @@ class MeOut(BaseModel):
     memberships: list[MembershipOut]
     session_method: str
     launch_course: LaunchCourseOut | None = None
+    #: Canvas account administrator without an OpenCredential administrator role: the app
+    #: explains how to get one. Grants nothing (ADR-0013).
+    canvas_admin_without_access: bool = False
+    #: Who to ask for that access (institution administrators' names), only in that case.
+    institution_admins: list[str] = []
 
 
 @router.get("/me", response_model=MeOut)
@@ -100,8 +105,29 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
                 roles=roles,
                 view="lecturer" if set(roles) & policy.COURSE_STAFF else "student",
             )
+    canvas_admin_without_access = claims.platform_admin and not any(
+        m.role == "inst_admin" for m in rows
+    )
+    institution_admins: list[str] = []
+    if canvas_admin_without_access:
+        institution_admins = sorted(
+            name
+            for name in db.scalars(
+                select(User.display_name)
+                .join(Membership, Membership.user_id == User.id)
+                .where(
+                    Membership.institution_id == claims.institution_id,
+                    Membership.role == "inst_admin",
+                    Membership.revoked_at.is_(None),
+                    User.status == "active",
+                )
+            )
+            if name
+        )
     return MeOut(
         id=user.id,
+        canvas_admin_without_access=canvas_admin_without_access,
+        institution_admins=institution_admins,
         display_name=user.display_name,
         email=user.email,
         launch_course=launch_course,

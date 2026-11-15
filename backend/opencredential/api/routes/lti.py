@@ -14,6 +14,7 @@ from opencredential.authz import sessions
 from opencredential.db.session import tenant_session
 from opencredential.logging import get_logger
 from opencredential.lti import pages
+from opencredential.lti.claims import is_platform_admin
 from opencredential.lti.config import canvas_tool_config, endpoints
 from opencredential.lti.keys import jwks
 from opencredential.lti.launch import (
@@ -185,6 +186,7 @@ def _complete(
         institution_id=registration.institution_id,
         course_id=result.course_id,
         method="lti",
+        platform_admin=is_platform_admin(launch_data.roles),
     )
     log.info(
         "lti.launch_ok",

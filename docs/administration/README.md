@@ -42,6 +42,11 @@ new installation "does nothing". When all six are done the checklist folds away 
 the setup checklist**; it unticks a step again if, say, the only issuer is suspended.
 `GET /api/v1/admin/setup` returns the same list.
 
+A Canvas account administrator gets no role here from Canvas. When one opens **Badges**, the
+home page says so and names the institution administrators who can grant them a role under
+**Staff roles**; before there are any, it says that the service operator makes the first one
+(`oc admin grant`, [Connecting OpenCredential to Canvas](../integrations/canvas.md), step 6).
+
 The administration menu follows the same order: **Faculties and departments**, **Courses**,
 **Staff roles**, **Issuers**, then the rules (**Approval and awarding policy**, **Colleague
 review by area**, **Badge templates**) and the records.
