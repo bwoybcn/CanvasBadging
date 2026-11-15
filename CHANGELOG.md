@@ -28,6 +28,21 @@ All notable changes to this project are documented here. The format follows
   - **Publish** asks first, and says what publishing does.
   - Disabled buttons say what is missing (Award badge, Approve, Return to author).
   - "1 requirement, which students must meet" instead of "1 requirement(s)".
+- Student, public and administration pages, from the first round of hands-on testing:
+  - A badge signed with a development (test) key says "Test badge: … it is not an official
+    award" on its public page and on **Check a credential file**, and the setup checklist says
+    so instead of claiming such badges cannot be checked.
+  - The public page lists the badge's learning outcomes. The sharing preview shows dates as
+    "15 November 2026", not a timestamp. The verification explanation says "badge", not
+    "credential".
+  - The home page gives students and staff their own instructions, has a skip link, and every
+    page has its own browser title ("Award badges · Badges").
+  - Headings on the progress and badge pages go in order (axe `heading-order`).
+  - Administration shows its menu beside the page, so the setup checklist is not pushed out of
+    sight. Areas are called areas throughout ("New area name"). Policy labels no longer say
+    "(default)" next to unticked boxes, and say "staff" rather than "a lecturer".
+  - Linking Canvas sub-accounts says plainly when no course needed moving, and warns before
+    creating a second area with the name of an existing one.
 - Small fixes from the second round of hands-on testing:
   - The short label on badge artwork is made of whole words of letters and digits, so a title
     with an emoji or "<" no longer prints half a word and a box on the badge.

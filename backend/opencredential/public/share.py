@@ -226,7 +226,9 @@ def _result_block(result: dict[str, Any]) -> str:
     )
     trust = result.get("issuer_trust") or {}
     trust_note = ""
-    if trust.get("detail"):
+    if trust.get("development"):
+        trust_note = f"<p><strong>{escape(str(trust['detail']))}</strong></p>"
+    elif trust.get("detail"):
         trust_note = f'<p class="muted">{escape(str(trust["detail"]))}</p>'
     return (
         f'<section class="result" style="border-color:{colour}" aria-labelledby="result-h">'
@@ -250,6 +252,11 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
         rows.append(("Type", view["achievement_type"]))
     rows.append(("Credential ID", view["credential_id"] or ""))
     dl = "".join(f"<dt>{escape(k)}</dt><dd>{escape(v)}</dd>" for k, v in rows)
+    outcomes = ""
+    if view.get("learning_outcomes"):
+        items = "".join(f"<li>{escape(o)}</li>" for o in view["learning_outcomes"])
+        outcomes = f'<section class="card"><h2>Learning outcomes</h2><ul>{items}</ul></section>'
+
     skills = ""
     if view["skills"]:
         items = "".join(
@@ -290,6 +297,7 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
         f"<h1>{escape(view['credential_name'])}</h1>{who}</div></div>"
         f"<p>{escape(view['description'])}</p><dl>{dl}</dl></article>"
         f'<section class="card"><h2>Criteria</h2><p>{escape(view["criteria"])}</p></section>'
+        + outcomes
         + skills
         + evidence
         + '<section class="card"><h2>What verification means</h2>'

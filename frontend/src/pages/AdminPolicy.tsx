@@ -98,7 +98,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           value={p.score_rules_default_policy}
           onChange={(_e, v) => set({ score_rules_default_policy: v as Policy["score_rules_default_policy"] })}
         >
-          <RadioInput value="lecturer_confirmed" label="A lecturer confirms each award" />
+          <RadioInput value="lecturer_confirmed" label="A member of staff confirms each award" />
           <RadioInput value="automatic" label="Award automatically when the released mark meets the threshold" />
         </RadioInputGroup>
         <Checkbox
@@ -129,7 +129,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           onChange={(e) => set({ areas_may_relax_review: e.target.checked })}
         />
         <Checkbox
-          label="Authors may approve their own badges (default; areas can change this)"
+          label="Authors may approve their own badges (areas can set their own rule)"
           checked={p.self_approval_allowed}
           onChange={(e) => set({ self_approval_allowed: e.target.checked })}
         />
@@ -156,7 +156,7 @@ function PolicyForm({ initial }: { initial: Policy }) {
           onChange={(e) => set({ course_activation_required: e.target.checked })}
         />
         <Checkbox
-          label="Manual awards need a second member of staff to confirm (default; areas can change this)"
+          label="Manual awards need a second member of staff to confirm (areas can set their own rule)"
           checked={p.manual_awards_require_second_approval}
           onChange={(e) => set({ manual_awards_require_second_approval: e.target.checked })}
         />

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Alert, Flex, Heading, List, Spinner, Text, View } from "@instructure/ui";
 import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { ApiError, apiFetch, problemLines, SESSION_ENDED, type Me } from "../api";
 import { useAuth } from "../auth";
@@ -60,6 +60,9 @@ export function Nav() {
 /** Standard page frame: navigation, a single h1 and the content. */
 export function Page({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
   const me = useMe();
+  useEffect(() => {
+    document.title = `${title} · Badges`;
+  }, [title]);
   // Once the session has ended nothing on the page works, so show only how to carry on, not
   // menus and buttons (such as "Create a badge") that would each fail.
   if (me.error instanceof ApiError && me.error.problem.status === 401) {

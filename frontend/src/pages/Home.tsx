@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Alert, Button, Heading, List, Spinner, Text, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { apiFetch, apiSend, problemText, type Course, type Me } from "../api";
 import { useAuth } from "../auth";
@@ -20,6 +20,9 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function Home() {
   const { token, setToken } = useAuth();
+  useEffect(() => {
+    document.title = "Home · Badges";
+  }, []);
   const me = useQuery({
     queryKey: ["me", token],
     queryFn: () => apiFetch<Me>("/api/v1/learners/me", token),
@@ -34,9 +37,14 @@ export function Home() {
     );
 
   const user = me.data;
+  const staff = roleFlags(user).isStaff;
   return (
-    <View as="main" padding="large" maxWidth="60rem" margin="0 auto" display="block">
+    <View as="div" padding="large" maxWidth="60rem" margin="0 auto" display="block">
+      <a href="#main-content" className="oc-skip-link">
+        Skip to main content
+      </a>
       <Nav />
+      <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
       <Heading level="h1" margin="0 0 small">
         Welcome, {user.display_name ?? "there"}
       </Heading>
@@ -60,14 +68,16 @@ export function Home() {
         ))}
       </List>
       <Text as="p">
-        Use the links above to see badges and progress, create and review badges, or award them. Students can
-        download, share and add their badges to LinkedIn from "My badges".
+        {staff
+          ? "Use the links above to create, review and award badges, and to see your students' progress."
+          : 'Use the links above to see the badges in your courses and your progress. In "My badges" you can download, share and add your badges to LinkedIn.'}
       </Text>
       {user.session_method === "dev" && (
         <Button margin="medium 0 0" onClick={() => setToken(null)}>
           Sign out
         </Button>
       )}
+      </main>
     </View>
   );
 }

@@ -190,6 +190,8 @@ def public_view(
         "description": achievement.get("description") or "",
         "short_description": version.short_description if version else None,
         "criteria": criteria.get("narrative") or "",
+        # Part of the badge's definition, like the criteria; shown on the public page too.
+        "learning_outcomes": list(version.learning_outcomes or []) if version else [],
         "skills": [
             {"name": a.get("targetName"), "url": a.get("targetUrl")}
             for a in achievement.get("alignment") or []
@@ -222,6 +224,17 @@ def _name_in_credential(subject: dict[str, Any]) -> bool:
     return any(isinstance(i, dict) and i.get("identityType") == "name" for i in ids)
 
 
+def _plain_date(value: str | None) -> str:
+    """ "2026-11-15T07:49:35Z" as "15 November 2026", as the public page shows it."""
+    if not value:
+        return ""
+    try:
+        day = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    return f"{day.day} {day:%B %Y}"
+
+
 def preview_fields(view: dict[str, Any]) -> list[dict[str, str]]:
     """Plain list of what becomes visible, for the student's consent screen."""
     rows = [
@@ -229,7 +242,8 @@ def preview_fields(view: dict[str, Any]) -> list[dict[str, str]]:
         ("Issued by", f"{view['issuer']['name']} ({view['issuer']['institution']})"),
         ("Description", view["description"]),
         ("Criteria", view["criteria"]),
-        ("Issued on", view["issued_on"] or ""),
+        ("Learning outcomes", "; ".join(view["learning_outcomes"])),
+        ("Issued on", _plain_date(view["issued_on"])),
         ("Credential ID", view["credential_id"] or ""),
         ("Your name", _name_row(view)),
         (

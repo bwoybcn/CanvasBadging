@@ -62,19 +62,19 @@ function RequirementProgress({ b }: { b: LearnerBadge }) {
       />
       {confirmed.length > 0 && (
         <>
-          <Heading level="h4">Confirmed</Heading>
+          <Heading level="h3">Confirmed</Heading>
           <List isUnstyled>{confirmed.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
         </>
       )}
       {pending.length > 0 && (
         <>
-          <Heading level="h4">Pending</Heading>
+          <Heading level="h3">Pending</Heading>
           <List isUnstyled>{pending.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
         </>
       )}
       {todo.length > 0 && (
         <>
-          <Heading level="h4">Still to do</Heading>
+          <Heading level="h3">Still to do</Heading>
           <List isUnstyled>{todo.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
         </>
       )}
@@ -103,7 +103,7 @@ function BadgeCard({ b }: { b: LearnerBadge }) {
       <Flex gap="medium" alignItems="start">
         {b.image.data_url && <Img src={b.image.data_url} alt={b.image.alt_text ?? ""} width="6rem" height="6rem" constrain="contain" />}
         <Flex.Item shouldGrow shouldShrink>
-          <Heading level="h3" id={headingId}>
+          <Heading level="h2" id={headingId}>
             {b.title}
           </Heading>
           <Text as="p" size="small">

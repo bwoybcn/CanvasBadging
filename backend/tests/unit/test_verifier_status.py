@@ -230,3 +230,30 @@ def test_credential_without_any_status_is_verified_but_says_it_cannot_be_revoked
     assert res.result == Outcome.verified
     assert checks["status"] == CheckStatus.skipped
     assert "cannot be revoked" in next(c.detail for c in res.checks if c.name == "status")
+
+
+class DevKeyIssuer(Lists):
+    """An issuer this service knows, whose signing key is a development key."""
+
+    def __init__(self, dev_methods: list[str]):
+        super().__init__({LIST_URL: _list()})
+        self.dev_methods = dev_methods
+
+    def known_issuer(self, did: str) -> dict[str, Any] | None:
+        return {
+            "name": "Skills Centre",
+            "approved": True,
+            "dev_verification_methods": self.dev_methods,
+        }
+
+
+def test_a_badge_signed_with_a_development_key_is_called_a_test_badge() -> None:
+    doc = _credential()
+    method = doc["proof"]["verificationMethod"]
+    res = Verifier(AcceptAllSigner(), DevKeyIssuer([method])).verify(doc, now=NOW)  # type: ignore[arg-type]
+    assert res.result == Outcome.verified
+    assert res.issuer_trust["development"] is True
+    assert res.issuer_trust["detail"].startswith("Test badge:")
+    real = Verifier(AcceptAllSigner(), DevKeyIssuer(["did:key:other#k"])).verify(doc, now=NOW)  # type: ignore[arg-type]
+    assert real.issuer_trust["development"] is False
+    assert "registered with this service" in real.issuer_trust["detail"]

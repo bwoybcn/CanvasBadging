@@ -41,7 +41,7 @@ from opencredential.verification.sources import Sources, Unavailable
 CLOCK_SKEW = timedelta(minutes=5)
 
 EXPLANATION = (
-    "Verification confirms that this credential was signed by the issuer named in it, has not "
+    "Verification confirms that this badge was signed by the issuer named in it, has not "
     "been altered since, is within its validity period and has not been revoked by the issuer. "
     "It does not confirm the identity of the person presenting it (ask them to prove control of "
     "the email address it was issued to), and it does not tell you whether to trust the issuing "
@@ -118,6 +118,15 @@ def _types(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value]
     return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
+
+
+def _signing_method(doc: dict[str, Any]) -> str | None:
+    """The verification method that signed ``doc`` (its first proof), if any."""
+    proof = doc.get("proof")
+    if isinstance(proof, list):
+        proof = proof[0] if proof else None
+    method = proof.get("verificationMethod") if isinstance(proof, dict) else None
+    return method if isinstance(method, str) else None
 
 
 def _issuer_id(doc: dict[str, Any]) -> str | None:
@@ -435,6 +444,10 @@ class Verifier:
                     known = None
                 trust = {
                     "known_issuer": bool(known and known.get("approved")),
+                    # Signed by one of the issuer's development keys: a trial badge.
+                    "development": bool(
+                        known and _signing_method(doc) in known.get("dev_verification_methods", [])
+                    ),
                     "detail": (
                         f"{known['name']} is an issuer registered with this service."
                         if known
@@ -442,6 +455,12 @@ class Verifier:
                         "Decide for yourself whether to trust it."
                     ),
                 }
+                if trust["development"]:
+                    trust["detail"] = (
+                        f"Test badge: {known['name'] if known else 'the issuer'} signed it with a "
+                        "test key while this service was being set up. It shows how a real badge "
+                        "will look; it is not an official award."
+                    )
         return VerificationResult(
             result=outcome,
             label=LABELS[outcome],

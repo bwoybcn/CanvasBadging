@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Frame for the administration area: the standard page plus a section menu. */
-import { Alert, Button, Flex, List, View } from "@instructure/ui";
+import { Alert, Button, List, View } from "@instructure/ui";
 import { useMutation } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -37,8 +37,10 @@ export function AdminPage({ title, children, instOnly = false }: { title: string
   const allowed = instOnly ? f.isInstAdmin : f.isAdmin;
   return (
     <Page title={title}>
-      <Flex alignItems="start" gap="large" wrap="wrap">
-        <View as="nav" aria-label="Administration sections" width="15rem">
+      {/* Menu beside the page, not above it: on a laptop-width Canvas frame the menu used to wrap
+          above the content and push the setup checklist out of sight. */}
+      <div className="oc-admin-layout">
+        <View as="nav" aria-label="Administration sections">
           <List isUnstyled margin="0">
             {SECTIONS.filter((s) => f.isInstAdmin || !s.instOnly).map((s) => (
               <List.Item key={s.to} margin="0 0 x-small">
@@ -47,7 +49,7 @@ export function AdminPage({ title, children, instOnly = false }: { title: string
             ))}
           </List>
         </View>
-        <View as="section" display="block" minWidth="min(20rem, 100%)" width="calc(100% - 17rem)">
+        <View as="section" display="block">
           {allowed ? (
             children
           ) : (
@@ -56,7 +58,7 @@ export function AdminPage({ title, children, instOnly = false }: { title: string
             </Alert>
           )}
         </View>
-      </Flex>
+      </div>
     </Page>
   );
 }

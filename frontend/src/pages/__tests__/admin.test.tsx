@@ -290,7 +290,7 @@ describe("administration", () => {
     await userEvent.click(screen.getByLabelText("Kind for new areas"));
     await userEvent.click(await screen.findByRole("option", { name: "service" }));
     await userEvent.click(screen.getByRole("button", { name: "Link selected (1)" }));
-    expect(await screen.findByText(/Linked 1 sub-account; 2 existing courses joined its area/)).toBeInTheDocument();
+    expect(await screen.findByText(/Linked 1 sub-account\. 2 courses not yet in an area joined it/)).toBeInTheDocument();
     expect(calls.find((c) => c.url.endsWith("/canvas-accounts/link"))!.body).toEqual({
       items: [{ id: "a4", kind: "service" }],
     });

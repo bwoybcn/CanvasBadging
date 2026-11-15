@@ -988,3 +988,22 @@ describe("staff pages reached by a student", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });
+
+describe("the home page speaks to the reader", () => {
+  it("gives students student instructions, with a skip link and a page title", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": { ...STAFF_ME, memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" }] },
+    });
+    renderAt("/");
+    expect(await screen.findByText(/see the badges in your courses and your progress/)).toBeInTheDocument();
+    expect(screen.queryByText(/create, review and award/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Skip to main content" })).toBeInTheDocument();
+    expect(document.title).toBe("Home · Badges");
+  });
+
+  it("gives staff staff instructions", async () => {
+    stubApi({ "GET /api/v1/learners/me": STAFF_ME });
+    renderAt("/");
+    expect(await screen.findByText(/create, review and award badges/)).toBeInTheDocument();
+  });
+});

@@ -112,11 +112,21 @@ def known_issuer_local(did: str) -> dict[str, Any] | None:
         issuer = db.scalar(select(Issuer).where(Issuer.did == did))
         if issuer is None or not _host_belongs_to(db, iid, did):
             return None
+        # A badge signed while the service was being set up uses a development key: genuine,
+        # but a trial, and a reader should be told so (finding M3 of the hands-on test).
+        dev_methods = list(
+            db.scalars(
+                select(IssuerKey.verification_method_id).where(
+                    IssuerKey.issuer_id == issuer.id, IssuerKey.is_dev.is_(True)
+                )
+            )
+        )
         return {
             "id": issuer.did,
             "name": issuer.name,
             "status": issuer.status,
             "approved": issuer.approved_by is not None,
+            "dev_verification_methods": dev_methods,
         }
 
 
