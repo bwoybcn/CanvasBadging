@@ -421,7 +421,8 @@ export function problemLines(error: unknown): string[] {
     if (p.status === 401) return [SESSION_ENDED];
     // The server says only "validation failed" for a refused form: name the fields instead.
     if (p.code === "VALIDATION_FAILED" && p.errors?.length) return fieldProblems(p.errors);
-    return [p.detail || p.title];
+    // A server error behind a proxy can arrive with no title at all; never show an empty message.
+    return [p.detail || p.title || "Something went wrong. Please try again."];
   }
   return ["Something went wrong. Please try again."];
 }

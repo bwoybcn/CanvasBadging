@@ -24,6 +24,7 @@ from opencredential.api.deps import (
     TenantDb,
 )
 from opencredential.api.errors import ApiError
+from opencredential.api.filenames import file_stem
 from opencredential.authz.checks import may_revoke, require_key_manager
 from opencredential.db.models import (
     AchievementVersion,
@@ -52,13 +53,13 @@ def export(credential_id: uuid.UUID, claims: ClaimsDep, db: TenantDb) -> Respons
         # Scenario 10: someone else's credential looks exactly like a missing one.
         raise ApiError(404, "NOT_FOUND", "No such badge")
     version = db.get(AchievementVersion, cred.version_id)
-    stem = "".join(ch if ch.isalnum() else "-" for ch in (version.title if version else "badge"))
+    stem = file_stem(version.title if version else None)
     date = cred.issued_at.date().isoformat() if cred.issued_at else "credential"
     return Response(
         json.dumps(cred.signed_json, indent=2, ensure_ascii=False),
         media_type="application/ld+json",
         headers={
-            "Content-Disposition": f'attachment; filename="{stem.strip("-").lower()}-{date}.json"',
+            "Content-Disposition": f'attachment; filename="{stem}-{date}.json"',
             "Cache-Control": "no-store",
         },
     )
