@@ -74,12 +74,12 @@ RESULT_STYLE = {
 }
 
 RESULT_TEXT = {
-    "verified": "The signature is valid, the issuer's key checks out, and the issuer has not "
-    "revoked it.",
-    "revoked": "The issuer has revoked this credential. It is no longer valid.",
-    "expired": "This credential has passed its expiry date.",
-    "invalid": "This credential failed a structural or cryptographic check. It may have been "
-    "altered.",
+    "verified": "This badge is genuine. It was issued by the organisation named below, has not "
+    "been changed since, and has not been withdrawn.",
+    "revoked": "The issuer has withdrawn (revoked) this badge. It is no longer valid.",
+    "expired": "This badge has passed its expiry date, so it is no longer current.",
+    "invalid": "This badge failed its checks. It may have been changed since it was issued, or it "
+    "may not be a genuine badge. Do not rely on it.",
     "unable_to_verify": "We could not complete the checks right now, for example because the "
     "issuer's status information was temporarily unreachable. This is not evidence that "
     "anything is wrong. Please try again later.",
@@ -103,7 +103,7 @@ h1{font-size:1.6rem;margin:0 0 .25rem}h2{font-size:1.15rem;margin:0 0 .5rem}
 .result{border-left:.4rem solid;padding:.75rem 1rem;margin:0 0 1rem;background:#fff;
 border-radius:.25rem}.result strong{font-size:1.2rem}
 dl{display:grid;grid-template-columns:minmax(8rem,max-content) 1fr;gap:.35rem 1rem;margin:0}
-dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}
+dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}li{overflow-wrap:anywhere}
 .muted{color:#4a5563;font-size:.95rem}a{color:#0b4f8a}
 details summary{cursor:pointer;font-weight:600}
 code{font-size:.9em;overflow-wrap:anywhere}
@@ -366,7 +366,16 @@ and is not stored.</p>
 <p><button type="submit">Check the file</button></p></form>
 <div id="out" role="status" aria-live="polite"></div></div>
 <section class="card"><h2>What verification means</h2><p>__MEANS__</p></section>
+<script type="application/json" id="result-words">__WORDS__</script>
 """
+
+
+def _result_words() -> str:
+    """The verdict wording and colours, shared with check.js so both pages say the same."""
+    words = {"text": RESULT_TEXT, "style": {k: list(v) for k, v in RESULT_STYLE.items()}}
+    # Inside <script>, "</" could end the element early; JSON allows "<\/" for it.
+    return json.dumps(words).replace("</", "<\\/")
+
 
 CHECK_JS = (Path(__file__).parent / "static" / "check.js").read_text(encoding="utf-8")
 
@@ -375,7 +384,9 @@ CHECK_JS = (Path(__file__).parent / "static" / "check.js").read_text(encoding="u
 def check_page() -> HTMLResponse:
     return _page(
         "Check a credential file",
-        CHECK_PAGE.replace("__MEANS__", escape(WHAT_IT_MEANS)),
+        CHECK_PAGE.replace("__MEANS__", escape(WHAT_IT_MEANS)).replace(
+            "__WORDS__", _result_words()
+        ),
         script="/verify-assets/check.js",
     )
 

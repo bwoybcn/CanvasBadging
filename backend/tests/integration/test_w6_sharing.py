@@ -12,6 +12,7 @@ credential is also checked by the independent Python verifier (C-INDEP-01).
 
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from collections.abc import Iterator
@@ -485,6 +486,14 @@ def test_public_check_page_and_robots(client: TestClient) -> None:
     assert "does not independently prove" in page.text
     js = public.get("/verify-assets/check.js")
     assert js.status_code == 200 and "/api/v1/verify" in js.text
+    # The result is explained in plain words, the same ones as a shared badge page, and the
+    # technical checks are folded away; a file that is not JSON gets advice, not an API error.
+    words = page.text.split('id="result-words">', 1)[1].split("</script>", 1)[0]
+    parsed = json.loads(words)
+    assert parsed["text"]["invalid"].startswith("This badge failed its checks")
+    assert set(parsed["style"]) >= {"verified", "invalid", "revoked", "expired"}
+    assert "Show the individual checks" in js.text and "NOT_JSON" in js.text
+    assert "request body" not in js.text
     robots = public.get("/robots.txt")
     assert robots.text == "User-agent: *\nDisallow: /\n"
     assert "noindex" in page.headers["x-robots-tag"]
