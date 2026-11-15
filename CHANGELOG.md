@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- A withdrawn badge says so plainly to its holder. The badge page names the issuer, the date and
+  the reason category ("Reason: Issued in error."); the staff explanation stays in the record. It
+  no longer says "Verification confirms that this credential … has not been revoked" under
+  "Revoked", no longer offers to turn on a public link or add the badge to LinkedIn, and says who
+  to contact. `GET /api/v1/credentials/{id}` gains `withdrawal`.
+- **Stop sharing** asks first, and says that the link stops working everywhere it was given out
+  (LinkedIn, a CV, emails) and that sharing again gives a new link.
 - **Download credential file** works for badges with accented names. A title such as "Gŵyl Dewi"
   or "Café" put a non-Latin-1 letter in the download's file name header, so the server failed
   and the button did nothing. Download names are now plain ASCII ("gwyl-dewi-2026-11-15.json")

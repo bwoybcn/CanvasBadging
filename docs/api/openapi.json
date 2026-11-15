@@ -1168,6 +1168,16 @@
             "additionalProperties": true,
             "title": "Verification",
             "type": "object"
+          },
+          "withdrawal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Withdrawal"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -4471,6 +4481,54 @@
           "published_at"
         ],
         "title": "VersionOut",
+        "type": "object"
+      },
+      "Withdrawal": {
+        "description": "Why and when the holder's badge stopped counting (revoked or suspended).\n\nThe reason category only: the explanation staff write stays in the record (spec \u00a78.5).",
+        "properties": {
+          "issuer_name": {
+            "title": "Issuer Name",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "state": {
+            "enum": [
+              "revoked",
+              "suspended"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "on",
+          "reason_code",
+          "issuer_name"
+        ],
+        "title": "Withdrawal",
         "type": "object"
       },
       "opencredential__api__routes__achievements__RejectIn": {

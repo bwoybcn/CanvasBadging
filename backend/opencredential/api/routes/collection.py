@@ -154,7 +154,20 @@ def verify_signed(signer: SignerClient, settings: Settings, vc: dict[str, Any]) 
     return verifier.verify(vc, now=datetime.now(UTC)).to_dict()
 
 
+class Withdrawal(BaseModel):
+    """Why and when the holder's badge stopped counting (revoked or suspended).
+
+    The reason category only: the explanation staff write stays in the record (spec §8.5).
+    """
+
+    state: Literal["revoked", "suspended"]
+    on: datetime | None
+    reason_code: str | None
+    issuer_name: str
+
+
 class CredentialDetail(CredentialSummary):
+    withdrawal: Withdrawal | None = None
     description: str
     criteria: str
     achievement_type: str | None
@@ -184,8 +197,18 @@ def detail(
     assert version is not None and cred.signed_json is not None
     # The holder sees every piece of evidence in their own credential.
     view = svc.public_view(db, cred, svc.ShareOptions(show_evidence=True), settings)
+    status = db.scalar(select(CredentialStatus).where(CredentialStatus.credential_id == cred.id))
+    withdrawal = None
+    if status is not None and status.state in ("revoked", "suspended"):
+        withdrawal = Withdrawal(
+            state=status.state,  # type: ignore[arg-type]
+            on=status.changed_at,
+            reason_code=status.reason_code,
+            issuer_name=view["issuer"]["name"],
+        )
     return CredentialDetail(
         **summary.model_dump(),
+        withdrawal=withdrawal,
         description=view["description"],
         criteria=view["criteria"],
         achievement_type=view["achievement_type"],

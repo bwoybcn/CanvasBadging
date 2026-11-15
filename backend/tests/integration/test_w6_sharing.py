@@ -279,6 +279,12 @@ def test_scenario_7_external_verifier_reports_valid_then_revoked(
     page = public.get(f"/verify/{share_id}")
     assert page.status_code == 200 and "Revoked" in page.text
     assert public.get(f"/verify/{share_id}/verification.json").json()["result"] == "revoked"
+    # The holder is told when and why (the category, not the staff explanation).
+    mine = client.get(f"/api/v1/credentials/{cred_id}", headers=student).json()
+    assert mine["withdrawal"]["state"] == "revoked"
+    assert mine["withdrawal"]["reason_code"] == "issued_in_error"
+    assert mine["withdrawal"]["on"]
+    assert "wrong learner" not in str(mine["withdrawal"])
 
     tampered = {**vc, "validFrom": "2001-01-01T00:00:00Z"}
     assert public.post("/api/v1/verify", json=tampered).json()["result"] == "invalid"
