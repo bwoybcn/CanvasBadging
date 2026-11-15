@@ -362,12 +362,12 @@ def _check_message(claims: dict[str, Any], launch_url: str) -> None:
     context = claims.get(c.CLAIM_CONTEXT)
     if not isinstance(context, dict) or not context.get("id"):
         raise LaunchRejected(
-            "COURSE_CONTEXT_MISSING", "Open Micro-Credentials from inside a Canvas course.", 403
+            "COURSE_CONTEXT_MISSING", "Choose Badges in the menu of a Canvas course.", 403
         )
     types = context.get("type") or []
     if types and not (set(map(str, types)) & c.COURSE_CONTEXT_TYPES):
         raise LaunchRejected(
-            "COURSE_CONTEXT_UNSUPPORTED", "Micro-Credentials only opens inside a course.", 403
+            "COURSE_CONTEXT_UNSUPPORTED", "Badges only opens inside a course.", 403
         )
 
 

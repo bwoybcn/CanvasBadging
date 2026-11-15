@@ -52,7 +52,7 @@ Signer: `OC_ENV`, `SIGNER_DATABASE_URL` (as `oc_signer`), `SIGNER_KEK` (32 bytes
 Follow [../integrations/canvas.md](../integrations/canvas.md) steps 1 to 7, using your production
 host in place of `localhost`. In short: create an LTI 1.3 developer key from the tool
 configuration at `https://<host>/lti/config.json` (Course Navigation placement, label
-"Micro-Credentials"), deploy it at the root account, register the issuer, client id and
+"Badges"), deploy it at the root account, register the issuer, client id and
 deployment id with `oc canvas register`, then bootstrap the first institution administrator
 with `oc admin grant`. If you ever move the tool to a new host, see
 [Changing the tool's address](../integrations/canvas.md#changing-the-tools-address).

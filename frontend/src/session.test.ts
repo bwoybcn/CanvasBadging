@@ -146,6 +146,6 @@ describe("a session that has ended", () => {
   it("is explained in plain words, with what to do next", () => {
     const ended = new ApiError({ status: 401, code: "SESSION_INVALID", title: "Your session has expired or is invalid" });
     expect(problemText(ended)).toBe(SESSION_ENDED);
-    expect(SESSION_ENDED).toMatch(/Open Micro-Credentials from the Canvas course menu again/);
+    expect(SESSION_ENDED).toMatch(/Choose Badges in the Canvas course menu again/);
   });
 });

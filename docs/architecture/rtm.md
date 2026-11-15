@@ -100,7 +100,7 @@ Component abbreviations: LTI = LTI launch; CAN = Canvas adapter; SYNC = sync/rec
 |---|---|---|---|---|
 | R-4.1-01 | LTI 1.3 with relevant Advantage services (NRPS) | LTI, CAN | I-LTI-01, I-NRPS-01 | W3 |
 | R-4.1-02 | Admin-managed registration and installation | LTI, OPS | D-CANVAS-INSTALL followed on sandbox; I-INST-CANVAS-01 | W3 |
-| R-4.1-03 | Course Navigation entry, configurable label "Micro-Credentials" | LTI | I-LTI-CONFIG generated JSON has `course_navigation`, label from config | W3 |
+| R-4.1-03 | Course Navigation entry, configurable label (the specification's "Micro-Credentials"; default "Badges" since 15 Nov 2026) | LTI | I-LTI-CONFIG generated JSON has `course_navigation`, label from config | W3 |
 | R-4.1-04 | Opens lecturer or student UI per validated permissions | LTI, AUTHZ | I-LTI-ROLE-01 instructor→lecturer view, learner→student view | W3 |
 | R-4.1-05 | Account-level deployment supported | LTI | I-LTI-02 multiple courses under one deployment | W3 |
 | R-4.1-06 | Course-level enabling subject to institution settings | LTI, INST | I-LTI-COURSE-ENABLE (placement default disabled + app course activation flag) | W3 |

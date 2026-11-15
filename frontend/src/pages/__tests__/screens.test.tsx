@@ -322,7 +322,7 @@ describe("Create Micro-Credential wizard", () => {
     await userEvent.type(screen.getByLabelText(/Criteria/), "Pass the lab induction.");
     await userEvent.click(screen.getByRole("button", { name: "Next" }));
     const alert = await screen.findByText(/Your session has ended/);
-    expect(alert).toHaveTextContent(/Open Micro-Credentials from the Canvas course menu again/);
+    expect(alert).toHaveTextContent(/Choose Badges in the Canvas course menu again/);
     expect(alert).toHaveTextContent(/saved as a draft: you will find it under Badges/);
     expect(screen.getByRole("heading", { name: /Step 3 of 7/ })).toBeInTheDocument();
   });

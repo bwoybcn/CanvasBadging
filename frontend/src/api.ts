@@ -408,7 +408,7 @@ export const POLICY_LABELS: Record<string, string> = {
 
 /** Shown wherever a request is refused because the session is over. */
 export const SESSION_ENDED =
-  "Your session has ended. Open Micro-Credentials from the Canvas course menu again to carry on.";
+  "Your session has ended. Choose Badges in the Canvas course menu again to carry on.";
 
 /** What went wrong, one sentence per problem, in words the person can act on. */
 export function problemLines(error: unknown): string[] {

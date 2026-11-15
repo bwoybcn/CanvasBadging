@@ -478,6 +478,6 @@ def test_tool_jwks_and_canvas_config(world: dict[str, Any]) -> None:
     cfg = world["client"].get("/lti/config.json").json()
     placement = cfg["extensions"][0]["settings"]["placements"][0]
     assert placement["placement"] == "course_navigation"
-    assert placement["text"] == "Micro-Credentials" and placement["default"] == "disabled"
+    assert placement["text"] == "Badges" and placement["default"] == "disabled"
     assert cfg["custom_fields"]["canvas_course_id"] == "$Canvas.course.id"
     assert cfg["public_jwk"]["kid"] == jwks["keys"][0]["kid"]

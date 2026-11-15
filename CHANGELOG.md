@@ -61,8 +61,12 @@ All notable changes to this project are documented here. The format follows
   my courses**, **Create micro-credential** is **Create a badge**, **Issued credentials** is
   **Issued badges**, **May issue credentials** is **May issue badges**, the public page
   **Check a credential** is **Check a credential file**, and the audit category "Credential
-  definitions" is "Badge definitions". The Canvas menu item keeps the name it was registered
-  with (**Micro-Credentials** by default). API paths, codes and fields are unchanged.
+  definitions" is "Badge definitions". API paths, codes and fields are unchanged.
+- The Canvas course menu item is now **Badges** (it was "Micro-Credentials"): the generated
+  developer-key configuration, `oc lti config` and every message that sends someone back to
+  the course menu use the new name. Canvas stores the menu text in the developer key, so an
+  existing installation shows the old name until the key is edited once; see "Renaming the
+  menu item on an existing installation" in `docs/integrations/canvas.md`.
 - "Awards to confirm" is now **Award badges**, with three tabs: **Waiting to confirm** (with a
   count), **One student** and **A list of students**. The tab is kept in the address
   (`/awards?tab=student`, `?tab=list`), and what is typed on one tab survives a look at another.

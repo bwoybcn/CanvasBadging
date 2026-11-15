@@ -27,7 +27,8 @@ REST API, authorised once by an integration account.
 
    It is also served at `<public URL>/lti/config.json`. It contains the tool's public key only.
    Use `--jwks-url` if Canvas can reach `<public URL>/lti/jwks` (production): key rotation then
-   needs no Canvas change. Use `--label` to change the menu text.
+   needs no Canvas change. The course menu text is **Badges**; use `--label` for another name
+   (the tool's own messages still say "Badges").
 
 2. In Canvas: **Admin → (root account) → Developer Keys → + Developer Key → + LTI Key**.
    Choose **Method: Paste JSON**, paste the file, set **Key Name** to `OpenCredential` and
@@ -41,7 +42,7 @@ What the configuration contains:
 |---|---|---|
 | Login URL | `<public URL>/lti/login` | OIDC third-party initiated login |
 | Target link / redirect | `<public URL>/lti/launch` | id_token `form_post` |
-| Placement | `course_navigation`, text **Micro-Credentials**, `default: disabled` | Each course opts in (Q15) |
+| Placement | `course_navigation`, text **Badges**, `default: disabled` | Each course opts in (Q15) |
 | Privacy level | `public` | Name for the UI, email for the recipient identifier (Q5) |
 | Custom fields | `canvas_course_id=$Canvas.course.id`, `canvas_user_id=$Canvas.user.id`, `canvas_user_sis_id=$Person.sourcedId`, `canvas_account_id=$Canvas.account.id` | Link LTI identities to REST ids; the student ID number lets staff award a badge to a list; the sub-account places the course in a linked area |
 | Scopes | `contextmembership.readonly` (NRPS) only | Least privilege; no AGS |
@@ -135,7 +136,7 @@ more with `--deployment-id` (the command is idempotent).
 
 ## 6. Bootstrap an administrator and authorise the API
 
-1. Open any course, enable **Micro-Credentials** in **Settings → Navigation** (it starts
+1. Open any course, enable **Badges** in **Settings → Navigation** (it starts
    hidden), and launch it once as the person who will administer OpenCredential.
 2. Grant them the institution admin role:
    `docker compose exec api oc admin grant --institution uol-dev --email <their Canvas email>`
@@ -151,7 +152,7 @@ refreshed server-side; `GET /api/v1/canvas/integrations` shows connection status
 
 ## 7. Use it in a course
 
-Teachers enable **Micro-Credentials** under course **Settings → Navigation** (or an admin does
+Teachers enable **Badges** under course **Settings → Navigation** (or an admin does
 it with `PUT /api/v1/courses/:id/tabs/context_external_tool_<tool id>` `hidden=false`).
 Launching shows the user's name, the course, and their role, and opens the lecturer view for
 Teachers, TAs, Designers and course admins, and the student view for students.
@@ -177,6 +178,24 @@ micro-credentials for this course**. Switching on reads Canvas straight away and
 minutes. A lecturer, course admin or administrator can switch it off again with
 `POST /api/v1/courses/<id>/deactivate`. Issued credentials are not affected. If the policy is
 off, every course joins at its first launch.
+
+## Renaming the menu item on an existing installation
+
+The menu text is stored in Canvas, in the developer key, so an installation made before
+15 November 2026 still shows **Micro-Credentials** until the key is edited. No reinstall and no
+change to OpenCredential's registration is needed:
+
+1. In Canvas: **Admin → (root account) → Developer Keys**, and choose the pencil (**Edit**) on
+   the `OpenCredential` LTI key.
+2. If the key was made with **Paste JSON**, change both `"text": "Micro-Credentials"` values to
+   `"text": "Badges"` (one under `settings`, one in the `course_navigation` placement). If it was
+   made with **Manual entry**, change the **Text** box under **Course Navigation**. Leave
+   everything else as it is.
+3. **Save**. Canvas applies the change to the installed tool; reload a course after a minute
+   and the menu shows **Badges**. Courses keep the item switched on or hidden as they had it.
+
+On newer Canvas versions the same text can be changed under **Admin → Apps → Manage**, by
+editing the OpenCredential app's **Course Navigation** label.
 
 ## Changing the tool's address
 

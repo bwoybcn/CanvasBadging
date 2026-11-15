@@ -38,7 +38,7 @@ def lti_keygen(
 
 @lti_app.command("config")
 def lti_config(
-    label: str = typer.Option("Micro-Credentials", help="Course navigation menu text"),
+    label: str = typer.Option("Badges", help="Course navigation menu text"),
     jwks_url: bool = typer.Option(False, help="Reference /lti/jwks instead of embedding the key"),
     privacy_level: str = typer.Option("public", help="public | name_only | email_only | anonymous"),
 ) -> None:
