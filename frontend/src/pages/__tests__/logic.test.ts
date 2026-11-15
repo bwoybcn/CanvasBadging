@@ -91,6 +91,10 @@ describe("wizard steps", () => {
 
   it("needs an issuer, outcomes and criteria", () => {
     expect(stepProblems(0, { ...form(), issuer_id: "" })).toEqual(["Choose the issuer that will award this badge."]);
+    expect(stepProblems(0, { ...form(), course_id: "", issuer_id: "" })).toEqual([
+      "Choose the course this badge belongs to.",
+      "Choose the issuer that will award this badge.",
+    ]);
     expect(stepProblems(2, form({ learning_outcomes: [" "], criteria_narrative: "" }))).toHaveLength(2);
   });
 
