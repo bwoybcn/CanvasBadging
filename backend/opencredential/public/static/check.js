@@ -9,7 +9,7 @@
   var words = JSON.parse(document.getElementById("result-words").textContent);
   function el(tag, text) { var e = document.createElement(tag); if (text) e.textContent = text; return e; }
   function say(text) { out.textContent = ""; out.appendChild(el("p", text)); }
-  // Errors from the API are written for developers ("The request body must be…"); say what to do.
+  // Errors from the API are written for developers; say what to do instead.
   var REFUSALS = {
     NOT_JSON: "This is not a credential file. Choose the .json file downloaded from the badge page (Download credential file).",
     TOO_LARGE: "This file is too large to be a credential file. Choose the .json file downloaded from the badge page."
