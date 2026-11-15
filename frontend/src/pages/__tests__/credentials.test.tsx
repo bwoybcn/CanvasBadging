@@ -236,9 +236,34 @@ describe("credential detail", () => {
     const user = userEvent.setup();
     renderAt("/me/credentials/cr-1");
     await user.click(await screen.findByRole("button", { name: "Stop sharing" }));
+    // It asks first, and says links already given out (LinkedIn, a CV) stop working for good.
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+    expect(screen.getByRole("alert")).toHaveTextContent(/LinkedIn, your CV/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/you get a new link/);
+    await user.click(screen.getByRole("button", { name: "Stop sharing" }));
     await waitFor(() => expect(screen.getByText(/This badge is private/)).toBeInTheDocument());
     expect(calls.some((c) => c.method === "DELETE")).toBe(true);
     expect(calls.some((c) => c.url.includes("/revoke"))).toBe(false);
+  });
+
+  it("says plainly when a badge was withdrawn, and stops offering to share it", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": STUDENT_ME,
+      "GET /api/v1/credentials/cr-1": {
+        ...detail(PRIVATE),
+        status: "revoked",
+        verification: { ...detail(PRIVATE).verification, result: "revoked", label: "Revoked" },
+        withdrawal: { state: "revoked", on: "2026-11-15T12:00:00Z", reason_code: "issued_in_error", issuer_name: "Skills Centre" },
+      },
+      "POST /api/v1/credentials/cr-1/share/preview": () => preview(false),
+    });
+    renderAt("/me/credentials/cr-1");
+    expect(await screen.findByText(/Skills Centre withdrew \(revoked\) this badge on 15 November 2026/)).toBeInTheDocument();
+    expect(screen.getByText("Reason: Issued in error.")).toBeInTheDocument();
+    expect(screen.getByText(/The issuer has withdrawn this badge, so it no longer counts as valid/)).toBeInTheDocument();
+    expect(screen.queryByText(/has not been revoked by the issuer/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Turn on public link" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /LinkedIn/ })).toBeNull();
   });
 
   it("explains how to keep credentials after leaving", async () => {

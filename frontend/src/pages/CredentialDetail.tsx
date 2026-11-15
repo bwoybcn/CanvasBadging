@@ -18,11 +18,13 @@ import {
   formatDate,
   type LinkedIn,
   problemText,
+  REVOCATION_REASONS,
   type ShareOut,
   type SharePreview,
 } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
+import { ConfirmButton } from "../components/ConfirmButton";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 
 function Facts({ rows }: { rows: [string, ReactNode][] }) {
@@ -55,12 +57,41 @@ export function CopyValue({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** What the check means for the holder, in one sentence: the general explanation is written for
+ * someone checking a badge, and read oddly under "Revoked". */
+const RESULT_FOR_HOLDER: Record<Detail["verification"]["result"], string> = {
+  verified: "This badge is genuine: anyone who checks it will see that it was issued to you and has not been changed.",
+  revoked: "The issuer has withdrawn this badge, so it no longer counts as valid.",
+  expired: "This badge has passed its expiry date, so it is no longer current.",
+  invalid: "This badge failed its checks. Please contact the course staff who awarded it.",
+  unable_to_verify: "The checks could not be completed just now. This is not a sign that anything is wrong; try again later.",
+};
+
 function VerificationPanel({ d }: { d: Detail }) {
   const v = d.verification;
   const variant = v.result === "verified" ? "success" : v.result === "unable_to_verify" ? "info" : "error";
   return (
     <Alert variant={variant} margin="0 0 medium">
-      <Text weight="bold">Verification: {v.label}.</Text> {v.explanation}
+      <Text weight="bold">Verification: {v.label}.</Text> {RESULT_FOR_HOLDER[v.result] ?? v.explanation}
+    </Alert>
+  );
+}
+
+/** A withdrawn badge: when, by whom, the reason category, and what others now see. */
+function WithdrawalPanel({ w, course }: { w: NonNullable<Detail["withdrawal"]>; course: string | null }) {
+  const verb = w.state === "revoked" ? "withdrew (revoked)" : "suspended";
+  const reason = w.reason_code ? (REVOCATION_REASONS[w.reason_code] ?? w.reason_code) : null;
+  return (
+    <Alert variant="warning" margin="0 0 medium">
+      <Text as="p" weight="bold">
+        {w.issuer_name} {verb} this badge{w.on ? ` on ${formatDate(w.on)}` : ""}.
+      </Text>
+      {reason && <Text as="p">Reason: {reason}.</Text>}
+      <Text as="p">
+        Anyone who opens your public link or checks your credential file now sees that it is no longer valid. You can no
+        longer download a certificate or add it to LinkedIn. If you think this is a mistake, contact the staff of
+        {course ? ` ${course}` : " the course that awarded it"}.
+      </Text>
     </Alert>
   );
 }
@@ -156,9 +187,14 @@ function SharePanel({ d }: { d: Detail }) {
           </Button>
         )}
         {d.share.shared && (
-          <Button onClick={() => unshare.mutate()} interaction={unshare.isPending ? "disabled" : "enabled"}>
-            Stop sharing
-          </Button>
+          <ConfirmButton
+            label="Stop sharing"
+            consequence="Stop sharing? The link stops working straight away, everywhere you have put it: LinkedIn, your CV, emails. If you share again later you get a new link, so you would need to update those places. Your badge stays valid."
+            confirmLabel="Stop sharing"
+            cancelLabel="Keep sharing"
+            busy={unshare.isPending}
+            onConfirm={() => unshare.mutate()}
+          />
         )}
       </Flex>
       {d.share.shared && (
@@ -305,6 +341,7 @@ export function CredentialDetail() {
               </Flex.Item>
             </Flex>
             <VerificationPanel d={d} />
+            {d.withdrawal && <WithdrawalPanel w={d.withdrawal} course={d.course?.title ?? null} />}
             <Facts
               rows={[
                 ["Issuer", `${d.issuer.name}, ${d.issuer.institution}`],
@@ -347,8 +384,9 @@ export function CredentialDetail() {
             )}
           </View>
           <KeepPanel d={d} />
-          <SharePanel d={d} />
-          <LinkedInPanel li={d.linkedin} />
+          {/* A withdrawn badge is not shared any further; a link already out shows "Revoked". */}
+          {d.withdrawal ? d.share.shared && <SharePanel d={d} /> : <SharePanel d={d} />}
+          {!d.withdrawal && <LinkedInPanel li={d.linkedin} />}
         </>
       )}
     </Page>

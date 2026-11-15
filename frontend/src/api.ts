@@ -491,6 +491,13 @@ export interface Evidence {
 }
 
 export interface CredentialDetail extends CredentialSummary {
+  /** Present when the issuer has revoked or suspended the badge. */
+  withdrawal?: {
+    state: "revoked" | "suspended";
+    on: string | null;
+    reason_code: string | null;
+    issuer_name: string;
+  } | null;
   description: string;
   criteria: string;
   achievement_type: string | null;
