@@ -15,5 +15,8 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // The badge wizard tests click through up to seven steps with userEvent and take about
+    // 5 seconds on a CI runner, right at Vitest's default limit, so they failed now and then.
+    testTimeout: 20_000,
   },
 });
