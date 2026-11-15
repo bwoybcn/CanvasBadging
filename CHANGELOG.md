@@ -21,6 +21,13 @@ All notable changes to this project are documented here. The format follows
   problem, the "Please fix the following" list is announced and takes focus, instead of focus
   staying on Next in silence. Every error message from the server (award forms, admin pages)
   is announced as it appears.
+- **Check a credential file** is written for the people who use it, usually an employer. The
+  result now opens with a coloured verdict and a plain sentence ("This badge failed its checks…
+  Do not rely on it."), names the badge and issuer, warns that those details cannot be trusted
+  when the check fails, and folds the technical checks under "Show the individual checks", as a
+  shared badge page does. A file that is not a credential gets advice instead of "The request
+  body must be the credential JSON". Long signing-key text no longer pushes the page wider than a
+  phone screen. Shared badge pages use the same plainer verdict wording.
 
 ### Added
 - A setup checklist on the Administration overview for institution administrators
