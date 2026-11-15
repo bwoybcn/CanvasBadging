@@ -114,6 +114,8 @@ test("E1 lecturer creates a badge: draft, preview, review, publish", async ({ pa
   await signIn(page, STAFF.lecturer);
   await page.goto(`/app/badges/${state.badgeId}`);
   await page.getByRole("button", { name: /Publish/ }).click();
+  // Publish asks first; confirm it.
+  await page.getByRole("group", { name: "Publish" }).getByRole("button", { name: "Publish" }).click();
   await expect(page.getByText(/published/i).first()).toBeVisible();
   const lec = await Api.as(page.request, STAFF.lecturer);
   const b = (await lec.get<{ items: Achievement[] }>("/api/v1/achievements")).items.find((x) => x.id === state.badgeId)!;
