@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /**
- * One credential for its holder (spec §8.3, §8.4, §9.3): details, verification, download,
- * student-controlled public sharing with a preview of exactly what becomes public, and the
+ * One credential for its holder (spec §8.3, §8.4, §9.3): details, verification, downloads
+ * (certificate, badge image, credential file), student-controlled public sharing with a preview of exactly what becomes public, and the
  * LinkedIn "Add license or certification" values.
  */
 import { Alert, Button, Checkbox, Flex, Heading, Img, Link, List, Pill, Text, View } from "@instructure/ui";
@@ -206,10 +206,81 @@ function LinkedInPanel({ li }: { li: LinkedIn }) {
   );
 }
 
+/** One thing to download: what it is for, then its button. */
+function Download({ title, children, action }: { title: string; children: ReactNode; action: ReactNode }) {
+  return (
+    <View as="div" padding="small 0" display="block">
+      <Heading level="h3">{title}</Heading>
+      <Text as="p">{children}</Text>
+      {action}
+    </View>
+  );
+}
+
+function KeepPanel({ d }: { d: Detail }) {
+  const { token } = useAuth();
+  const [withName, setWithName] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const download = (path: string, fallback: string) => {
+    setError(null);
+    downloadFile(path, token, fallback).catch((e) => setError(problemText(e)));
+  };
+  const valid = d.status === "active" || d.status === "expired";
+  return (
+    <View as="section" aria-labelledby="keep-h" padding="medium" borderWidth="small" borderRadius="medium" display="block" margin="0 0 medium">
+      <Heading level="h2" id="keep-h">
+        Download and keep
+      </Heading>
+      <Text as="p">
+        Everything here is yours to keep and keeps working after you leave. <AppLink to="/me/keeping">How to keep and use your badges</AppLink>
+      </Text>
+      <Download
+        title="Certificate"
+        action={
+          valid ? (
+            <>
+              <Checkbox label="Put my name on the certificate" checked={withName} onChange={() => setWithName(!withName)} />
+              <Button color="primary" margin="small 0 0" onClick={() => download(`/api/v1/credentials/${d.id}/certificate?show_name=${withName}`, "certificate.pdf")}>
+                Download certificate (PDF)
+              </Button>
+            </>
+          ) : (
+            <Text as="p" weight="bold">
+              A certificate can be downloaded only while the badge is valid.
+            </Text>
+          )
+        }
+      >
+        One page to print or attach to an application.{" "}
+        {d.share.shared
+          ? "It carries a QR code that opens your public link, so anyone can check the badge."
+          : "To have a QR code on it that anyone can scan to check the badge, turn on the public link below first."}
+        {d.share.shared && withName && !d.share.show_name && " People who scan the code see your name on the public page only if you choose to show it there."}
+      </Download>
+      {d.image.data_url && (
+        <Download title="Badge image" action={<Button onClick={() => download(`/api/v1/credentials/${d.id}/image`, "badge.png")}>Download badge image</Button>}>
+          The picture of your badge (PNG), for a CV, slides or an email signature.
+        </Download>
+      )}
+      <Download
+        title="Credential file, for wallets"
+        action={<Button onClick={() => download(`/api/v1/credentials/${d.id}/export`, "credential.json")}>Download credential file</Button>}
+      >
+        Your badge in signed Open Badges 3.0 form. This file is the proof: anyone can check it without Canvas, and you can import it into a digital
+        wallet.
+      </Download>
+      {error && (
+        <Alert variant="error" margin="small 0 0">
+          {error}
+        </Alert>
+      )}
+    </View>
+  );
+}
+
 export function CredentialDetail() {
   const { id = "" } = useParams();
   const { token } = useAuth();
-  const [dlError, setDlError] = useState<string | null>(null);
   const q = useQuery({
     queryKey: ["credential", id],
     queryFn: () => apiFetch<Detail>(`/api/v1/credentials/${id}`, token),
@@ -275,29 +346,7 @@ export function CredentialDetail() {
               </>
             )}
           </View>
-          <View as="section" aria-labelledby="keep-h" padding="medium" borderWidth="small" borderRadius="medium" display="block" margin="0 0 medium">
-            <Heading level="h2" id="keep-h">
-              Download and keep
-            </Heading>
-            <Text as="p">
-              The credential file is your badge in signed Open Badges 3.0 form. Anyone can check it without Canvas, and it keeps working after you
-              leave. You can also import it into a digital wallet. <AppLink to="/me/keeping">How to keep and use your badges</AppLink>
-            </Text>
-            <Button
-              color="primary"
-              onClick={() => {
-                setDlError(null);
-                downloadFile(`/api/v1/credentials/${d.id}/export`, token, "credential.json").catch((e) => setDlError(problemText(e)));
-              }}
-            >
-              Download credential file
-            </Button>
-            {dlError && (
-              <Alert variant="error" margin="small 0 0">
-                {dlError}
-              </Alert>
-            )}
-          </View>
+          <KeepPanel d={d} />
           <SharePanel d={d} />
           <LinkedInPanel li={d.linkedin} />
         </>

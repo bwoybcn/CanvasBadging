@@ -94,6 +94,90 @@ describe("student collection", () => {
     expect(nav).toHaveAttribute("href", "/me/credentials");
     expect(nav).toHaveAttribute("aria-current", "page");
     expect(screen.queryByRole("button", { name: "My badges" })).toBeNull();
+    // A certificate is offered for a valid badge, not for a revoked one.
+    expect(within(card).getByRole("button", { name: "Download certificate for Academic Writing Foundations" })).toBeInTheDocument();
+    expect(within(other).queryByRole("button", { name: /Download certificate/ })).toBeNull();
+  });
+});
+
+describe("download and keep", () => {
+  function stubDownloads() {
+    const created = vi.fn(() => "blob:test");
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() }));
+    return created;
+  }
+  const file = (type: string) => () => new Response("x", { status: 200, headers: { "content-type": type } });
+
+  it("downloads the certificate with or without the name, the image and the credential file", async () => {
+    stubDownloads();
+    const calls = stubApi({
+      "GET /api/v1/learners/me": STUDENT_ME,
+      "GET /api/v1/credentials/cr-1": { ...detail(PRIVATE), image: { data_url: "data:image/png;base64,AAAA", alt_text: "Blue shield" } },
+      "POST /api/v1/credentials/cr-1/share/preview": () => preview(false),
+      "GET /api/v1/credentials/cr-1/certificate?show_name=true": file("application/pdf"),
+      "GET /api/v1/credentials/cr-1/certificate?show_name=false": file("application/pdf"),
+      "GET /api/v1/credentials/cr-1/image": file("image/png"),
+      "GET /api/v1/credentials/cr-1/export": file("application/ld+json"),
+    });
+    const user = userEvent.setup();
+    renderAt("/me/credentials/cr-1");
+    const keep = await screen.findByRole("region", { name: "Download and keep" });
+    // Private badge: the page says how to get a QR code on the certificate.
+    expect(within(keep).getByText(/turn on the public link below first/)).toBeInTheDocument();
+    const name = within(keep).getByRole("checkbox", { name: "Put my name on the certificate" });
+    expect(name).toBeChecked();
+    await user.click(within(keep).getByRole("button", { name: "Download certificate (PDF)" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/certificate?show_name=true"))).toBe(true));
+    await user.click(name);
+    await user.click(within(keep).getByRole("button", { name: "Download certificate (PDF)" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/certificate?show_name=false"))).toBe(true));
+    await user.click(within(keep).getByRole("button", { name: "Download badge image" }));
+    await user.click(within(keep).getByRole("button", { name: "Download credential file" }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/export"))).toBe(true));
+    expect(calls.some((c) => c.url.endsWith("/image"))).toBe(true);
+    expect(within(keep).queryByRole("alert")).toBeNull();
+  });
+
+  it("says the certificate carries a QR code once the badge is shared, and shows why a download failed", async () => {
+    stubDownloads();
+    stubApi({
+      "GET /api/v1/learners/me": STUDENT_ME,
+      "GET /api/v1/credentials/cr-1": detail(SHARED),
+      "POST /api/v1/credentials/cr-1/share/preview": () => preview(false),
+      "GET /api/v1/credentials/cr-1/certificate?show_name=true": () =>
+        new Response(
+          JSON.stringify({
+            status: 409,
+            code: "NAME_NOT_PRINTABLE",
+            title: "The certificate cannot print your name",
+            detail: "The certificate cannot print some of the characters in your name yet. On the badge's page, untick \"Put my name on the certificate\" and download it again.",
+          }),
+          { status: 409, headers: { "content-type": "application/problem+json" } },
+        ),
+    });
+    const user = userEvent.setup();
+    renderAt("/me/credentials/cr-1");
+    const keep = await screen.findByRole("region", { name: "Download and keep" });
+    expect(within(keep).getByText(/carries a QR code that opens your public link/)).toBeInTheDocument();
+    // The public page hides the name, so the page warns that the certificate and the page differ.
+    expect(within(keep).getByText(/only if you choose to show it there/)).toBeInTheDocument();
+    // No artwork on this badge, so no image to download.
+    expect(within(keep).queryByRole("button", { name: "Download badge image" })).toBeNull();
+    await user.click(within(keep).getByRole("button", { name: "Download certificate (PDF)" }));
+    expect(await within(keep).findByText(/cannot print some of the characters in your name/)).toBeInTheDocument();
+  });
+
+  it("offers no certificate for a revoked badge but keeps the credential file", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": STUDENT_ME,
+      "GET /api/v1/credentials/cr-1": { ...detail(PRIVATE), status: "revoked" },
+      "POST /api/v1/credentials/cr-1/share/preview": () => preview(false),
+    });
+    renderAt("/me/credentials/cr-1");
+    const keep = await screen.findByRole("region", { name: "Download and keep" });
+    expect(within(keep).getByText("A certificate can be downloaded only while the badge is valid.")).toBeInTheDocument();
+    expect(within(keep).queryByRole("button", { name: "Download certificate (PDF)" })).toBeNull();
+    expect(within(keep).getByRole("button", { name: "Download credential file" })).toBeInTheDocument();
   });
 });
 

@@ -45,6 +45,7 @@ No special category data is processed. Marks are processed only once released in
 |---|---|---|
 | Achievement name, description, criteria, image, issuer | Yes | Yes |
 | Learner's name | **No** by default (institution policy `include_recipient_name_in_credential`) | Only if the learner chooses "Show my name" |
+| Learner's name on the certificate PDF | n/a (the certificate is not the credential) | n/a. The holder downloads the certificate themselves; their name is printed unless they untick it. The file is made on request and not stored |
 | Email address | **No.** Only a salted SHA-256 hash, with a fresh salt per credential | No |
 | Canvas ids, marks, submissions | No | No |
 | Evidence | Only evidence the badge marks as disclosable | Only if the learner chooses "Show evidence" |

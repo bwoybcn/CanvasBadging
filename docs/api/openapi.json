@@ -9289,6 +9289,56 @@
         ]
       }
     },
+    "/api/v1/credentials/{credential_id}/certificate": {
+      "get": {
+        "description": "One A4 page with the badge, who issued it and when, and how to check it.\n\nThe holder's name is printed unless ``show_name`` is false. It is read when the certificate\nis made and is not stored in it anywhere else. A QR code to the holder's public page is\nprinted when they have turned a public link on.",
+        "operationId": "certificate_api_v1_credentials__credential_id__certificate_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "show_name",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Show Name",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A certificate to print (PDF), for the holder",
+        "tags": [
+          "student collection"
+        ]
+      }
+    },
     "/api/v1/credentials/{credential_id}/export": {
       "get": {
         "operationId": "export_api_v1_credentials__credential_id__export_get",
@@ -9325,6 +9375,45 @@
         "summary": "Download the signed Open Badges 3.0 credential",
         "tags": [
           "credentials"
+        ]
+      }
+    },
+    "/api/v1/credentials/{credential_id}/image": {
+      "get": {
+        "operationId": "badge_image_api_v1_credentials__credential_id__image_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The badge image as a PNG, for the holder",
+        "tags": [
+          "student collection"
         ]
       }
     },

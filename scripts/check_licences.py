@@ -29,6 +29,11 @@ ALLOWED = {
 REVIEWED = {
     "opencredential": "AGPL-3.0-or-later (this project)",
     "jsonify": "Public Domain; transitive frontend dependency, compatible with AGPL",
+    "resvg_py": (
+        "MIT (LICENSE file in the wheel; the package metadata has no licence field). The bundled "
+        "Rust crates (resvg, usvg, tiny-skia and others) are MIT, Apache-2.0, BSD or Zlib per "
+        "the wheel's SBOM (reviewed for the certificate download)"
+    ),
     "@digitalbazaar/credentials-context": (
         "W3C Software and Document License (context files) + BSD-3-Clause (code); "
         "both permissive and AGPL-compatible (reviewed W4)"
