@@ -53,8 +53,10 @@ async function verifyFileAnonymously(page: Page, json: string): Promise<string> 
   await p.locator('input[type="file"]').setInputFiles({ name: "credential.json", mimeType: "application/json", buffer: Buffer.from(json) });
   await p.getByRole("button", { name: "Check the file" }).click();
   const out = p.getByRole("status");
-  await expect(out.getByRole("heading", { name: /^Result:/ })).toBeVisible({ timeout: 20_000 });
-  const text = await out.getByRole("heading", { name: /^Result:/ }).innerText();
+  // The verdict is the result heading (for example "Verified" or "Revoked"), as on a shared page.
+  const verdict = out.getByRole("heading", { level: 2 });
+  await expect(verdict).toBeVisible({ timeout: 20_000 });
+  const text = await verdict.innerText();
   await ctx.close();
   return text;
 }
