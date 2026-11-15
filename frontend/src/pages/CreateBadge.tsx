@@ -181,6 +181,7 @@ export const hasPlaceholder = (x: string | null | undefined) => /\[[^\]]+\]/.tes
 export function stepProblems(step: number, s: FormState, catalogue?: Catalogue): string[] {
   const f = s.fields;
   const out: string[] = [];
+  if (step === 0 && !s.course_id) out.push("Choose the course this badge belongs to.");
   if (step === 0 && !s.issuer_id) out.push("Choose the issuer that will award this badge.");
   if (step === 1) {
     if (!f.title?.trim()) out.push("Give the badge a title.");
