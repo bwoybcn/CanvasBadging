@@ -931,3 +931,16 @@ describe("a Canvas administrator with no role here", () => {
     expect(screen.queryByRole("region", { name: "Setting up badges" })).toBeNull();
   });
 });
+
+describe("staff pages reached by a student", () => {
+  it.each(["/awards", "/badges/new", "/badges", "/reviews"])("%s says it is for course staff and draws no forms", async (path) => {
+    stubApi({
+      "GET /api/v1/learners/me": { ...STAFF_ME, memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" }] },
+    });
+    renderAt(path);
+    expect(await screen.findByRole("heading", { name: "This page is for course staff" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "My badges" }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+});

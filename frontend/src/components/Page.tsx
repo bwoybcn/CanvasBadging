@@ -78,6 +78,35 @@ export function Page({ title, children, actions }: { title: string; children: Re
   );
 }
 
+/**
+ * A page for course staff or administrators, reached by someone who is neither (a student who
+ * typed the address). The server refuses every action anyway; this says so plainly instead of
+ * drawing forms and menus that cannot work for them.
+ */
+export function NotForYou({ who }: { who: "staff" | "admins" }) {
+  const title = who === "staff" ? "This page is for course staff" : "This page is for administrators";
+  return (
+    <Page title={title}>
+      <Text as="p">
+        {who === "staff"
+          ? "Creating, reviewing and awarding badges is done by the staff who teach a course."
+          : "Only Badges administrators can use the administration pages."}{" "}
+        Your own badges and your progress are on <AppLink to="/me/credentials">My badges</AppLink> and{" "}
+        <AppLink to="/me/progress">Badges in my courses</AppLink>.
+      </Text>
+    </Page>
+  );
+}
+
+/** Shows ``children`` only to course staff (lecturers, TAs, course and other admins). */
+export function StaffOnly({ children }: { children: ReactNode }) {
+  const me = useMe();
+  if (me.isPending) return <Loading what="your roles" />;
+  // If the profile cannot be read, let the page show its own error rather than guess.
+  if (me.isError || roleFlags(me.data).isStaff) return <>{children}</>;
+  return <NotForYou who="staff" />;
+}
+
 export function Loading({ what }: { what: string }) {
   return <Spinner renderTitle={`Loading ${what}`} margin="large" />;
 }

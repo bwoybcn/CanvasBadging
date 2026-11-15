@@ -14,6 +14,11 @@ All notable changes to this project are documented here. The format follows
   to contact. `GET /api/v1/credentials/{id}` gains `withdrawal`.
 - **Stop sharing** asks first, and says that the link stops working everywhere it was given out
   (LinkedIn, a CV, emails) and that sharing again gives a new link.
+- A student who opens a staff page by its address (Award badges, Create a badge, Badges, Review
+  queue, a course's progress) sees "This page is for course staff" with links to their own
+  badges, instead of forms that the server would refuse. Someone with no administrator role
+  sees "This page is for administrators" on administration pages, without the administration
+  menu. The server's checks are unchanged.
 - **Download credential file** works for badges with accented names. A title such as "Gŵyl Dewi"
   or "Café" put a non-Latin-1 letter in the download's file name header, so the server failed
   and the button did nothing. Download names are now plain ASCII ("gwyl-dewi-2026-11-15.json")

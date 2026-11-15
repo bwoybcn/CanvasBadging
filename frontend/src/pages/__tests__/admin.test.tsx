@@ -82,7 +82,9 @@ describe("administration", () => {
   it("is not offered to lecturers", async () => {
     stubApi({});
     renderAt("/admin/issuers");
-    expect(await screen.findByText("Only administrators can use this page.")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "This page is for administrators" })).toBeInTheDocument();
+    // No administration menu for someone who cannot use it.
+    expect(screen.queryByRole("navigation", { name: "Administration sections" })).toBeNull();
   });
 
   it("authorises an issuer only with a recorded basis of authority", async () => {

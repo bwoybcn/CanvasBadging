@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { downloadFile } from "../../api";
 import { useAuth } from "../../auth";
 import { AppLink } from "../../components/AppLink";
-import { ErrorAlert, Loading, Page, roleFlags, useMe } from "../../components/Page";
+import { ErrorAlert, Loading, NotForYou, Page, roleFlags, useMe } from "../../components/Page";
 
 export const SECTIONS: { to: string; label: string; instOnly: boolean }[] = [
   { to: "/admin", label: "Overview", instOnly: false },
@@ -32,6 +32,8 @@ export function AdminPage({ title, children, instOnly = false }: { title: string
   const me = useMe();
   const f = roleFlags(me.data);
   if (me.isPending) return <Loading what="your roles" />;
+  // Someone with no administrator role at all sees no administration menu either.
+  if (me.data && !f.isAdmin) return <NotForYou who="admins" />;
   const allowed = instOnly ? f.isInstAdmin : f.isAdmin;
   return (
     <Page title={title}>
