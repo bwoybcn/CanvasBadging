@@ -27,6 +27,8 @@ Checked 13 Nov 2026 against PyPI and npm registry metadata (latest version, decl
 
 Bundled font: Liberation Sans Regular and Bold 2.1.5 (SIL OFL 1.1), in `backend/opencredential/credentials/fonts/` with its licence. It sets the certificate text and the text inside badge artwork, so output does not depend on fonts installed on the server. It has the same letter widths as Arial, which the artwork templates ask for.
 
+Certificate fallback fonts, used one character at a time for text Liberation Sans cannot set, in the same folder with their licences: Droid Sans Fallback Full (Apache-2.0, from the Android Open Source Project; Chinese and Japanese, `DroidSansFallback-LICENSE.txt`) and Noto Emoji (SIL OFL 1.1, from Google Fonts; black-and-white emoji, `NotoEmoji-OFL.txt`). Together about 6 MB. Korean, Arabic and Hebrew are not covered; authors are warned when a badge's wording would not print.
+
 Rejected: PyLTI1p3 2.0.0 (MIT, but no release since 2022-11), Authlib (fine licence, larger than needed next to joserfc), arq/rq/dramatiq (need Redis), nh3/bleach (HTML sanitisers, not SVG).
 
 ## Signer (Node 22 LTS, TypeScript)

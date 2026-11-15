@@ -134,7 +134,9 @@ def test_certificate_is_still_made_without_an_image_or_with_a_broken_one() -> No
         ("Zoë Müller", True),  # a combining mark that composes to one character
         ("Ελένη Иванова", True),
         ("", True),
-        ("王伟", False),
+        ("王伟", True),  # Chinese and Japanese fall back to Droid Sans Fallback
+        ("やまだ たろう", True),
+        ("Gŵyl Dewi \N{GRADUATION CAP}\N{VARIATION SELECTOR-16}", True),  # emoji: Noto Emoji
         ("محمد", False),
         ("דוד", False),
         ("ą́x", False),  # marks left over after composing
@@ -166,3 +168,25 @@ def test_png_artwork_is_passed_through_and_rubbish_is_refused() -> None:
     for data, media in ((b"nope", "image/png"), (b"<svg", "image/svg+xml"), (b"x", "text/plain")):
         with pytest.raises(cert.CertificateError):
             cert.badge_png(data, media)
+
+
+def test_chinese_japanese_and_emoji_print_and_wrap_on_the_page() -> None:
+    title = "研究データ管理" * 12 + " \N{GRADUATION CAP}"
+    pdf = cert.render(
+        _certificate(recipient_name="王伟", badge_name=title, description="中文说明。" * 30)
+    )
+    reader = PdfReader(io.BytesIO(pdf))
+    assert len(reader.pages) == 1
+    text = _text(pdf)
+    assert "王伟" in text
+    assert "研究データ管理" in text
+    fonts = reader.pages[0]["/Resources"]["/Font"]
+    names = " ".join(str(f.get_object()["/BaseFont"]) for f in fonts.values())
+    assert "DroidSans" in names and "NotoEmoji" in names
+
+
+def test_a_long_line_of_chinese_breaks_between_characters() -> None:
+    lines = cert._split("研究データ管理" * 20, cert.BOLD, 20, 300)
+    assert len(lines) > 1
+    assert all(cert._width(line, cert.BOLD, 20) <= 300 for line in lines)
+    assert "".join(lines) == "研究データ管理" * 20

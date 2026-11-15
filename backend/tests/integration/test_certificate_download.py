@@ -236,6 +236,13 @@ def test_a_name_the_certificate_cannot_print_is_explained(
         user = db.get(m.User, tenant.student_ids[0])
         assert user is not None
         user.display_name = "王伟"
+    # Chinese and Japanese names print, through the bundled fallback font.
+    r = client.get(f"/api/v1/credentials/{cred}/certificate", headers=me)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")
+    with owner_session() as db:
+        user = db.get(m.User, tenant.student_ids[0])
+        assert user is not None
+        user.display_name = "محمد"  # right-to-left: still not printable
     r = client.get(f"/api/v1/credentials/{cred}/certificate", headers=me)
     assert r.status_code == 409 and r.json()["code"] == "NAME_NOT_PRINTABLE"
     assert "Put my name on the certificate" in r.json()["detail"]
