@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A setup checklist on the Administration overview for institution administrators
+  (`GET /api/v1/admin/setup`): Canvas connected, public address set, an area that may issue, an
+  issuer created, authorised and delegated. Each step is ticked from the current state, says
+  what is there or what to do, and links to its page; the first one left is marked "Do this
+  next". The two steps the service operator does say so. It folds away when all six are done.
 - A certificate to print: **Download certificate (PDF)** on a student's badge page and in **My
   badges** (`GET /api/v1/credentials/{id}/certificate`). One A4 page with the badge image, the
   student's name (they can leave it off), the badge, who issued it and when, and the credential
@@ -65,6 +70,10 @@ All notable changes to this project are documented here. The format follows
   account is left out.
 
 ### Changed
+- **Departments and roles** is now four pages in the administration menu: **Faculties and
+  departments** (areas and Canvas sub-accounts), **Courses**, **Staff roles** and **Colleague
+  review by area**. The menu is ordered the way an institution is set up. The old address opens
+  Faculties and departments.
 - One vocabulary on every screen, message and user guide: **badge** for what a student earns
   (no more "micro-credential" or "credential"), **student** (no more "learner"), and
   **credential file** only for the signed file that is downloaded or checked. Renamed with it:
@@ -111,7 +120,7 @@ All notable changes to this project are documented here. The format follows
     staff must confirm; unmatched entries offer **Refresh the course from Canvas** for students
     who joined today; results are announced to screen readers.
   - Badge teams: switching on asks for confirmation and explains the effect; administrators can
-    switch teams off from the course or from **Courses** in Departments and roles
+    switch teams off from the course or from **Administration → Courses**
     (`badge_teams` in `/api/v1/admin/courses`).
   - A badge's owner, or an administrator, can hand a badge to another member of course staff
     (`PUT /api/v1/achievements/{id}/owner`); the old owner stays on the team as an editor.

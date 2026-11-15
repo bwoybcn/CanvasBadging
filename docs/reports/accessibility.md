@@ -31,7 +31,7 @@ scenarios and accessibility (Playwright)".
 | Student | Home, My badges (progress), My credentials, Credential detail with sharing, Keeping your credentials |
 | Lecturer | Home, Badges, Create micro-credential wizard, Badge detail with preview, Award badges (all three tabs), Course progress |
 | Reviewer | Review queue |
-| Institution admin | Overview, Institution settings, Policy, Issuers, Departments and roles, Templates, Issued credentials, Reports, Audit log, Personal data and retention, Failed issuance |
+| Institution admin | Overview (with the setup checklist), Institution settings, Faculties and departments, Courses, Staff roles, Issuers, Policy, Colleague review by area, Templates, Issued credentials, Reports, Audit log, Personal data and retention, Failed issuance |
 | Public | Verify a credential, a shared credential page, development sign-in |
 
 Result of the latest local run: **0 violations on 26 desktop screens and 0 on 26 mobile

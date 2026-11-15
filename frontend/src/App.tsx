@@ -10,7 +10,7 @@ import { Audit } from "./pages/admin/Audit";
 import { Credentials } from "./pages/admin/Credentials";
 import { InstitutionSettings } from "./pages/admin/Institution";
 import { Issuers } from "./pages/admin/Issuers";
-import { People } from "./pages/admin/People";
+import { AreaReviewPage, Areas, CoursePlacement, StaffRoles } from "./pages/admin/People";
 import { Privacy } from "./pages/admin/Privacy";
 import { Reconciliation } from "./pages/admin/Reconciliation";
 import { Reports } from "./pages/admin/Reports";
@@ -56,7 +56,12 @@ export function AppRoutes() {
           ["/admin/institution", <InstitutionSettings />],
           ["/admin/policy", <AdminPolicy />],
           ["/admin/issuers", <Issuers />],
-          ["/admin/people", <People />],
+          ["/admin/areas", <Areas />],
+          ["/admin/courses", <CoursePlacement />],
+          ["/admin/roles", <StaffRoles />],
+          ["/admin/review", <AreaReviewPage />],
+          // "Departments and roles" was one long page until it was split into the four above.
+          ["/admin/people", <Navigate to="/admin/areas" replace />],
           ["/admin/templates", <Templates />],
           ["/admin/credentials", <Credentials />],
           ["/admin/reports", <Reports />],

@@ -30,6 +30,7 @@ from opencredential.governance import (
     records,
     retention,
     revocation,
+    setup,
     templates,
 )
 
@@ -88,6 +89,14 @@ def update_institution(
         changes["logo_asset_id"] = uuid.UUID(changes["logo_asset_id"])
     inst = institution.update_config(db, actor, changes, request_id=rid)
     return institution.config_out(inst)
+
+
+@router.get(
+    "/admin/setup",
+    summary="The setup checklist: what is done and what is left before staff can create badges",
+)
+def setup_checklist(db: TenantDb, actor: ActorDep, settings: SettingsDep) -> dict[str, Any]:
+    return setup.checklist(db, actor, production=settings.is_production)
 
 
 class RetentionIn(BaseModel):

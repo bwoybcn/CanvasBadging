@@ -170,11 +170,11 @@ Teachers, TAs, Designers and course admins, and the student view for students.
 Roles are re-read from the signed launch every time and from NRPS on every sync; Canvas
 removals revoke them (ADR-0013).
 
-### Switch micro-credentials on for the course
+### Switch badges on for the course
 
 By default (institution policy `course_activation_required`, Administration → Policy) a course
 takes part only once a lecturer switches it on. The first lecturer launch shows **Switch on
-micro-credentials for this course**. Switching on reads Canvas straight away and then every 30
+badges for this course**. Switching on reads Canvas straight away and then every 30
 minutes. A lecturer, course admin or administrator can switch it off again with
 `POST /api/v1/courses/<id>/deactivate`. Issued credentials are not affected. If the policy is
 off, every course joins at its first launch.

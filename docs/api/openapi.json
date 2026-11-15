@@ -7813,6 +7813,29 @@
         ]
       }
     },
+    "/api/v1/admin/setup": {
+      "get": {
+        "operationId": "setup_checklist_api_v1_admin_setup_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Setup Checklist Api V1 Admin Setup Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The setup checklist: what is done and what is left before staff can create badges",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
     "/api/v1/admin/templates": {
       "get": {
         "operationId": "list_templates_api_v1_admin_templates_get",

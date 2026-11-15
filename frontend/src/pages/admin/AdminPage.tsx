@@ -12,9 +12,14 @@ import { ErrorAlert, Loading, Page, roleFlags, useMe } from "../../components/Pa
 export const SECTIONS: { to: string; label: string; instOnly: boolean }[] = [
   { to: "/admin", label: "Overview", instOnly: false },
   { to: "/admin/institution", label: "Institution settings", instOnly: true },
-  { to: "/admin/policy", label: "Approval and awarding policy", instOnly: true },
+  // Who and where: the order an institution is set up in.
+  { to: "/admin/areas", label: "Faculties and departments", instOnly: false },
+  { to: "/admin/courses", label: "Courses", instOnly: false },
+  { to: "/admin/roles", label: "Staff roles", instOnly: false },
   { to: "/admin/issuers", label: "Issuers", instOnly: false },
-  { to: "/admin/people", label: "Departments and roles", instOnly: false },
+  // The rules.
+  { to: "/admin/policy", label: "Approval and awarding policy", instOnly: true },
+  { to: "/admin/review", label: "Colleague review by area", instOnly: false },
   { to: "/admin/templates", label: "Badge templates", instOnly: false },
   { to: "/admin/credentials", label: "Issued badges and revocation", instOnly: false },
   { to: "/admin/reports", label: "Reports", instOnly: false },

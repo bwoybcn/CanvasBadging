@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/** Faculties and departments, which may issue, course placement and delegated staff roles
- * (spec §2.3, §2.4, §10.3). */
+/** Faculties and departments, which may issue, course placement, colleague review by area and
+ * delegated staff roles (spec §2.3, §2.4, §10.3). One page each, so an administrator looking
+ * for "who has which role" does not scroll past five other tables to find it. */
 import { Button, Checkbox, Flex, Heading, SimpleSelect, Table, Text, TextInput, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -25,14 +26,39 @@ import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
 import { TableScroll } from "../../components/TableScroll";
 
-export function People() {
+export function Areas() {
   return (
-    <AdminPage title="Departments and roles">
+    <AdminPage title="Faculties and departments">
+      <Text as="p">
+        An area is a faculty, department, service or programme. Areas decide who may issue badges, which administrators look
+        after which courses, and how badges are reviewed.
+      </Text>
       <OrgUnits />
       <CanvasSubAccounts />
+    </AdminPage>
+  );
+}
+
+export function AreaReviewPage() {
+  return (
+    <AdminPage title="Colleague review by area">
       <AreaReview />
       <PublishedWithoutReview />
+    </AdminPage>
+  );
+}
+
+export function CoursePlacement() {
+  return (
+    <AdminPage title="Courses">
       <Courses />
+    </AdminPage>
+  );
+}
+
+export function StaffRoles() {
+  return (
+    <AdminPage title="Staff roles">
       <Roles />
     </AdminPage>
   );
@@ -63,7 +89,7 @@ function OrgUnits() {
   return (
     <View as="section" display="block" margin="0 0 large">
       <Heading level="h2" margin="0 0 small">
-        Faculties and departments
+        Your areas
       </Heading>
       {q.isPending && <Loading what="departments" />}
       {q.isError && <ErrorAlert error={q.error} />}
@@ -355,7 +381,7 @@ function AreaReview() {
   return (
     <View as="section" display="block" margin="0 0 large">
       <Heading level="h2" margin="0 0 small">
-        Colleague review by area
+        Review rules for each area
       </Heading>
       <Text as="p">
         Each faculty, department or service can set its own review rules, for example switching review off for
@@ -487,7 +513,7 @@ function Courses() {
   return (
     <View as="section" display="block" margin="0 0 large">
       <Heading level="h2" margin="0 0 small">
-        Courses
+        Where each course belongs
       </Heading>
       {courses.isError && <ErrorAlert error={courses.error} />}
       {move.isError && <ErrorAlert error={move.error} />}
@@ -573,7 +599,7 @@ function Roles() {
   return (
     <View as="section" display="block">
       <Heading level="h2" margin="0 0 small">
-        Staff roles
+        Who has which role
       </Heading>
       {roles.isError && <ErrorAlert error={roles.error} />}
       <TableScroll>

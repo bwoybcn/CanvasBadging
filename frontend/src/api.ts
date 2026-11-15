@@ -681,6 +681,24 @@ export interface CredentialRecord {
   revocation_reason: string | null;
 }
 
+export interface SetupStep {
+  key: "canvas" | "address" | "area" | "issuer" | "authorised" | "delegated";
+  title: string;
+  done: boolean;
+  detail: string;
+  /** Administration page where the step is done; null for steps the service operator does. */
+  to: string | null;
+  operator: boolean;
+}
+
+export interface SetupChecklist {
+  steps: SetupStep[];
+  done: number;
+  total: number;
+  complete: boolean;
+  next: SetupStep["key"] | null;
+}
+
 export interface ReportSummary {
   issued: number;
   revoked: number;
