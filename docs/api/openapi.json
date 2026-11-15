@@ -2880,6 +2880,11 @@
       },
       "MeOut": {
         "properties": {
+          "canvas_admin_without_access": {
+            "default": false,
+            "title": "Canvas Admin Without Access",
+            "type": "boolean"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -2909,6 +2914,14 @@
           },
           "institution": {
             "$ref": "#/components/schemas/InstitutionOut"
+          },
+          "institution_admins": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Institution Admins",
+            "type": "array"
           },
           "launch_course": {
             "anyOf": [

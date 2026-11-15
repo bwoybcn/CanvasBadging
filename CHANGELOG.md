@@ -28,6 +28,12 @@ All notable changes to this project are documented here. The format follows
   shared badge page does. A file that is not a credential gets advice instead of "The request
   body must be the credential JSON". Long signing-key text no longer pushes the page wider than a
   phone screen. Shared badge pages use the same plainer verdict wording.
+- A Canvas administrator who opens **Badges** is told how to get set up, instead of seeing only
+  "No course role". Canvas roles still grant nothing here (ADR-0013); the home page explains that,
+  names the Badges administrators to ask for a role under **Staff roles**, or, when there are
+  none yet, says the service operator makes the first one. `GET /api/v1/learners/me` gains
+  `canvas_admin_without_access` and `institution_admins` for this, from the launch's Canvas
+  institution or system Administrator role.
 
 ### Added
 - A setup checklist on the Administration overview for institution administrators

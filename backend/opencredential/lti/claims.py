@@ -62,6 +62,23 @@ def _principal(role: str) -> tuple[str, str | None]:
     return "", None
 
 
+#: Canvas sends these for account (institution) and site administrators. They never grant an
+#: OpenCredential role (org-wide roles are granted in the app, ADR-0013); they only let the app
+#: tell a Canvas administrator how to get set up, instead of showing them nothing.
+PLATFORM_ADMIN_ROLES = frozenset(
+    {
+        "http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator",
+        "http://purl.imsglobal.org/vocab/lis/v2/system/person#Administrator",
+        "http://purl.imsglobal.org/vocab/lis/v2/system/person#SysAdmin",
+    }
+)
+
+
+def is_platform_admin(roles: list[str] | tuple[str, ...]) -> bool:
+    """Whether the launch came from a Canvas account or site administrator."""
+    return any(r in PLATFORM_ADMIN_ROLES for r in roles)
+
+
 def map_roles(roles: list[str]) -> set[str]:
     """Course roles granted by a launch. TAs map to ``lecturer`` (ADR-0013)."""
     out: set[str] = set()

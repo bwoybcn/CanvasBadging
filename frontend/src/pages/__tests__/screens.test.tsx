@@ -900,3 +900,36 @@ describe("course progress: history and revocation requests", () => {
     expect(await screen.findByText(/stays valid until they approve/)).toBeTruthy();
   });
 });
+
+describe("a Canvas administrator with no role here", () => {
+  it("explains how to get administration access and who to ask", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": {
+        ...STAFF_ME,
+        memberships: [],
+        canvas_admin_without_access: true,
+        institution_admins: ["Ada Admin", "Tess Teacher"],
+      },
+    });
+    renderAt("/");
+    const box = await screen.findByRole("region", { name: "Setting up badges" });
+    expect(box).toHaveTextContent("You are a Canvas administrator");
+    expect(box).toHaveTextContent("Ada Admin, Tess Teacher");
+  });
+
+  it("says who makes the first administrator when there is none", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": { ...STAFF_ME, memberships: [], canvas_admin_without_access: true, institution_admins: [] },
+    });
+    renderAt("/");
+    const box = await screen.findByRole("region", { name: "Setting up badges" });
+    expect(box).toHaveTextContent("Whoever runs the Badges service makes the first one");
+  });
+
+  it("stays quiet for everyone else", async () => {
+    stubApi({ "GET /api/v1/learners/me": STAFF_ME });
+    renderAt("/");
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("region", { name: "Setting up badges" })).toBeNull();
+  });
+});

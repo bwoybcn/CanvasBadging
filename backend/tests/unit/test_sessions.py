@@ -111,3 +111,21 @@ def _aged(claims: sessions.SessionClaims, expires_at: datetime) -> sessions.Sess
     from dataclasses import replace
 
     return replace(claims, expires_at=expires_at)
+
+
+def test_canvas_admin_flag_survives_renewal_and_defaults_off() -> None:
+    from opencredential.lti.claims import is_platform_admin
+
+    assert is_platform_admin(
+        ["http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator"]
+    )
+    assert not is_platform_admin(["http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"])
+    plain, _ = sessions.issue(S, user_id=USER, institution_id=INST, method="lti")
+    assert sessions.verify(S, plain).platform_admin is False
+    token, _ = sessions.issue(
+        S, user_id=USER, institution_id=INST, method="lti", platform_admin=True
+    )
+    claims = sessions.verify(S, token)
+    assert claims.platform_admin is True
+    renewed, _ = sessions.renew(S, claims)
+    assert sessions.verify(S, renewed).platform_admin is True
