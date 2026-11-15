@@ -23,10 +23,14 @@ All notable changes to this project are documented here. The format follows
   (`POST /api/v1/achievements/{id}/discard-version`) removes a version started with **Start a
   new version**, while it is a draft, in review or approved, and leaves the published version
   live and unchanged. It asks first. Before, a new version could only be finished.
-- Authors are warned when the printable certificate cannot show their wording. A badge whose
-  title or short description has characters the certificate font lacks (for example emoji)
-  now lists "The printable certificate cannot show some characters…" among the things a
-  reviewer will look at, while it can still be changed. It does not block the badge.
+- Certificates print Chinese, Japanese and emoji. Characters Liberation Sans lacks fall back to
+  bundled Droid Sans Fallback (Chinese and Japanese, Apache-2.0) and Noto Emoji (black and white,
+  OFL), and Chinese and Japanese lines break between characters. A badge with an emoji in its
+  name, or a student whose name is in Chinese, no longer has its certificate refused. The fonts
+  add about 6 MB.
+- Authors are warned when the certificate still cannot show their wording (for example Arabic
+  or Hebrew script): "The printable certificate cannot show some characters…" appears among the
+  things a reviewer will look at, while the wording can still change. It does not block the badge.
 - **Download credential file** works for badges with accented names. A title such as "Gŵyl Dewi"
   or "Café" put a non-Latin-1 letter in the download's file name header, so the server failed
   and the button did nothing. Download names are now plain ASCII ("gwyl-dewi-2026-11-15.json")

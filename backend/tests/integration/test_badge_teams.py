@@ -277,7 +277,7 @@ def test_author_is_warned_when_the_certificate_cannot_print_the_wording(world: W
     assert world.post("lecturer", f"{url}/new-version").status_code == 200
     plain = world.get("lecturer", url).json()["readiness"]
     assert "CERTIFICATE_CHARACTERS" not in {i["code"] for i in plain}
-    r = world.patch("lecturer", url, {"title": "Gwyl Dewi 🎓"})
+    r = world.patch("lecturer", url, {"title": "Croeso مرحبا"})
     assert r.status_code == 200, r.text
     issues = {i["code"]: i for i in world.get("lecturer", url).json()["readiness"]}
     assert issues["CERTIFICATE_CHARACTERS"]["severity"] == "warning"

@@ -507,9 +507,9 @@ def readiness(
             _issue("category", "CATEGORY_INVALID", "Choose one of the listed categories.")
         )
 
-    # The printable certificate has no glyphs for some characters (emoji, right-to-left
-    # scripts); say so while the wording can still change. Not blocking: the badge, its public
-    # page and the credential file show every character.
+    # The printable certificate cannot set some text (right-to-left scripts, characters no
+    # bundled font has): say so while the wording can still change. Not blocking: the badge,
+    # its public page and the credential file show every character.
     from opencredential.credentials.certificate import printable  # local: keeps PDF code out
 
     if not all(printable(getattr(version, f)) for f in ("title", "short_description")):
@@ -518,9 +518,9 @@ def readiness(
                 "title",
                 "CERTIFICATE_CHARACTERS",
                 "The printable certificate cannot show some characters in the title or short "
-                "description (for example emoji), so students could not download a certificate "
-                "for this badge. The badge itself, its public page and the credential file are "
-                "not affected.",
+                "description (for example Arabic or Hebrew script), so students could not "
+                "download a certificate for this badge. The badge itself, its public page and "
+                "the credential file are not affected.",
                 severity="warning",
             )
         )

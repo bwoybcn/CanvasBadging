@@ -6,13 +6,17 @@ the proof. The proof is the signed credential file, or the public page the QR co
 the certificate says so.
 
 Text is set in Liberation Sans, bundled in ``fonts/`` so the result does not depend on fonts
-installed on the server. Scripts that need shaping or right-to-left layout are not supported:
-:func:`printable` reports them so the caller can explain instead of printing boxes.
+installed on the server. Characters it lacks fall back, one character at a time, to Droid Sans
+Fallback (Chinese and Japanese) and then Noto Emoji (black-and-white emoji), also bundled.
+Chinese and Japanese lines may break between any two characters. Scripts that need shaping or
+right-to-left layout are not supported: :func:`printable` reports them so the caller can explain
+instead of printing boxes.
 """
 
 from __future__ import annotations
 
 import io
+import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import date
@@ -25,7 +29,7 @@ from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.utils import ImageReader, simpleSplit
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen.canvas import Canvas
@@ -36,6 +40,16 @@ BOLD_FILE = FONT_DIR / "LiberationSans-Bold.ttf"
 FAMILY = "Liberation Sans"
 REGULAR = "OC-Sans"
 BOLD = "OC-Sans-Bold"
+#: Fallbacks, tried in order for a character the main font lacks (Apache-2.0 and OFL).
+FALLBACK_FILES = (
+    ("OC-CJK", FONT_DIR / "DroidSansFallbackFull.ttf"),
+    ("OC-Emoji", FONT_DIR / "NotoEmoji-Regular.ttf"),
+)
+#: Invisible joiners and emoji/text style selectors: dropped, since we draw glyph by glyph.
+_INVISIBLE = dict.fromkeys(map(ord, "‍︎️"))
+#: Characters a line may break before or after without a space (Chinese, Japanese, full width).
+_WIDE = "⺀-⿿　-ヿ㄀-ㇿ㐀-䶿一-鿿豈-﫿＀-￯"
+_TOKENS = re.compile(rf"\s+|[{_WIDE}]|[^\s{_WIDE}]+")
 
 #: Pixels along the longer side of a badge image made from an SVG.
 IMAGE_SIDE = 1000
@@ -84,14 +98,83 @@ def _fonts() -> tuple[TTFont, TTFont]:
     return regular, bold
 
 
+@cache
+def _fallbacks() -> tuple[TTFont, ...]:
+    fonts = []
+    for name, path in FALLBACK_FILES:
+        if path.exists():
+            font = TTFont(name, str(path))
+            pdfmetrics.registerFont(font)
+            fonts.append(font)
+    return tuple(fonts)
+
+
+def _font_for(ch: str, font: str) -> str | None:
+    """The font that draws ``ch`` when the text is set in ``font``; ``None`` if none can."""
+    if ch.isspace():
+        return font
+    code = ord(ch)
+    regular, bold = _fonts()
+    main = bold if font == BOLD else regular
+    if code in main.face.charToGlyph:
+        return font
+    for fallback in _fallbacks():
+        if code in fallback.face.charToGlyph:
+            return str(fallback.fontName)
+    return None
+
+
+def _runs(text: str, font: str) -> list[tuple[str, str]]:
+    """``text`` cut into ``(piece, font)`` runs, each drawn by a font that has its glyphs."""
+    runs: list[tuple[str, str]] = []
+    for ch in text:
+        use = _font_for(ch, font) or font
+        if runs and runs[-1][1] == use:
+            runs[-1] = (runs[-1][0] + ch, use)
+        else:
+            runs.append((ch, use))
+    return runs
+
+
+def _width(text: str, font: str, size: float) -> float:
+    return float(sum(pdfmetrics.stringWidth(piece, f, size) for piece, f in _runs(text, font)))
+
+
+def _draw(c: Canvas, x: float, y: float, text: str, font: str, size: float) -> None:
+    for piece, f in _runs(text, font):
+        c.setFont(f, size)
+        c.drawString(x, y, piece)
+        x += pdfmetrics.stringWidth(piece, f, size)
+    c.setFont(font, size)
+
+
+def _split(text: str, font: str, size: float, width: float) -> list[str]:
+    """Lines no wider than ``width``, broken at spaces or between Chinese/Japanese characters."""
+    lines: list[str] = []
+    line = ""
+    for token in _TOKENS.findall(text):
+        if token.isspace():
+            if line:
+                line += " "
+            continue
+        if line.strip() and _width(line + token, font, size) > width:
+            lines.append(line.rstrip())
+            line = token
+        else:
+            line += token
+    if line.strip():
+        lines.append(line.rstrip())
+    return lines
+
+
 def tidy(text: str | None) -> str:
     """Composed characters and single spaces, so accents print as one glyph."""
-    return " ".join(unicodedata.normalize("NFC", text or "").split())
+    composed = unicodedata.normalize("NFC", text or "").translate(_INVISIBLE)
+    return " ".join(composed.split())
 
 
 def printable(text: str | None) -> bool:
     """True when every character of ``text`` can be printed correctly on the certificate."""
-    regular, bold = _fonts()
     for ch in tidy(text):
         if ch == " ":
             continue
@@ -99,8 +182,7 @@ def printable(text: str | None) -> bool:
             return False  # combining marks and control characters need shaping we do not do
         if unicodedata.bidirectional(ch) in ("R", "AL", "AN"):
             return False  # right-to-left scripts would print back to front
-        code = ord(ch)
-        if code not in regular.face.charToGlyph or code not in bold.face.charToGlyph:
+        if _font_for(ch, REGULAR) is None or _font_for(ch, BOLD) is None:
             return False
     return True
 
@@ -143,15 +225,13 @@ def _fit(
     """The largest of ``sizes`` at which ``text`` fits in ``max_lines``; else shortened."""
     lines: list[str] = []
     for size in sizes:
-        lines = simpleSplit(text, font, size, width)
-        if len(lines) <= max_lines and all(
-            pdfmetrics.stringWidth(line, font, size) <= width for line in lines
-        ):
+        lines = _split(text, font, size, width)
+        if len(lines) <= max_lines and all(_width(line, font, size) <= width for line in lines):
             return size, lines
     size = sizes[-1]
     kept = lines[:max_lines]
     last = kept[-1] if kept else ""
-    while last and pdfmetrics.stringWidth(last + "…", font, size) > width:
+    while last and _width(last + "…", font, size) > width:
         last = last[:-1]
     if kept:
         kept[-1] = last.rstrip() + "…"
@@ -162,7 +242,7 @@ def _lines(c: Canvas, lines: list[str], font: str, size: float, x: float, y: flo
     """Draw ``lines`` downwards from baseline ``y``; return the baseline after the last."""
     c.setFont(font, size)
     for line in lines:
-        c.drawString(x, y, line)
+        _draw(c, x, y, line, font, size)
         y -= size * 1.25
     return y
 
@@ -178,6 +258,7 @@ def _qr(c: Canvas, value: str, x: float, y: float, side: float) -> None:
 def render(cert: Certificate) -> bytes:
     """One A4 landscape page."""
     _fonts()
+    _fallbacks()
     width, height = landscape(A4)
     out = io.BytesIO()
     c = Canvas(out, pagesize=(width, height), lang="en-GB", pageCompression=1)
