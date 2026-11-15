@@ -29,7 +29,7 @@ export function Home() {
   if (me.isError)
     return (
       <View as="main" padding="large" display="block">
-        <Alert variant="error">Your session has expired. Open OpenCredential from Canvas again.</Alert>
+        <Alert variant="error">Your session has expired. Choose Badges in your Canvas course menu again.</Alert>
       </View>
     );
 

@@ -30,7 +30,7 @@ _STORAGE_JS = """
     if (cfg.mode === 'put') { window.location.replace(cfg.redirect); return; }
     if (!value) {
       document.getElementById('oc-status').textContent =
-        'Your browser blocked the sign-in check. Open Micro-Credentials again from Canvas, ' +
+        'Your browser blocked the sign-in check. Choose Badges in your Canvas course menu again, ' +
         'or allow cookies for this site.';
       return;
     }
@@ -112,7 +112,7 @@ def put_storage_then_redirect(
     *, redirect: str, target: str, origin: str, key: str, secret: str
 ) -> HTMLResponse:
     return _page(
-        "Signing in to Micro-Credentials",
+        "Signing in to Badges",
         '<h1>Signing you in…</h1><p id="oc-status" role="status">Connecting to Canvas.</p>',
         script=_STORAGE_JS,
         config={
@@ -137,7 +137,7 @@ def get_storage_and_verify(
         '<input type="hidden" name="browser_secret" value=""></form>'
     )
     return _page(
-        "Signing in to Micro-Credentials",
+        "Signing in to Badges",
         body,
         script=_STORAGE_JS,
         config={"mode": "get", "target": target, "origin": origin, "key": key},
@@ -147,9 +147,8 @@ def get_storage_and_verify(
 
 def redirect_to_app(url: str, frame_ancestors: str) -> HTMLResponse:
     return _page(
-        "Opening Micro-Credentials",
-        '<p role="status">Opening Micro-Credentials… '
-        f'<a href="{html.escape(url)}">Continue</a></p>',
+        "Opening Badges",
+        f'<p role="status">Opening Badges… <a href="{html.escape(url)}">Continue</a></p>',
         script=_REDIRECT_JS,
         config={"url": url},
         frame_ancestors=frame_ancestors,
@@ -159,10 +158,10 @@ def redirect_to_app(url: str, frame_ancestors: str) -> HTMLResponse:
 def error(code: str, message: str, status: int, request_id: str | None) -> HTMLResponse:
     ref = f" Reference: {html.escape(request_id)}." if request_id else ""
     body = (
-        "<h1>Micro-Credentials could not open</h1>"
+        "<h1>Badges could not open</h1>"
         f"<p>{html.escape(message)}</p>"
-        "<p>Close this and open <strong>Micro-Credentials</strong> from the course menu again. "
+        "<p>Close this and choose <strong>Badges</strong> in the course menu again. "
         "If it keeps happening, contact your Canvas administrator.</p>"
         f'<p class="code">Error code: {html.escape(code)}.{ref}</p>'
     )
-    return _page("Micro-Credentials could not open", body, status=status)
+    return _page("Badges could not open", body, status=status)

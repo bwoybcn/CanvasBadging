@@ -13,7 +13,9 @@ from urllib.parse import urlsplit
 from opencredential.lti.keys import public_jwk
 from opencredential.settings import Settings
 
-DEFAULT_LABEL = "Micro-Credentials"
+#: What the tool is called in the Canvas course menu, and so in every message that sends
+#: someone back there. An installation may register another name (``oc lti config --label``).
+DEFAULT_LABEL = "Badges"
 NRPS_SCOPE = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly"
 
 
@@ -39,7 +41,7 @@ def canvas_tool_config(
     domain = urlsplit(settings.public_base_url).netloc
     config: dict[str, Any] = {
         "title": "OpenCredential",
-        "description": "Micro-credentials and Open Badges 3.0 for Canvas courses.",
+        "description": "Digital badges (Open Badges 3.0) for Canvas courses.",
         "oidc_initiation_url": ep["login"],
         "target_link_uri": ep["launch"],
         "scopes": [NRPS_SCOPE],

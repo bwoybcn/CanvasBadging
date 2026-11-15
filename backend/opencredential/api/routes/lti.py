@@ -177,7 +177,7 @@ def _complete(
     except PermissionError as exc:
         return _rejected(
             request,
-            LaunchRejected(str(exc), "Your account cannot use Micro-Credentials here.", 403),
+            LaunchRejected(str(exc), "Your account cannot use Badges here.", 403),
         )
     token, _ = sessions.issue(
         settings,

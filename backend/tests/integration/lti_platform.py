@@ -71,7 +71,7 @@ class Platform:
             c.CLAIM_VERSION: "1.3.0",
             c.CLAIM_DEPLOYMENT_ID: DEPLOYMENT_ID,
             c.CLAIM_TARGET_LINK_URI: LAUNCH_URL,
-            c.CLAIM_RESOURCE_LINK: {"id": "rl-1", "title": "Micro-Credentials"},
+            c.CLAIM_RESOURCE_LINK: {"id": "rl-1", "title": "Badges"},
             c.CLAIM_ROLES: [INSTRUCTOR],
             c.CLAIM_CONTEXT: {
                 "id": CONTEXT_ID,

@@ -46,8 +46,9 @@ vocabulary. Code, the API, the database and the technical documents keep the sta
 | **credential file** | credential, JSON | Only the signed file a student downloads, or that someone uploads to check |
 | **award** | issue (as a verb for people) | Staff award a badge; the system issues it |
 
-Names that belong to someone else stay as they are: **Micro-Credentials** is the item in the
-Canvas course menu (set when the tool is registered), "Credential ID" and "Credential URL" are
+The item in the Canvas course menu is **Badges** (`DEFAULT_LABEL` in
+`backend/opencredential/lti/config.py`), and messages that send someone back there quote it.
+Names that belong to someone else stay as they are: "Credential ID" and "Credential URL" are
 LinkedIn's field names, and "Learner Credential Wallet" is a product. The end-to-end pass over
 every screen (`tests/end_to_end/specs/a11y.spec.ts`) fails if "learner" or "micro-credential"
 comes back.

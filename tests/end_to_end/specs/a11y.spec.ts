@@ -86,8 +86,8 @@ test.beforeAll(async ({ request }) => {
   ];
 });
 
-/** Words the screens no longer use. "Micro-Credentials" with a capital C is the Canvas menu item. */
-const OLD_WORDS = /\b[Ll]earners?\b|\b[Mm]icro-credentials?\b/;
+/** Words the screens no longer use. */
+const OLD_WORDS = /\blearners?\b|\bmicro-credentials?\b/i;
 /** Other people's product names that happen to contain one. */
 const KEPT_NAMES = /Learner Credential Wallet/g;
 

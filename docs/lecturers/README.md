@@ -5,7 +5,7 @@ knowledge. Everything happens inside your Canvas course.
 
 ## Before you start
 
-1. In your Canvas course, open **Micro-Credentials** in the course menu. If you cannot see it,
+1. In your Canvas course, choose **Badges** in the course menu. If you cannot see it,
    turn it on under **Settings → Navigation**, or ask your Canvas administrator.
 2. The first time, you may see **Switch on badges for this course**. Choose it.
    OpenCredential then reads your students' progress from Canvas straight away, and again every

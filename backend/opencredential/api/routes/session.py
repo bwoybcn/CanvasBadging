@@ -44,7 +44,7 @@ def renew(claims: ClaimsDep, settings: SettingsDep, db: TenantDb) -> SessionOut:
             401,
             "SESSION_TOO_OLD",
             "Your session has reached its time limit",
-            "Open Micro-Credentials from Canvas again to carry on.",
+            "Choose Badges in your Canvas course menu again to carry on.",
         ) from exc
     log.info("session.renewed", method=claims.method)
     return SessionOut(
