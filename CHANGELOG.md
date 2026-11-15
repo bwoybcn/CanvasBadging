@@ -12,6 +12,10 @@ All notable changes to this project are documented here. The format follows
   and the button did nothing. Download names are now plain ASCII ("gwyl-dewi-2026-11-15.json")
   for the credential file, certificate and badge image alike, and an error that arrives with no
   words now says "Something went wrong. Please try again." instead of nothing.
+- **Award badges › One student** keeps listing a badge while its next version is drafted. It
+  asked only for published badges, so **Start a new version** took the badge off the list even
+  though its published version stays live; the list award tab already showed it. Both tabs now
+  use the same list of badges with a live version.
 - Drop-down lists that looked chosen but were not. The badge wizard showed the first course or
   category as if it were selected, then refused the step ("Choose a category."), and left the
   artwork Template box blank after a template was picked. Course, Issuer, Category, Template,

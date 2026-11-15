@@ -101,9 +101,11 @@ function ManualAward() {
   const [kind, setKind] = useState("lecturer_confirmation");
   const [narrative, setNarrative] = useState("");
   const [pub, setPub] = useState(false);
+  // Badges with a live version, including one whose next version is still being drafted: the
+  // published version stays awardable until the new one replaces it (same list as "A list").
   const badges = useQuery({
-    queryKey: ["achievements", "published"],
-    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?state=published", token),
+    queryKey: ["achievements", "awardable"],
+    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?awardable=true", token),
   });
   const chosen = badges.data?.items.find((b) => b.id === badge);
   const learners = useQuery({

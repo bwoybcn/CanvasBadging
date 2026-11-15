@@ -597,7 +597,6 @@ describe("awards and progress", () => {
           current_eligibility: null,
         },
       ],
-      "GET /api/v1/achievements?state=published": { items: [] },
       "POST /api/v1/awards/dec-1/confirm": { id: "dec-1", status: "ready" },
     });
     renderAt("/awards");
@@ -628,7 +627,6 @@ describe("awards and progress", () => {
         waiting("dec-3", "Lee Wong"),
         waiting("dec-4", "Ana Silva", "manual"),
       ],
-      "GET /api/v1/achievements?state=published": { items: [] },
       "GET /api/v1/achievements?awardable=true": { items: [] },
       "POST /api/v1/awards/confirm-all": {
         confirmed: 2,
@@ -656,11 +654,11 @@ describe("awards and progress", () => {
   });
 
   it("finds a student by typing part of their name", async () => {
+    // The badge has a new version in draft: its published version must still be awardable.
     const calls = stubApi({
       "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [],
-      "GET /api/v1/achievements?awardable=true": { items: [] },
-      "GET /api/v1/achievements?state=published": {
-        items: [{ id: "d-1", state: "published", course_id: "c-1", course_title: "Writing", title: "Seminar Participation", category: "Participation", version_no: 1, live_version_id: "v-1", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z" }],
+      "GET /api/v1/achievements?awardable=true": {
+        items: [{ id: "d-1", state: "draft", course_id: "c-1", course_title: "Writing", title: "Seminar Participation", category: "Participation", version_no: 1, live_version_id: "v-1", award_policy: "manual", updated_at: "2026-11-14T10:00:00Z" }],
       },
       "GET /api/v1/courses/c-1/progress": {
         course: { id: "c-1", title: "Writing" },
