@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { hasScoreRule, ruleProblems } from "../../components/RuleBuilder";
 import { cellText } from "../CourseProgress";
-import { stepProblems, toDraftFields } from "../CreateBadge";
+import { shortLabel, stepProblems, toDraftFields } from "../CreateBadge";
 
 const CATALOGUE = {
   categories: ["Completion", "Competency"],
@@ -113,5 +113,15 @@ describe("course progress wording", () => {
     expect(cellText("unknown", null, ["DATA_STALE"])).toBe("Pending: Canvas data unavailable");
     expect(cellText("met", "awaiting_confirmation", [])).toBe("Awaiting your confirmation");
     expect(cellText(null, null, [])).toBe("Not evaluated yet");
+  });
+});
+
+describe("the short label on badge artwork", () => {
+  it("keeps whole words and leaves out emoji and symbols", () => {
+    expect(shortLabel("Gŵyl Dewi 🎓 <img> & Café")).toBe("Gŵyl Dewi img");
+    expect(shortLabel("Library Induction Complete")).toBe("Library");
+    expect(shortLabel("Seminar Skills")).toBe("Seminar Skills");
+    expect(shortLabel("Supercalifragilistic")).toBe("Supercalifragi");
+    expect(shortLabel("🎓🎓")).toBe("");
   });
 });

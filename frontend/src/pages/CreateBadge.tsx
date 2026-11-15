@@ -177,6 +177,21 @@ export function toDraftFields(f: FormState["fields"]): DraftFields {
 /** Template wording such as "[Scheme name]" that the author has not replaced yet. */
 export const hasPlaceholder = (x: string | null | undefined) => /\[[^\]]+\]/.test(x ?? "");
 
+/**
+ * A label for the artwork from the badge title: whole words of letters and digits, up to 14
+ * characters. Cutting the title at 14 characters left half words, emoji and "<" on the badge.
+ */
+export function shortLabel(title: string, max = 14): string {
+  const words = title.match(/[\p{L}\p{N}][\p{L}\p{N}'’.&-]*/gu) ?? [];
+  let out = "";
+  for (const w of words) {
+    const next = out ? `${out} ${w}` : w;
+    if (next.length > max) break;
+    out = next;
+  }
+  return out || (words[0] ?? "").slice(0, max);
+}
+
 /** Per-step checks so the author fixes problems where they are, not at the end. */
 export function stepProblems(step: number, s: FormState, catalogue?: Catalogue): string[] {
   const f = s.fields;
@@ -237,7 +252,7 @@ function ArtworkStep({
   const [template, setTemplate] = useState("shield");
   const [primary, setPrimary] = useState("#1f4e79");
   const [secondary, setSecondary] = useState("#f2c14e");
-  const [label, setLabel] = useState(defaultLabel.slice(0, 14));
+  const [label, setLabel] = useState(shortLabel(defaultLabel));
   const [alt, setAlt] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);

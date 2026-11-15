@@ -82,8 +82,17 @@ function RequirementProgress({ b }: { b: LearnerBadge }) {
   );
 }
 
+/** "Waiting for information" is vague when the only thing missing is a member of staff. */
+function statusOf(b: LearnerBadge) {
+  const waiting = b.requirements.filter((r) => r.status === "pending");
+  if (b.status === "pending" && waiting.length > 0 && waiting.every((r) => r.type === "manual_approval")) {
+    return { label: "Waiting for staff to confirm", color: "info" as const };
+  }
+  return BADGE_STATUS[b.status] ?? { label: b.status, color: "primary" as const };
+}
+
 function BadgeCard({ b }: { b: LearnerBadge }) {
-  const status = BADGE_STATUS[b.status] ?? { label: b.status, color: "primary" as const };
+  const status = statusOf(b);
   const headingId = `badge-${b.version_id}`;
   // A badge the student holds is theirs, however it was awarded. Course staff can award one by
   // hand without every requirement being recorded as met, so the requirement list would say

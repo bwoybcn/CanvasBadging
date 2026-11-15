@@ -3,7 +3,7 @@ import { Alert, Flex, Heading, List, Spinner, Text, View } from "@instructure/ui
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { apiFetch, problemLines, type Me } from "../api";
+import { ApiError, apiFetch, problemLines, SESSION_ENDED, type Me } from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "./AppLink";
 
@@ -59,6 +59,19 @@ export function Nav() {
 
 /** Standard page frame: navigation, a single h1 and the content. */
 export function Page({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
+  const me = useMe();
+  // Once the session has ended nothing on the page works, so show only how to carry on, not
+  // menus and buttons (such as "Create a badge") that would each fail.
+  if (me.error instanceof ApiError && me.error.problem.status === 401) {
+    return (
+      <View as="main" padding="medium" maxWidth="72rem" margin="0 auto" display="block">
+        <Heading level="h1" margin="0 0 small">
+          Your session has ended
+        </Heading>
+        <Text as="p">{SESSION_ENDED}</Text>
+      </View>
+    );
+  }
   return (
     // The navigation sits outside <main>, and a skip link (visible when focused) jumps straight
     // to the content, so keyboard and screen-reader users need not pass the menu on every page.

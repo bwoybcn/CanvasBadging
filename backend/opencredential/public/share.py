@@ -246,8 +246,6 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
     ]
     if view["valid_until"]:
         rows.append(("Expires on", _date(view["valid_until"])))
-    if view["recipient_name"]:
-        rows.append(("Awarded to", view["recipient_name"]))
     if view["achievement_type"]:
         rows.append(("Type", view["achievement_type"]))
     rows.append(("Credential ID", view["credential_id"] or ""))

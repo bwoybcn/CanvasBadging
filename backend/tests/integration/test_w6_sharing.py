@@ -471,6 +471,8 @@ def test_preview_is_exactly_what_becomes_public_and_og_has_no_learner_data(
     assert out["preview"]["public"] == shown["public"]
     page = public.get(f"/verify/{_share_id(out['share']['url'])}")
     assert "Eilidh Featherstonehaugh" in page.text
+    # The name is said once ("Awarded to …"), not repeated in the facts table.
+    assert page.text.count("Eilidh Featherstonehaugh") == 1
     assert "Reflective essay on lab practice" in page.text
     og = _og(page.text)
     assert og["og:title"].startswith("Academic Writing Foundations")

@@ -539,12 +539,19 @@ function Courses() {
             </SimpleSelect.Option>
           ))}
         </SimpleSelect>
-        <Checkbox
-          label={`Badge teams in ${c.title}`}
-          checked={!!c.badge_teams}
-          disabled={teams.isPending}
-          onChange={(e) => teams.mutate({ id: c.id, enabled: e.target.checked })}
+        <ConfirmButton
+          label={c.badge_teams ? `Switch badge teams off in ${c.title}` : `Switch badge teams on in ${c.title}`}
+          consequence={
+            c.badge_teams
+              ? `Switch badge teams off in ${c.title}? Every member of staff in the course will be able to edit and award every badge again.`
+              : `Switch badge teams on in ${c.title}? Colleagues will lose the ability to edit or award badges they do not own until the owner adds them to the badge's team.`
+          }
+          confirmLabel={c.badge_teams ? "Switch off" : "Switch on"}
+          cancelLabel="Leave it as it is"
+          busy={teams.isPending}
+          onConfirm={() => teams.mutate({ id: c.id, enabled: !c.badge_teams })}
         />
+        <Text size="small">Badge teams: {c.badge_teams ? "on" : "off"}</Text>
         </Flex>
       ))}
     </View>
