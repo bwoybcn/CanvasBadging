@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 
 import { AuthProvider, readLaunchSession, useAuth } from "./auth";
+import { StaffOnly } from "./components/Page";
 import { AdminHome } from "./pages/admin/AdminHome";
 import { Audit } from "./pages/admin/Audit";
 import { Credentials } from "./pages/admin/Credentials";
@@ -41,13 +42,13 @@ export function AppRoutes() {
       {(
         [
           ["/", <Home />],
-          ["/badges", <BadgeList />],
-          ["/badges/new", <CreateBadge />],
-          ["/badges/:id", <BadgeDetail />],
-          ["/badges/:id/edit", <CreateBadge />],
-          ["/reviews", <ReviewQueue />],
-          ["/awards", <Awards />],
-          ["/courses/:id/progress", <CourseProgress />],
+          ["/badges", <StaffOnly><BadgeList /></StaffOnly>],
+          ["/badges/new", <StaffOnly><CreateBadge /></StaffOnly>],
+          ["/badges/:id", <StaffOnly><BadgeDetail /></StaffOnly>],
+          ["/badges/:id/edit", <StaffOnly><CreateBadge /></StaffOnly>],
+          ["/reviews", <StaffOnly><ReviewQueue /></StaffOnly>],
+          ["/awards", <StaffOnly><Awards /></StaffOnly>],
+          ["/courses/:id/progress", <StaffOnly><CourseProgress /></StaffOnly>],
           ["/me/progress", <MyProgress />],
           ["/me/credentials", <MyCredentials />],
           ["/me/credentials/:id", <CredentialDetail />],
