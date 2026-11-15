@@ -18,19 +18,24 @@ export const BADGE_STATUS: Record<string, { label: string; color: "success" | "i
   not_awarded: { label: "Not awarded", color: "warning" },
 };
 
+/** Statuses where the student already has the badge, so requirement progress no longer applies. */
+const HELD = new Set(["earned", "awarded"]);
+
+/** Joins a requirement and its state without doubling punctuation ("quiz.: Awaiting" reads badly). */
+export function requirementText(description: string, label: string): string {
+  return `${description.replace(/[.:;\s]+$/, "")}: ${label}`;
+}
+
 function RequirementItem({ r }: { r: Requirement }) {
   const mark = r.status === "complete" ? "✓" : r.status === "pending" ? "…" : "○";
   return (
     <List.Item>
       <span aria-hidden="true">{mark} </span>
-      <Text weight={r.confirmed ? "bold" : "normal"}>{r.description}</Text>
-      <Text>: {r.label}</Text>
+      <Text weight={r.confirmed ? "bold" : "normal"}>{requirementText(r.description, r.label)}</Text>
       {r.children && (
         <List margin="xx-small 0 0">
           {r.children.map((c) => (
-            <List.Item key={c.rule_id}>
-              {c.description}: {c.label}
-            </List.Item>
+            <List.Item key={c.rule_id}>{requirementText(c.description, c.label)}</List.Item>
           ))}
         </List>
       )}
@@ -38,12 +43,52 @@ function RequirementItem({ r }: { r: Requirement }) {
   );
 }
 
-function BadgeCard({ b }: { b: LearnerBadge }) {
-  const status = BADGE_STATUS[b.status] ?? { label: b.status, color: "primary" as const };
+function RequirementProgress({ b }: { b: LearnerBadge }) {
   const confirmed = b.requirements.filter((r) => r.status === "complete");
   const pending = b.requirements.filter((r) => r.status === "pending");
   const todo = b.requirements.filter((r) => r.status === "incomplete");
+  return (
+    <>
+      <ProgressBar
+        screenReaderLabel={`${b.title} progress`}
+        valueNow={b.progress.completed}
+        valueMax={Math.max(b.progress.total, 1)}
+        renderValue={() => (
+          <Text size="small">
+            {b.progress.completed} of {b.progress.total} confirmed
+            {b.progress.mode === "ANY" ? " (any one is enough)" : ""}
+          </Text>
+        )}
+      />
+      {confirmed.length > 0 && (
+        <>
+          <Heading level="h4">Confirmed</Heading>
+          <List isUnstyled>{confirmed.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
+        </>
+      )}
+      {pending.length > 0 && (
+        <>
+          <Heading level="h4">Pending</Heading>
+          <List isUnstyled>{pending.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
+        </>
+      )}
+      {todo.length > 0 && (
+        <>
+          <Heading level="h4">Still to do</Heading>
+          <List isUnstyled>{todo.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
+        </>
+      )}
+    </>
+  );
+}
+
+function BadgeCard({ b }: { b: LearnerBadge }) {
+  const status = BADGE_STATUS[b.status] ?? { label: b.status, color: "primary" as const };
   const headingId = `badge-${b.version_id}`;
+  // A badge the student holds is theirs, however it was awarded. Course staff can award one by
+  // hand without every requirement being recorded as met, so the requirement list would say
+  // "Pending" next to "Earned". Show the award instead of the progress.
+  const held = HELD.has(b.status);
   return (
     <View as="section" aria-labelledby={headingId} padding="medium" borderWidth="small" borderRadius="medium" margin="0 0 medium" display="block">
       <Flex gap="medium" alignItems="start">
@@ -62,34 +107,10 @@ function BadgeCard({ b }: { b: LearnerBadge }) {
               <AppLink to={`/me/credentials/${b.credential_id}`}>View, download or share this badge</AppLink>
             </Text>
           )}
-          <ProgressBar
-            screenReaderLabel={`${b.title} progress`}
-            valueNow={b.progress.completed}
-            valueMax={Math.max(b.progress.total, 1)}
-            renderValue={() => (
-              <Text size="small">
-                {b.progress.completed} of {b.progress.total} confirmed
-                {b.progress.mode === "ANY" ? " (any one is enough)" : ""}
-              </Text>
-            )}
-          />
-          {confirmed.length > 0 && (
-            <>
-              <Heading level="h4">Confirmed</Heading>
-              <List isUnstyled>{confirmed.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
-            </>
-          )}
-          {pending.length > 0 && (
-            <>
-              <Heading level="h4">Pending</Heading>
-              <List isUnstyled>{pending.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
-            </>
-          )}
-          {todo.length > 0 && (
-            <>
-              <Heading level="h4">Still to do</Heading>
-              <List isUnstyled>{todo.map((r) => <RequirementItem key={r.rule_id} r={r} />)}</List>
-            </>
+          {held ? (
+            <Text as="p">You have this badge. Nothing more is needed from you.</Text>
+          ) : (
+            <RequirementProgress b={b} />
           )}
         </Flex.Item>
       </Flex>
