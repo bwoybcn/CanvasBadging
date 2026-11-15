@@ -14,6 +14,7 @@ import {
   Flex,
   Heading,
   Img,
+  Link,
   List,
   RadioInput,
   RadioInputGroup,
@@ -50,6 +51,20 @@ import { ChoiceSelect } from "../components/ChoiceSelect";
 import { ColourField, LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { hasScoreRule, RuleBuilder, ruleProblems } from "../components/RuleBuilder";
+
+/** Open Badges achievement types in plain words (the stored value stays the standard one). */
+export const ACHIEVEMENT_TYPE_LABELS: Record<string, string> = {
+  Achievement: "Achievement",
+  Assessment: "Assessment",
+  Award: "Award",
+  Badge: "Badge",
+  Certificate: "Certificate",
+  Competency: "Competency",
+  CoCurricular: "Co-curricular activity",
+  Course: "Course",
+  LearningProgram: "Learning programme",
+  MicroCredential: "Short accredited course",
+};
 
 export const STEPS = [
   "Course and issuer",
@@ -216,6 +231,8 @@ export function stepProblems(step: number, s: FormState, catalogue?: Catalogue):
     if ([f.criteria_narrative, f.evidence_description, ...f.learning_outcomes].some(hasPlaceholder))
       out.push("Replace the template text in [square brackets] with your own details.");
   }
+  if (step === 3 && !f.asset_id)
+    out.push("Add the badge artwork: choose a template and select Create artwork, or upload an image.");
   if (step === 4) out.push(...ruleProblems(s.rules));
   return out;
 }
@@ -309,7 +326,7 @@ function ArtworkStep({
             label="Template"
             value={template}
             placeholder="Choose a template"
-            options={(templates.data ?? []).map((t) => ({ value: t.key, label: `${t.name} (${t.licence})` }))}
+            options={(templates.data ?? []).map((t) => ({ value: t.key, label: t.name }))}
             onChange={setTemplate}
           />
           <ColourField label="Main colour" value={primary} onChange={setPrimary} />
@@ -407,6 +424,9 @@ export function CreateBadge() {
   });
   const issuerId = s.issuer_id || (!editing && issuers.data?.length === 1 ? issuers.data[0].id : "");
   const st: FormState = { ...s, course_id: courseId, issuer_id: issuerId };
+  // The problems shown follow the form: one that has been fixed disappears straight away, and
+  // the box goes when none are left (until Next is pressed again).
+  const liveProblems = shownProblems.length ? stepProblems(step, st, catalogue.data) : [];
   const badgeTemplates = useQuery({
     queryKey: ["badge-templates", courseId],
     enabled: !!courseId && !editing,
@@ -528,10 +548,15 @@ export function CreateBadge() {
         <List isUnstyled delimiter="none" margin="0 0 medium">
           {STEPS.map((name, i) => (
             <List.Item key={name}>
-              <Text weight={i === step ? "bold" : "normal"} aria-current={i === step ? "step" : undefined}>
-                {i + 1}. {name}
-                {i < step ? " (done)" : ""}
-              </Text>
+              {i < step ? (
+                <Link as="button" onClick={() => void go(i)}>
+                  {i + 1}. {name} (done)
+                </Link>
+              ) : (
+                <Text weight={i === step ? "bold" : "normal"} aria-current={i === step ? "step" : undefined}>
+                  {i + 1}. {name}
+                </Text>
+              )}
             </List.Item>
           ))}
         </List>
@@ -539,12 +564,12 @@ export function CreateBadge() {
       <Heading level="h2" margin="0 0 small" elementRef={(el) => (headingRef.current = el as HTMLHeadingElement)} tabIndex={-1}>
         Step {step + 1} of {STEPS.length}: {STEPS[step]}
       </Heading>
-      {shownProblems.length > 0 && (
+      {liveProblems.length > 0 && (
         <div role="alert" tabIndex={-1} ref={problemsRef} className="oc-problems">
           <Alert variant="error" margin="0 0 small">
             <Text weight="bold">Please fix the following:</Text>
             <List>
-              {shownProblems.map((p) => (
+              {liveProblems.map((p) => (
                 <List.Item key={p}>{p}</List.Item>
               ))}
             </List>
@@ -657,7 +682,7 @@ export function CreateBadge() {
           >
             {cat.achievement_types.map((t) => (
               <SimpleSelect.Option key={t} id={`type-${t}`} value={t}>
-                {t}
+                {ACHIEVEMENT_TYPE_LABELS[t] ?? t}
               </SimpleSelect.Option>
             ))}
           </SimpleSelect>
@@ -759,8 +784,9 @@ export function CreateBadge() {
             </Alert>
           ) : (
             <Text as="p">
-              Requirements are checked against Canvas data. A requirement is only confirmed when Canvas says so;
-              missing, excused or unreleased marks stay pending and never award a badge.
+              Module, assignment and score requirements are checked against Canvas and count only once Canvas
+              confirms them: missing, excused or unreleased marks stay pending. A &ldquo;Staff confirm&rdquo;
+              requirement is met when a member of staff records it.
             </Text>
           )}
           {(modules.isError || assignments.isError) && <ErrorAlert error={modules.error ?? assignments.error} />}
@@ -788,7 +814,7 @@ export function CreateBadge() {
             label={
               score
                 ? "Use the institution's default for score-based badges"
-                : "Use the default (award automatically)"
+                : "Follow the institution's setting (today: award automatically)"
             }
           />
           <RadioInput value="automatic" label={POLICY_LABELS.automatic} />

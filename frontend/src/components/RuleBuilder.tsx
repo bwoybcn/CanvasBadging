@@ -106,7 +106,13 @@ function LeafEditor({
       <Text as="p" size="small" color="secondary">
         {RULE_TYPES.find((t) => t.value === rule.type)?.hint}
       </Text>
-      {rule.type === "module_completed" && (
+      {rule.type === "module_completed" && modules.length === 0 && (
+        <Text as="p">
+          This course has no modules with completion requirements in Canvas yet. Add requirements to a module in
+          Canvas (Modules, then the module&rsquo;s settings), or choose another type of requirement.
+        </Text>
+      )}
+      {rule.type === "module_completed" && modules.length > 0 && (
         <ChoiceSelect
           label="Module"
           value={rule.module_id}
@@ -128,6 +134,11 @@ function LeafEditor({
         </CheckboxGroup>
       )}
       {(rule.type === "assignment_submitted" || rule.type === "assignment_score") && (
+        sources.assignments.filter((a) => rule.type === "assignment_submitted" || a.score_rules_allowed).length === 0 ? (
+          <Text as="p">
+            This course has no assignments that can be used here yet. Choose another type of requirement.
+          </Text>
+        ) : (
         <ChoiceSelect
           label="Assignment"
           value={rule.assignment_id}
@@ -137,6 +148,7 @@ function LeafEditor({
             .map((a) => ({ value: a.id, label: a.name }))}
           onChange={(value) => onChange({ ...rule, assignment_id: value })}
         />
+        )
       )}
       {rule.type === "assignment_score" && (
         <NumberInput
@@ -149,7 +161,7 @@ function LeafEditor({
       )}
       {rule.type === "manual_approval" && (
         <LimitedTextArea maxLength={500}
-          label="What the lecturer confirms"
+          label="What a member of staff confirms"
           value={rule.instructions ?? ""}
           onChange={(e) => onChange({ ...rule, instructions: e.target.value })}
         />
