@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- **Download credential file** works for badges with accented names. A title such as "Gŵyl Dewi"
+  or "Café" put a non-Latin-1 letter in the download's file name header, so the server failed
+  and the button did nothing. Download names are now plain ASCII ("gwyl-dewi-2026-11-15.json")
+  for the credential file, certificate and badge image alike, and an error that arrives with no
+  words now says "Something went wrong. Please try again." instead of nothing.
 - Drop-down lists that looked chosen but were not. The badge wizard showed the first course or
   category as if it were selected, then refused the step ("Choose a category."), and left the
   artwork Template box blank after a template was picked. Course, Issuer, Category, Template,

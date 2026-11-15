@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from opencredential.api.deps import ClaimsDep, SettingsDep, SignerDep, TenantDb
 from opencredential.api.errors import ApiError
+from opencredential.api.filenames import file_stem
 from opencredential.authoring.preview import asset_data_url
 from opencredential.credentials import certificate as certificates
 from opencredential.credentials import linkedin
@@ -219,10 +220,7 @@ def _linkedin(
 
 
 def _file_stem(version: AchievementVersion | None) -> str:
-    stem = "".join(
-        ch if ch.isascii() and ch.isalnum() else "-" for ch in (version.title if version else "")
-    )
-    return "-".join(part for part in stem.lower().split("-") if part) or "badge"
+    return file_stem(version.title if version else None)
 
 
 def _attachment(data: bytes, media_type: str, filename: str) -> Response:

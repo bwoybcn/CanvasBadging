@@ -123,3 +123,10 @@ describe("what a refused request says", () => {
     expect(problemText(new Error("boom"))).toBe("Something went wrong. Please try again.");
   });
 });
+
+describe("an error with no words", () => {
+  it("still says something, so a failed download is never silent", () => {
+    const blank = new ApiError({ status: 500, code: "HTTP_ERROR", title: "" });
+    expect(problemText(blank)).toBe("Something went wrong. Please try again.");
+  });
+});
