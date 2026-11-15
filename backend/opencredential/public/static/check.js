@@ -41,6 +41,7 @@
       h.appendChild(el("strong", j.label));
       box.appendChild(h);
       box.appendChild(el("p", words.text[j.result] || ""));
+      if (j.issuer_trust && j.issuer_trust.development) box.appendChild(el("strong", j.issuer_trust.detail));
       var name = j.achievement && j.achievement.name;
       var issuer = j.issuer && j.issuer.name;
       if (name || issuer) {

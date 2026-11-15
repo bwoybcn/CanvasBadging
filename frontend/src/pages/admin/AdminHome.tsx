@@ -73,7 +73,7 @@ function Setup() {
       ) : (
         <>
           <Text as="p">
-            {q.data.done} of {q.data.total} done. Until every step is done, lecturers cannot create badges that the public can check.
+            {q.data.done} of {q.data.total} done. Until every step is done, badges are for trying things out: they are signed with a test key, and their public pages say they are test badges.
           </Text>
           {steps}
         </>

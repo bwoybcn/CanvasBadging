@@ -95,22 +95,22 @@ function PreviewPanel({ id }: { id: string }) {
           <Text>No artwork yet</Text>
         )}
         <Flex.Item shouldShrink>
-          <Heading level="h3">{a.title || "(untitled)"}</Heading>
+          <Heading level="h2">{a.title || "(untitled)"}</Heading>
           <Text as="p">{a.description}</Text>
           <Text as="p">
             {a.category} · {a.demonstration} · issued by {p.data.issuer.name}
           </Text>
-          <Heading level="h4">Learning outcomes</Heading>
+          <Heading level="h3">Learning outcomes</Heading>
           <List>
             {a.learning_outcomes.map((o) => (
               <List.Item key={o}>{o}</List.Item>
             ))}
           </List>
-          <Heading level="h4">Criteria</Heading>
+          <Heading level="h3">Criteria</Heading>
           <Text as="p">{a.criteria}</Text>
           {a.requirements.length > 0 && (
             <>
-              <Heading level="h4">Requirements</Heading>
+              <Heading level="h3">Requirements</Heading>
               <List>
                 {a.requirements.map((r) => (
                   <List.Item key={r}>{r}</List.Item>
@@ -347,7 +347,7 @@ function TeamPanel({ id }: { id: string }) {
       {change.isError && <ErrorAlert error={change.error} />}
       {t.can_transfer && others.length > 0 && (
         <View as="div" margin="medium 0 0">
-          <Heading level="h3" margin="0 0 x-small">
+          <Heading level="h2" margin="0 0 x-small">
             Hand this badge to a colleague
           </Heading>
           <Text as="p" size="small">
@@ -564,7 +564,7 @@ export function BadgeDetail() {
         <Tabs.Panel id="details" renderTitle="Details" isSelected={tab === 0}>
           <Text as="p">{v.short_description}</Text>
           <Text as="p">Category: {v.category || "(not set)"}</Text>
-          <Heading level="h3">Requirements</Heading>
+          <Heading level="h2">Requirements</Heading>
           {def.rules ? (
             <Text as="p">
               {def.rules.rules.length === 1
@@ -575,7 +575,7 @@ export function BadgeDetail() {
           ) : (
             <Text as="p">No requirements yet.</Text>
           )}
-          <Heading level="h3">Review history</Heading>
+          <Heading level="h2">Review history</Heading>
           {def.reviews.length === 0 ? (
             <Text as="p">No reviews yet.</Text>
           ) : (

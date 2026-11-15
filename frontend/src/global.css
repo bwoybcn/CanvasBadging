@@ -69,3 +69,16 @@
   outline: 3px solid #2b7abc;
   outline-offset: 2px;
 }
+
+/* Administration: section menu beside the content; stacked only on narrow screens. */
+.oc-admin-layout {
+  display: grid;
+  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 40rem) {
+  .oc-admin-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

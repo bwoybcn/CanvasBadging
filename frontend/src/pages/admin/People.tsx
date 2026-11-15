@@ -2,7 +2,7 @@
 /** Faculties and departments, which may issue, course placement, colleague review by area and
  * delegated staff roles (spec §2.3, §2.4, §10.3). One page each, so an administrator looking
  * for "who has which role" does not scroll past five other tables to find it. */
-import { Button, Checkbox, Flex, Heading, SimpleSelect, Table, Text, TextInput, View } from "@instructure/ui";
+import { Alert, Button, Checkbox, Flex, Heading, SimpleSelect, Table, Text, TextInput, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -125,7 +125,7 @@ function OrgUnits() {
       </TableScroll>
       {patch.isError && <ErrorAlert error={patch.error} />}
       <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0 0">
-        <TextInput maxLength={200} renderLabel="New unit name" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} width="16rem" />
+        <TextInput maxLength={200} renderLabel="New area name" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} width="16rem" />
         <SimpleSelect renderLabel="Kind" value={v.kind} onChange={(_e, { value }) => setV({ ...v, kind: String(value) })} width="10rem">
           {["faculty", "department", "programme", "service", "other"].map((k) => (
             <SimpleSelect.Option key={k} id={`kind-${k}`} value={k}>
@@ -151,7 +151,7 @@ function OrgUnits() {
             ))}
         </SimpleSelect>
         <Button onClick={() => create.mutate()} interaction={v.name.trim().length >= 2 ? "enabled" : "disabled"}>
-          Add unit
+          Add area
         </Button>
       </Flex>
       {create.isError && <ErrorAlert error={create.error} />}
@@ -195,8 +195,10 @@ function CanvasSubAccounts() {
     onSuccess: (r) => {
       setPicked([]);
       setDone(
-        `Linked ${r.linked} sub-account${r.linked === 1 ? "" : "s"}; ` +
-          `${r.courses_placed} existing course${r.courses_placed === 1 ? "" : "s"} joined ${r.linked === 1 ? "its area" : "their areas"}.`,
+        `Linked ${r.linked} sub-account${r.linked === 1 ? "" : "s"}.` +
+          (r.courses_placed
+            ? ` ${r.courses_placed} course${r.courses_placed === 1 ? "" : "s"} not yet in an area joined ${r.linked === 1 ? "it" : "them"}.`
+            : " Its courses were already in an area, so none needed moving; new courses join it when first opened."),
       );
       refreshAll();
     },
@@ -211,6 +213,11 @@ function CanvasSubAccounts() {
   if (!f.isInstAdmin) return null;
   const rows = q.data ?? [];
   const toggle = (id: string, on: boolean) => setPicked(on ? [...picked, id] : picked.filter((x) => x !== id));
+  // Linking to "a new area" when an area of the same name exists would make a second one.
+  const existing = new Set((units.data ?? []).filter((u) => u.status === "active").map((u) => u.name.trim().toLowerCase()));
+  const clashes = target
+    ? []
+    : rows.filter((a) => picked.includes(a.id) && existing.has(a.name.trim().toLowerCase())).map((a) => a.name);
   return (
     <View as="section" display="block" margin="0 0 large">
       <Heading level="h2" margin="0 0 small">
@@ -333,6 +340,12 @@ function CanvasSubAccounts() {
               Link selected ({picked.length})
             </Button>
           </Flex>
+          {clashes.length > 0 && (
+            <Alert variant="warning" margin="small 0">
+              An area called {clashes.join(", ")} already exists. To use it, choose &ldquo;Existing area:{" "}
+              {clashes[0]}&rdquo; under Link to; otherwise a second area with the same name is created.
+            </Alert>
+          )}
           {link.isError && <ErrorAlert error={link.error} />}
           <Text as="p" size="small">
             Last read from Canvas {fmtDate(rows[0].refreshed_at)}.
