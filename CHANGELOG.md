@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Drop-down lists that looked chosen but were not. The badge wizard showed the first course or
+  category as if it were selected, then refused the step ("Choose a category."), and left the
+  artwork Template box blank after a template was picked. Course, Issuer, Category, Template,
+  Module, Assignment and the badge lists on Award badges now show the placeholder until something
+  is chosen, and show a saved choice once its list has loaded.
+
 ### Added
 - A setup checklist on the Administration overview for institution administrators
   (`GET /api/v1/admin/setup`): Canvas connected, public address set, an area that may issue, an

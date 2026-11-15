@@ -33,6 +33,7 @@ import {
   type DefinitionSummary,
 } from "../api";
 import { useAuth } from "../auth";
+import { ChoiceSelect } from "../components/ChoiceSelect";
 import { ConfirmButton } from "../components/ConfirmButton";
 import { LimitedTextArea, SearchSelect } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
@@ -134,13 +135,16 @@ function ManualAward() {
         Use this when a student has met the outcomes in a way Canvas cannot show. Your justification is kept in the
         audit record; only evidence you mark as public appears on the badge.
       </Text>
-      <SimpleSelect renderLabel="Badge" value={badge || undefined} placeholder="Choose a published badge" onChange={(_e, { value }) => { setBadge(String(value)); setLearner(""); }}>
-        {(badges.data?.items ?? []).map((b) => (
-          <SimpleSelect.Option key={b.id} id={`mb-${b.id}`} value={b.id}>
-            {b.title}
-          </SimpleSelect.Option>
-        ))}
-      </SimpleSelect>
+      <ChoiceSelect
+        label="Badge"
+        value={badge}
+        placeholder="Choose a published badge"
+        options={(badges.data?.items ?? []).map((b) => ({ value: b.id, label: b.title }))}
+        onChange={(value) => {
+          setBadge(value);
+          setLearner("");
+        }}
+      />
       <SearchSelect
         label="Student"
         things="students"
@@ -235,21 +239,19 @@ function BulkAward() {
         or university emails, one per line or separated by commas. Only students enrolled in the badge's course can
         receive it. You will see who matches before anything is awarded.
       </Text>
-      <SimpleSelect
-        renderLabel="Badge to award"
-        value={badge || undefined}
+      <ChoiceSelect
+        label="Badge to award"
+        value={badge}
         placeholder="Choose a badge you can award"
-        onChange={(_e, { value }) => {
-          setBadge(String(value));
+        options={(badges.data?.items ?? []).map((b) => ({
+          value: b.id,
+          label: b.course_title ? `${b.title} (${b.course_title})` : b.title,
+        }))}
+        onChange={(value) => {
+          setBadge(value);
           reset();
         }}
-      >
-        {(badges.data?.items ?? []).map((b) => (
-          <SimpleSelect.Option key={b.id} id={`bb-${b.id}`} value={b.id}>
-            {b.course_title ? `${b.title} (${b.course_title})` : b.title}
-          </SimpleSelect.Option>
-        ))}
-      </SimpleSelect>
+      />
       <TextArea
         label="Student ID numbers or emails"
         height="8rem"

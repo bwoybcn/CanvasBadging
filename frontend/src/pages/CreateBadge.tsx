@@ -46,6 +46,7 @@ import {
   ApiError,
 } from "../api";
 import { useAuth } from "../auth";
+import { ChoiceSelect } from "../components/ChoiceSelect";
 import { ColourField, LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { hasScoreRule, RuleBuilder, ruleProblems } from "../components/RuleBuilder";
@@ -288,13 +289,13 @@ function ArtworkStep({
       </RadioInputGroup>
       {mode === "template" ? (
         <View as="div" margin="small 0" display="block">
-          <SimpleSelect renderLabel="Template" value={template} onChange={(_e, { value }) => setTemplate(String(value))}>
-            {(templates.data ?? []).map((t) => (
-              <SimpleSelect.Option key={t.key} id={`tpl-${t.key}`} value={t.key}>
-                {`${t.name} (${t.licence})`}
-              </SimpleSelect.Option>
-            ))}
-          </SimpleSelect>
+          <ChoiceSelect
+            label="Template"
+            value={template}
+            placeholder="Choose a template"
+            options={(templates.data ?? []).map((t) => ({ value: t.key, label: `${t.name} (${t.licence})` }))}
+            onChange={setTemplate}
+          />
           <ColourField label="Main colour" value={primary} onChange={setPrimary} />
           <ColourField label="Accent colour" value={secondary} onChange={setSecondary} />
           <TextInput
@@ -530,33 +531,23 @@ export function CreateBadge() {
       {step === 0 && (
         <View as="div" display="block">
           {courses.isError && <ErrorAlert error={courses.error} />}
-          <SimpleSelect
-            renderLabel="Course"
-            value={st.course_id || undefined}
+          <ChoiceSelect
+            label="Course"
+            value={st.course_id}
             placeholder="Choose a course"
             interaction={locked ? "readonly" : "enabled"}
-            onChange={(_e, { value }) => setS((p) => ({ ...p, course_id: String(value), issuer_id: "", template_id: "" }))}
-          >
-            {staffCourses.map((c) => (
-              <SimpleSelect.Option key={c.id} id={`course-${c.id}`} value={c.id}>
-                {c.title}
-              </SimpleSelect.Option>
-            ))}
-          </SimpleSelect>
+            options={staffCourses.map((c) => ({ value: c.id, label: c.title }))}
+            onChange={(value) => setS((p) => ({ ...p, course_id: value, issuer_id: "", template_id: "" }))}
+          />
           <View as="div" margin="small 0" display="block">
-            <SimpleSelect
-              renderLabel="Issuer"
-              value={st.issuer_id || undefined}
+            <ChoiceSelect
+              label="Issuer"
+              value={st.issuer_id}
               placeholder={st.course_id ? "Choose an issuer" : "Choose a course first"}
               interaction={locked ? "readonly" : "enabled"}
-              onChange={(_e, { value }) => setS((p) => ({ ...p, issuer_id: String(value) }))}
-            >
-              {(issuers.data ?? []).map((i) => (
-                <SimpleSelect.Option key={i.id} id={`issuer-${i.id}`} value={i.id}>
-                  {i.name}
-                </SimpleSelect.Option>
-              ))}
-            </SimpleSelect>
+              options={(issuers.data ?? []).map((i) => ({ value: i.id, label: i.name }))}
+              onChange={(value) => setS((p) => ({ ...p, issuer_id: value }))}
+            />
             {st.course_id && issuers.data?.length === 0 && (
               <Alert variant="warning" margin="small 0">
                 No issuer is set up to award badges in this course. Ask your department administrator.
@@ -614,18 +605,13 @@ export function CreateBadge() {
             value={f.description ?? ""}
             onChange={(e) => setF({ description: e.target.value })}
           />
-          <SimpleSelect
-            renderLabel="Category"
-            value={f.category || undefined}
+          <ChoiceSelect
+            label="Category"
+            value={f.category}
             placeholder="Choose a category"
-            onChange={(_e, { value }) => setF({ category: String(value) })}
-          >
-            {cat.categories.map((c) => (
-              <SimpleSelect.Option key={c} id={`cat-${c}`} value={c}>
-                {c}
-              </SimpleSelect.Option>
-            ))}
-          </SimpleSelect>
+            options={cat.categories.map((c) => ({ value: c, label: c }))}
+            onChange={(value) => setF({ category: value })}
+          />
           <Text as="p" size="small">
             Completion, participation and attendance badges record that something was done. Competency and skills
             badges claim that something can be done, so they need assessed evidence.

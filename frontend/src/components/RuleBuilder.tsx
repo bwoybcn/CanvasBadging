@@ -16,6 +16,7 @@ import {
 } from "@instructure/ui";
 
 import type { CanvasAssignment, CanvasModule, GroupRule, LeafRule, Rule, RuleSet } from "../api";
+import { ChoiceSelect } from "./ChoiceSelect";
 import { LimitedTextArea } from "./Fields";
 
 export const RULE_TYPES: { value: LeafRule["type"]; label: string; hint: string }[] = [
@@ -106,18 +107,13 @@ function LeafEditor({
         {RULE_TYPES.find((t) => t.value === rule.type)?.hint}
       </Text>
       {rule.type === "module_completed" && (
-        <SimpleSelect
-          renderLabel="Module"
-          value={rule.module_id || undefined}
+        <ChoiceSelect
+          label="Module"
+          value={rule.module_id}
           placeholder="Choose a module"
-          onChange={(_e, { value }) => onChange({ ...rule, module_id: String(value) })}
-        >
-          {modules.map((m) => (
-            <SimpleSelect.Option key={m.id} id={`${label}-m-${m.id}`} value={m.id}>
-              {m.name}
-            </SimpleSelect.Option>
-          ))}
-        </SimpleSelect>
+          options={modules.map((m) => ({ value: m.id, label: m.name }))}
+          onChange={(value) => onChange({ ...rule, module_id: value })}
+        />
       )}
       {rule.type === "modules_completed" && (
         <CheckboxGroup
@@ -132,20 +128,15 @@ function LeafEditor({
         </CheckboxGroup>
       )}
       {(rule.type === "assignment_submitted" || rule.type === "assignment_score") && (
-        <SimpleSelect
-          renderLabel="Assignment"
-          value={rule.assignment_id || undefined}
+        <ChoiceSelect
+          label="Assignment"
+          value={rule.assignment_id}
           placeholder="Choose an assignment"
-          onChange={(_e, { value }) => onChange({ ...rule, assignment_id: String(value) })}
-        >
-          {sources.assignments
+          options={sources.assignments
             .filter((a) => rule.type === "assignment_submitted" || a.score_rules_allowed)
-            .map((a) => (
-              <SimpleSelect.Option key={a.id} id={`${label}-a-${a.id}`} value={a.id}>
-                {a.name}
-              </SimpleSelect.Option>
-            ))}
-        </SimpleSelect>
+            .map((a) => ({ value: a.id, label: a.name }))}
+          onChange={(value) => onChange({ ...rule, assignment_id: value })}
+        />
       )}
       {rule.type === "assignment_score" && (
         <NumberInput
