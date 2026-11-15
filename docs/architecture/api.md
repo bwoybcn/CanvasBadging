@@ -57,6 +57,8 @@ Spec §13. FastAPI generates the OpenAPI document; this file fixes the contract 
 | POST | `/awards/manual` | `award.manual` | `{version_id, user_id, justification, evidence[]}`; may require second approval per policy |
 | GET | `/credentials/{id}` | owner (staff views are W7) | detail + live verification result + share state + LinkedIn values |
 | GET | `/credentials/{id}/export` | owner or `credential.export` | `application/ld+json` download of the exact `signed_json` bytes, filename `<slug>-<date>.json` |
+| GET | `/credentials/{id}/certificate` | owner | `application/pdf` download, one A4 landscape page, filename `<slug>-certificate.pdf`. `?show_name=false` leaves the holder's name off (default on). Carries a QR code to the holder's public page while a share is active. 409 `CERTIFICATE_NOT_AVAILABLE` for a revoked or suspended badge; 409 `NAME_NOT_PRINTABLE` when the name needs a script the bundled font cannot set. Anyone else gets 404 |
+| GET | `/credentials/{id}/image` | owner | `image/png` download of the badge artwork (SVG artwork drawn 1000 px wide), filename `<slug>-badge.png`. 404 `NO_IMAGE` when the badge has none |
 | GET/PUT/DELETE | `/credentials/{id}/share` | owner | `PUT {show_name, show_evidence}` turns sharing on or updates it (same link while active) → `{share:{shared, url, …}, linkedin:{fields, add_to_profile_url}, preview}`; DELETE withdraws the grant (credential not revoked). Anyone else gets 404 |
 | POST | `/credentials/{id}/share/preview` | owner | `{show_name, show_evidence}` → exactly what the public page would show, plus what is never shown. Changes nothing |
 | POST | `/credentials/{id}/revoke` | `credential.revoke` | `{reason_code, reason_text}` |

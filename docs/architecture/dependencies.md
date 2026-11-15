@@ -18,11 +18,14 @@ Checked 13 Nov 2026 against PyPI and npm registry metadata (latest version, decl
 | structlog | 26.1.0 | MIT OR Apache-2.0 | 2026-06-06 | structured logs |
 | python-multipart | 0.0.33 | Apache-2.0 | 2026-10-31 | uploads |
 | defusedxml | 0.7.1 | PSF | 2021-03-08 | safe SVG parsing (old but stable; the sanitiser is our own allowlist on top) |
-| cairosvg | 2.9.1 | LGPL-3.0-or-later | 2026-09-07 | PNG rendition of sanitised SVG |
-| pillow | 13.0.0 | MIT-CMU | 2026-10-16 | PNG validation and resize |
+| reportlab | 5.1.0 | BSD-3-Clause | 2026 | certificate PDF, including the QR code (added 15 Nov 2026) |
+| resvg-py | 0.5.0 | MIT (bundled Rust crates MIT, Apache-2.0, BSD, Zlib) | 2026 | PNG of sanitised SVG artwork for the certificate and the badge image download; no system libraries needed (added 15 Nov 2026, instead of cairosvg) |
+| pillow | 13.0.0 | MIT-CMU | 2026-10-16 | reads PNG artwork into the certificate (pulled in by reportlab) |
 | jinja2 | — | BSD-3 | — | server-rendered verify page |
 | hvac (optional) | 2.4.0 | Apache-2.0 | 2025-10-30 | Vault Transit KEK |
 | boto3 (optional) | 1.44.2 | Apache-2.0 | 2026-11-12 | S3-compatible asset storage |
+
+Bundled font: Liberation Sans Regular and Bold 2.1.5 (SIL OFL 1.1), in `backend/opencredential/credentials/fonts/` with its licence. It sets the certificate text and the text inside badge artwork, so output does not depend on fonts installed on the server. It has the same letter widths as Arial, which the artwork templates ask for.
 
 Rejected: PyLTI1p3 2.0.0 (MIT, but no release since 2022-11), Authlib (fine licence, larger than needed next to joserfc), arq/rq/dramatiq (need Redis), nh3/bleach (HTML sanitisers, not SVG).
 

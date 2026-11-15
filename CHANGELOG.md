@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A certificate to print: **Download certificate (PDF)** on a student's badge page and in **My
+  badges** (`GET /api/v1/credentials/{id}/certificate`). One A4 page with the badge image, the
+  student's name (they can leave it off), the badge, who issued it and when, and the credential
+  ID. While the badge has a public link, the certificate carries a QR code that opens it; without
+  one it says where to check the credential file. The page says it is a copy for printing and
+  that the proof is the credential file or the public page. Revoked and suspended badges have no
+  certificate.
+- **Download badge image** saves the badge picture as a PNG
+  (`GET /api/v1/credentials/{id}/image`).
+- New backend dependencies: reportlab (PDF) and resvg-py (draws SVG artwork as PNG), and the
+  Liberation Sans font (SIL OFL 1.1) bundled for the certificate text.
 - **Award all N** confirms every waiting award on the list in one go
   (`POST /api/v1/awards/confirm-all`, up to 500). Each award still gets the fresh Canvas check
   of a single confirm; any that no longer qualify stay on the list and are named with the

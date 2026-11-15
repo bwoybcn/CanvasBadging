@@ -225,6 +225,12 @@ test("E6 student export: the downloaded file is OB 3.0 with a verifiable proof",
   state.credentialId = page.url().split("/").pop();
   const json = await download(page, () => page.getByRole("button", { name: "Download credential file" }).click());
   state.downloaded = json;
+  // The certificate is a PDF named after the badge. The badge is still private, so the page
+  // says how to get a QR code on it.
+  await expect(page.getByText(/turn on the public link below first/)).toBeVisible();
+  const [pdf] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download certificate (PDF)" }).click()]);
+  expect(pdf.suggestedFilename()).toMatch(/-certificate\.pdf$/);
+  expect(readFileSync((await pdf.path())!).subarray(0, 5).toString("latin1")).toBe("%PDF-");
   const vc = JSON.parse(json);
   expect(vc.type).toEqual(expect.arrayContaining(["VerifiableCredential", "OpenBadgeCredential"]));
   expect(vc["@context"]).toEqual(expect.arrayContaining(["https://www.w3.org/ns/credentials/v2"]));

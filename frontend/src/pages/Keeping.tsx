@@ -14,8 +14,8 @@ export function Keeping() {
       </Text>
       <List as="ol">
         <List.Item>
-          Open <AppLink to="/me/credentials">My credentials</AppLink> and download each credential file. Save the files somewhere you
-          will keep, such as personal cloud storage or a personal email to yourself.
+          Open <AppLink to="/me/credentials">My badges</AppLink>, open each badge and download its certificate and its credential
+          file. Save the files somewhere you will keep, such as personal cloud storage or a personal email to yourself.
         </List.Item>
         <List.Item>Optionally import them into a digital wallet (below).</List.Item>
         <List.Item>
@@ -23,9 +23,14 @@ export function Keeping() {
           account closes unless you or the university turn them off.
         </List.Item>
       </List>
-      <Heading level="h2">Why the file keeps working</Heading>
+      <Heading level="h2">The certificate and the credential file</Heading>
       <Text as="p">
-        Each file you download is a credential file: your badge in signed Open Badges 3.0 form. Anyone can check it with an Open Badges verifier, or by uploading it to
+        The certificate is a one-page PDF to print or attach to an application. It is a copy for people to read. If your badge has a public
+        link when you download it, the certificate carries a QR code that opens that link, so a reader can check the badge. The code stops
+        working if you turn the link off.
+      </Text>
+      <Text as="p">
+        The credential file is the proof itself: your badge in signed Open Badges 3.0 form. Anyone can check it with an Open Badges verifier, or by uploading it to
         this service's public <Link href="/verify">Check a credential file</Link> page, without a Canvas account. The check needs the
         university's public verification information (its signing keys and revocation list) to stay online. The university is
         responsible for keeping that available.

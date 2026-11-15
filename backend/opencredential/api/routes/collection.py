@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from opencredential.api.deps import ClaimsDep, SettingsDep, SignerDep, TenantDb
 from opencredential.api.errors import ApiError
 from opencredential.authoring.preview import asset_data_url
+from opencredential.credentials import certificate as certificates
 from opencredential.credentials import linkedin
 from opencredential.credentials import sharing as svc
 from opencredential.db.models import (
@@ -30,9 +31,12 @@ from opencredential.db.models import (
     CredentialStatus,
     Institution,
     Issuer,
+    User,
 )
+from opencredential.institutions.identity import base_url
 from opencredential.settings import Settings
 from opencredential.signer_client import SignerClient
+from opencredential.storage import get_store
 from opencredential.verification.service import Verifier
 from opencredential.verification.sources import DefaultSources, own_origins
 
@@ -212,6 +216,130 @@ def _linkedin(
             "does not import the credential file itself; the Credential URL lets anyone verify it."
         ),
     }
+
+
+def _file_stem(version: AchievementVersion | None) -> str:
+    stem = "".join(
+        ch if ch.isascii() and ch.isalnum() else "-" for ch in (version.title if version else "")
+    )
+    return "-".join(part for part in stem.lower().split("-") if part) or "badge"
+
+
+def _attachment(data: bytes, media_type: str, filename: str) -> Response:
+    return Response(
+        data,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+def _badge_png(db: Session, version: AchievementVersion) -> bytes | None:
+    """The badge artwork as a PNG, or ``None`` when the badge has no readable image."""
+    asset = db.get(BadgeAsset, version.asset_id) if version.asset_id else None
+    if asset is None:
+        return None
+    try:
+        return certificates.badge_png(get_store().get(asset.storage_key), asset.media_type)
+    except (OSError, ValueError):
+        return None
+
+
+@router.get(
+    "/credentials/{credential_id}/image",
+    summary="The badge image as a PNG, for the holder",
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}}}},
+)
+def badge_image(credential_id: uuid.UUID, claims: ClaimsDep, db: TenantDb) -> Response:
+    cred = _owned(db, credential_id, claims.user_id)
+    version = db.get(AchievementVersion, cred.version_id)
+    png = _badge_png(db, version) if version else None
+    if png is None:
+        raise ApiError(404, "NO_IMAGE", "This badge has no image to download.")
+    return _attachment(png, "image/png", f"{_file_stem(version)}-badge.png")
+
+
+@router.get(
+    "/credentials/{credential_id}/certificate",
+    summary="A certificate to print (PDF), for the holder",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+def certificate(
+    credential_id: uuid.UUID,
+    claims: ClaimsDep,
+    db: TenantDb,
+    settings: SettingsDep,
+    show_name: bool = True,
+) -> Response:
+    """One A4 page with the badge, who issued it and when, and how to check it.
+
+    The holder's name is printed unless ``show_name`` is false. It is read when the certificate
+    is made and is not stored in it anywhere else. A QR code to the holder's public page is
+    printed when they have turned a public link on.
+    """
+    cred = _owned(db, credential_id, claims.user_id)
+    status = db.scalar(select(CredentialStatus).where(CredentialStatus.credential_id == cred.id))
+    state = svc.credential_state(cred, status)
+    if state in ("revoked", "suspended"):
+        raise ApiError(
+            409,
+            "CERTIFICATE_NOT_AVAILABLE",
+            "This badge has no certificate at the moment",
+            "A certificate can be downloaded only while the badge is valid. This badge has been "
+            + ("revoked." if state == "revoked" else "suspended."),
+        )
+    version = db.get(AchievementVersion, cred.version_id)
+    institution = db.get(Institution, cred.institution_id)
+    assert version is not None and institution is not None
+    view = svc.public_view(db, cred, svc.ShareOptions(), settings)
+    name = None
+    if show_name:
+        user = db.get(User, cred.user_id)
+        name = certificates.tidy(user.display_name if user else None) or None
+        if name and not certificates.printable(name):
+            raise ApiError(
+                409,
+                "NAME_NOT_PRINTABLE",
+                "The certificate cannot print your name",
+                "The certificate cannot print some of the characters in your name yet. On the "
+                'badge\'s page, untick "Put my name on the certificate" and download it again.',
+            )
+    printed = {
+        "badge_name": certificates.tidy(view["credential_name"]),
+        "issuer_name": certificates.tidy(view["issuer"]["name"]),
+        "institution_name": certificates.tidy(view["issuer"]["institution"]),
+        "description": certificates.tidy(view["short_description"] or view["description"]),
+    }
+    if not all(certificates.printable(value) for value in printed.values()):
+        raise ApiError(
+            409,
+            "CERTIFICATE_NOT_AVAILABLE",
+            "This badge has no certificate at the moment",
+            "The certificate cannot print some of the characters in this badge's name or "
+            "description yet. The public link and the credential file work as usual.",
+        )
+    grant = svc.active_grant(db, cred.id)
+    base = base_url(institution, settings)
+    pdf = certificates.render(
+        certificates.Certificate(
+            **printed,
+            issued_on=cred.issued_at.date() if cred.issued_at else None,
+            valid_until=cred.valid_until.date() if cred.valid_until else None,
+            expired=state == "expired",
+            credential_id=cred.credential_uri,
+            recipient_name=name,
+            public_url=svc.share_url(institution, settings, grant.share_id) if grant else None,
+            check_url=f"{base}/verify",
+            image_png=_badge_png(db, version),
+            produced_on=datetime.now(UTC).date(),
+        )
+    )
+    return _attachment(pdf, "application/pdf", f"{_file_stem(version)}-certificate.pdf")
 
 
 class ShareIn(BaseModel):

@@ -33,17 +33,19 @@ export function CredentialCard({ c }: { c: CredentialSummary }) {
           </Flex>
           <Flex gap="small" wrap="wrap" margin="small 0 0">
             <AppLink to={`/me/credentials/${c.id}`}>
-              View, share or add to LinkedIn<ScreenReaderContent> for {c.name}</ScreenReaderContent>
+              View, download, share or add to LinkedIn<ScreenReaderContent> for {c.name}</ScreenReaderContent>
             </AppLink>
-            <Button
-              size="small"
-              onClick={() => {
-                setError(null);
-                downloadFile(`/api/v1/credentials/${c.id}/export`, token, "credential.json").catch((e) => setError(problemText(e)));
-              }}
-            >
-              Download<ScreenReaderContent> {c.name}</ScreenReaderContent>
-            </Button>
+            {(c.status === "active" || c.status === "expired") && (
+              <Button
+                size="small"
+                onClick={() => {
+                  setError(null);
+                  downloadFile(`/api/v1/credentials/${c.id}/certificate`, token, "certificate.pdf").catch((e) => setError(problemText(e)));
+                }}
+              >
+                Download certificate<ScreenReaderContent> for {c.name}</ScreenReaderContent>
+              </Button>
+            )}
           </Flex>
           {error && (
             <Alert variant="error" margin="small 0 0">
@@ -71,7 +73,7 @@ export function MyCredentials() {
     <Page title="My badges">
       <Text as="p">
         Every badge you have earned, from all of your courses. Badges are private until you choose to share
-        one. You can download any of them and keep it, even after you leave. <AppLink to="/me/keeping">How to keep your badges</AppLink>
+        one. You can download a certificate for any of them and keep it, even after you leave. <AppLink to="/me/keeping">How to keep your badges</AppLink>
       </Text>
       {q.isPending && <Loading what="your badges" />}
       {q.isError && <ErrorAlert error={q.error} />}
