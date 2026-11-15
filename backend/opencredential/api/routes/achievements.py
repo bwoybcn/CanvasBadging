@@ -423,6 +423,17 @@ def new_version(
     return _out(db, actor, d)
 
 
+@router.post("/achievements/{definition_id}/discard-version", response_model=DefinitionOut)
+def discard_version(
+    definition_id: uuid.UUID, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> DefinitionOut:
+    """Throw away the version in progress; the published version stays live (undoes
+    ``new-version``)."""
+    d = _get(db, actor, definition_id)
+    authoring.discard_new_version(db, actor, d, request_id=rid)
+    return _out(db, actor, d)
+
+
 @router.get("/achievements/{definition_id}/preview")
 def preview(definition_id: uuid.UUID, db: TenantDb, actor: ActorDep) -> dict[str, Any]:
     """Non-issued, non-verifiable preview (spec §5.5)."""

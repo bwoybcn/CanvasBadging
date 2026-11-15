@@ -21,3 +21,6 @@ dist/
 .vscode/
 *.tsbuildinfo
 backend/var/
+
+# Local Claude Code session logs
+.claude/logs/

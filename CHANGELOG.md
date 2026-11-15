@@ -19,6 +19,10 @@ All notable changes to this project are documented here. The format follows
   badges, instead of forms that the server would refuse. Someone with no administrator role
   sees "This page is for administrators" on administration pages, without the administration
   menu. The server's checks are unchanged.
+- A new version of a badge can be thrown away. **Discard this version** on the badge page
+  (`POST /api/v1/achievements/{id}/discard-version`) removes a version started with **Start a
+  new version**, while it is a draft, in review or approved, and leaves the published version
+  live and unchanged. It asks first. Before, a new version could only be finished.
 - **Download credential file** works for badges with accented names. A title such as "Gŵyl Dewi"
   or "Café" put a non-Latin-1 letter in the download's file name header, so the server failed
   and the button did nothing. Download names are now plain ASCII ("gwyl-dewi-2026-11-15.json")

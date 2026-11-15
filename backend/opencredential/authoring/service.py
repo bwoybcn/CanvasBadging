@@ -971,6 +971,53 @@ def restore(
         )
 
 
+def discard_new_version(
+    db: Session,
+    actor: authz.Actor,
+    definition: AchievementDefinition,
+    request_id: str | None = None,
+) -> None:
+    """Throw away a version started from a published badge; the published one stays live.
+
+    Allowed while that version is a draft, in review or approved, but not yet published. A
+    badge that was never published is deleted with :func:`delete_draft` instead.
+    """
+    authz.require_edit(db, actor, definition)
+    if definition.current_version_id is None:
+        raise Conflict("INVALID_STATE", "This badge was never published. Delete the draft instead.")
+    _require_state(definition, "draft", "in_review", "approved")
+    version = working_version(db, definition)
+    if version.id == definition.current_version_id:
+        raise Conflict("INVALID_STATE", "There is no new version to discard.")
+    from opencredential.db.models import AwardRule, AwardRuleSet  # local: keeps imports tidy
+
+    rs = db.scalar(select(AwardRuleSet).where(AwardRuleSet.version_id == version.id))
+    if rs is not None:
+        for rule in db.scalars(select(AwardRule).where(AwardRule.rule_set_id == rs.id)):
+            db.delete(rule)
+        db.flush()
+        db.delete(rs)
+    for review in db.scalars(
+        select(DefinitionReview).where(DefinitionReview.version_id == version.id)
+    ):
+        db.delete(review)
+    db.flush()
+    version_no = version.version_no
+    db.delete(version)
+    definition.state = "published"
+    db.flush()
+    audit.record(
+        db,
+        action="achievement.discard_version",
+        resource_type="achievement_definition",
+        resource_id=definition.id,
+        institution_id=actor.institution_id,
+        actor_user_id=actor.user_id,
+        request_id=request_id,
+        data={"version_no": version_no},
+    )
+
+
 def new_version(
     db: Session,
     actor: authz.Actor,
