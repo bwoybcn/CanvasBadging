@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows
   "0 of 1 confirmed" and "Awaiting confirmation by course staff" under "Earned". A badge the
   student holds now says "You have this badge. Nothing more is needed from you." instead of the
   requirement list. Requirement lines no longer double their punctuation ("quiz.: Awaiting").
+- Screen readers now hear why a form was refused. When **Next** in the badge wizard finds a
+  problem, the "Please fix the following" list is announced and takes focus, instead of focus
+  staying on Next in silence. Every error message from the server (award forms, admin pages)
+  is announced as it appears.
 
 ### Added
 - A setup checklist on the Administration overview for institution administrators

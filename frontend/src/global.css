@@ -63,3 +63,9 @@
   outline: 2px solid #0e68b3;
   outline-offset: 2px;
 }
+
+/* The wizard's list of problems takes focus when Next is refused; show where focus went. */
+.oc-problems:focus-visible {
+  outline: 3px solid #2b7abc;
+  outline-offset: 2px;
+}

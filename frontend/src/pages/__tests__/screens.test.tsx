@@ -90,6 +90,10 @@ describe("Create Micro-Credential wizard", () => {
     expect(await screen.findByText("Give the badge a title.")).toBeInTheDocument();
     expect(screen.getByText("Choose a category.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Step 2 of 7/ })).toBeInTheDocument();
+    // The problems are announced and take focus, so a screen-reader user hears why Next did nothing.
+    const problems = screen.getByRole("alert");
+    expect(problems).toHaveTextContent("Give the badge a title.");
+    await waitFor(() => expect(problems).toHaveFocus());
   });
 
   it("starts from a badge template and asks the author to replace its placeholders", async () => {

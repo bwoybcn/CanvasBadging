@@ -85,20 +85,23 @@ export function Loading({ what }: { what: string }) {
 /** Says what went wrong. Several refused fields are listed one per line. */
 export function ErrorAlert({ error }: { error: unknown }) {
   const lines = problemLines(error);
+  // role="alert" makes screen readers read the problem out as soon as it appears.
   return (
-    <Alert variant="error" margin="small 0">
-      {lines.length === 1 ? (
-        lines[0]
-      ) : (
-        <>
-          <Text weight="bold">Please fix the following:</Text>
-          <List margin="x-small 0 0">
-            {lines.map((line) => (
-              <List.Item key={line}>{line}</List.Item>
-            ))}
-          </List>
-        </>
-      )}
-    </Alert>
+    <div role="alert">
+      <Alert variant="error" margin="small 0">
+        {lines.length === 1 ? (
+          lines[0]
+        ) : (
+          <>
+            <Text weight="bold">Please fix the following:</Text>
+            <List margin="x-small 0 0">
+              {lines.map((line) => (
+                <List.Item key={line}>{line}</List.Item>
+              ))}
+            </List>
+          </>
+        )}
+      </Alert>
+    </div>
   );
 }

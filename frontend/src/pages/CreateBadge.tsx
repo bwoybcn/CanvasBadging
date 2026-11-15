@@ -352,6 +352,7 @@ export function CreateBadge() {
   const [s, setS] = useState<FormState>(EMPTY);
   const [shownProblems, setShownProblems] = useState<string[]>([]);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const problemsRef = useRef<HTMLDivElement | null>(null);
   /** The saved draft this wizard writes to: the one being edited, or the one it created. */
   const [draftId, setDraftId] = useState<string | null>(id ?? null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -467,7 +468,12 @@ export function CreateBadge() {
     if (to > step) {
       const problems = stepProblems(step, st, catalogue.data);
       setShownProblems(problems);
-      if (problems.length) return;
+      if (problems.length) {
+        // Take the reader to the list of problems, so a screen reader reads it out and a
+        // keyboard user continues from there, rather than staying on Next with no news.
+        requestAnimationFrame(() => problemsRef.current?.focus());
+        return;
+      }
       // From "About the badge" onwards there is something worth keeping: save before moving on,
       // and stay on the step if the server refuses it, so the problem is fixed where it is.
       if (draftId || step >= 1) {
@@ -519,14 +525,16 @@ export function CreateBadge() {
         Step {step + 1} of {STEPS.length}: {STEPS[step]}
       </Heading>
       {shownProblems.length > 0 && (
-        <Alert variant="error" margin="0 0 small">
-          <Text weight="bold">Please fix the following:</Text>
-          <List>
-            {shownProblems.map((p) => (
-              <List.Item key={p}>{p}</List.Item>
-            ))}
-          </List>
-        </Alert>
+        <div role="alert" tabIndex={-1} ref={problemsRef} className="oc-problems">
+          <Alert variant="error" margin="0 0 small">
+            <Text weight="bold">Please fix the following:</Text>
+            <List>
+              {shownProblems.map((p) => (
+                <List.Item key={p}>{p}</List.Item>
+              ))}
+            </List>
+          </Alert>
+        </div>
       )}
 
       {step === 0 && (
