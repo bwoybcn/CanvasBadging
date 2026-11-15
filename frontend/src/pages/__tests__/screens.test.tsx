@@ -779,6 +779,39 @@ describe("awards and progress", () => {
     expect(within(card).getByText(/Awaiting published result/)).toBeInTheDocument();
     expect(within(card).getByText(/1 of 2 confirmed/)).toBeInTheDocument();
   });
+
+  it("does not call a badge the student holds pending when staff awarded it by hand", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": { ...STAFF_ME, memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" }] },
+      "GET /api/v1/learners/me/achievements": [
+          {
+            definition_id: "d-2",
+            version_id: "v-2",
+            course: { id: "c-1", title: "Library Volunteers" },
+            title: "Library Induction",
+            short_description: "Completed the library induction.",
+            category: "Completion",
+            issuer: "University Library",
+            image: { data_url: null, alt_text: null },
+            award_policy: "lecturer_confirmed",
+            status: "earned",
+            outcome: "unknown",
+            credential_id: "cred-2",
+            progress: { completed: 0, total: 1, mode: "ALL" },
+            requirements: [
+              { rule_id: "r1", type: "manual_approval", description: "Passed the catalogue quiz.", outcome: "unknown", status: "pending", confirmed: false, label: "Awaiting confirmation by course staff", explanation_code: "AWAITING_STAFF", message: "", as_of: null },
+            ],
+          },
+      ],
+    });
+    renderAt("/me/progress");
+    const card = await screen.findByRole("region", { name: "Library Induction" });
+    expect(within(card).getByText("Earned")).toBeInTheDocument();
+    expect(within(card).getByText("You have this badge. Nothing more is needed from you.")).toBeInTheDocument();
+    expect(within(card).queryByRole("heading", { name: "Pending" })).toBeNull();
+    expect(within(card).queryByText(/0 of 1 confirmed/)).toBeNull();
+    expect(within(card).queryByText(/Awaiting confirmation/)).toBeNull();
+  });
 });
 
 describe("course activation", () => {

@@ -12,6 +12,11 @@ All notable changes to this project are documented here. The format follows
   artwork Template box blank after a template was picked. Course, Issuer, Category, Template,
   Module, Assignment and the badge lists on Award badges now show the placeholder until something
   is chosen, and show a saved choice once its list has loaded.
+- A student's badge no longer says "Earned" and "Pending" at once. When course staff award a badge
+  by hand, its requirements are not all recorded as met, so **Badges in my courses** showed
+  "0 of 1 confirmed" and "Awaiting confirmation by course staff" under "Earned". A badge the
+  student holds now says "You have this badge. Nothing more is needed from you." instead of the
+  requirement list. Requirement lines no longer double their punctuation ("quiz.: Awaiting").
 
 ### Added
 - A setup checklist on the Administration overview for institution administrators
