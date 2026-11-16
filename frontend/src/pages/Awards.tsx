@@ -18,7 +18,12 @@ import {
   TextInput,
   View,
 } from "@instructure/ui";
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
@@ -47,29 +52,96 @@ export const EVIDENCE_KINDS: Record<string, string> = {
   artefact: "Student's work (artefact)",
 };
 
-function DecisionRow({ d }: { d: Decision }) {
+type EligibilityRule = {
+  type?: string;
+  outcome?: string;
+  rules?: EligibilityRule[];
+  source?: {
+    assignment_name?: string;
+    module_name?: string;
+    score_percent?: number;
+    threshold_percent?: number;
+  };
+};
+
+const pct = (n: number) => `${Math.round(n * 10) / 10}%`;
+
+/** What the student did, from the evaluation behind the award: "R3 quiz: 80% (needs 70%)". */
+export function whyMet(d: Decision): string {
+  if (d.kind === "manual") return "Manual award (needs a second approver)";
+  const rules = (
+    (d.current_eligibility as { rules?: EligibilityRule[] } | null)?.rules ?? []
+  ).flatMap((r) => (r.rules ? r.rules : [r]));
+  const parts = rules
+    .filter((r) => r.outcome === "met")
+    .map((r) => {
+      const s = r.source ?? {};
+      if (
+        r.type === "assignment_score" &&
+        s.assignment_name &&
+        s.score_percent != null
+      )
+        return `${s.assignment_name}: ${pct(s.score_percent)}${s.threshold_percent != null ? ` (needs ${pct(s.threshold_percent)})` : ""}`;
+      if (r.type === "assignment_submitted" && s.assignment_name)
+        return `Submitted ${s.assignment_name}`;
+      if (r.type === "module_completed" && s.module_name)
+        return `Completed the module ${s.module_name}`;
+      return null;
+    })
+    .filter((p): p is string => !!p);
+  return parts.length ? parts.join("; ") : "Requirements met";
+}
+
+function DecisionRow({
+  d,
+  onDone,
+}: {
+  d: Decision;
+  onDone: (message: string) => void;
+}) {
   const { token } = useAuth();
   const qc = useQueryClient();
   const [reason, setReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
+  const who = d.learner_name ?? "this student";
   const act = useMutation({
     mutationFn: (kind: "confirm" | "reject") =>
-      apiSend<Decision>(`/api/v1/awards/${d.id}/${kind}`, token, "POST", kind === "confirm" ? {} : { reason }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["awards"] }),
+      apiSend<Decision>(
+        `/api/v1/awards/${d.id}/${kind}`,
+        token,
+        "POST",
+        kind === "confirm" ? {} : { reason },
+      ),
+    onSuccess: (_res, kind) => {
+      onDone(
+        kind === "confirm"
+          ? `Awarded ${d.badge_title} to ${who}. It appears on their My badges page within a minute.`
+          : `Not awarded: ${d.badge_title} for ${who}. Your reason is kept in the audit record.`,
+      );
+      void qc.invalidateQueries({ queryKey: ["awards"] });
+    },
   });
-  const who = d.learner_name ?? "this student";
   return (
     <Table.Row>
       <Table.RowHeader>{who}</Table.RowHeader>
       <Table.Cell>{d.badge_title}</Table.Cell>
-      <Table.Cell>{d.kind === "manual" ? "Manual award (needs a second approver)" : "Requirements met"}</Table.Cell>
+      <Table.Cell>{whyMet(d)}</Table.Cell>
       <Table.Cell>
         {act.isError && <ErrorAlert error={act.error} />}
         {rejecting ? (
           <View as="div" display="block">
-            <TextInput maxLength={2000} renderLabel={`Reason for not awarding to ${who}`} value={reason} onChange={(_e, v) => setReason(v)} />
+            <TextInput
+              maxLength={2000}
+              renderLabel={`Reason for not awarding to ${who}`}
+              value={reason}
+              onChange={(_e, v) => setReason(v)}
+            />
             <Flex gap="x-small" margin="x-small 0 0">
-              <Button size="small" interaction={reason.trim().length >= 5 ? "enabled" : "disabled"} onClick={() => act.mutate("reject")}>
+              <Button
+                size="small"
+                interaction={reason.trim().length >= 5 ? "enabled" : "disabled"}
+                onClick={() => act.mutate("reject")}
+              >
                 Confirm not awarding
               </Button>
               <Button size="small" onClick={() => setRejecting(false)}>
@@ -79,7 +151,12 @@ function DecisionRow({ d }: { d: Decision }) {
           </View>
         ) : (
           <Flex gap="x-small">
-            <Button size="small" color="primary" interaction={act.isPending ? "disabled" : "enabled"} onClick={() => act.mutate("confirm")}>
+            <Button
+              size="small"
+              color="primary"
+              interaction={act.isPending ? "disabled" : "enabled"}
+              onClick={() => act.mutate("confirm")}
+            >
               Award to {who}
             </Button>
             <Button size="small" onClick={() => setRejecting(true)}>
@@ -105,13 +182,21 @@ function ManualAward() {
   // published version stays awardable until the new one replaces it (same list as "A list").
   const badges = useQuery({
     queryKey: ["achievements", "awardable"],
-    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?awardable=true", token),
+    queryFn: () =>
+      apiFetch<{ items: DefinitionSummary[] }>(
+        "/api/v1/achievements?awardable=true",
+        token,
+      ),
   });
   const chosen = badges.data?.items.find((b) => b.id === badge);
   const learners = useQuery({
     queryKey: ["progress", chosen?.course_id],
     enabled: !!chosen?.course_id,
-    queryFn: () => apiFetch<CourseProgress>(`/api/v1/courses/${chosen?.course_id}/progress`, token),
+    queryFn: () =>
+      apiFetch<CourseProgress>(
+        `/api/v1/courses/${chosen?.course_id}/progress`,
+        token,
+      ),
   });
   const award = useMutation({
     mutationFn: () =>
@@ -134,14 +219,18 @@ function ManualAward() {
         Award a badge to one student
       </Heading>
       <Text as="p">
-        Use this when a student has met the outcomes in a way Canvas cannot show. Your justification is kept in the
-        audit record; only evidence you mark as public appears on the badge.
+        Use this when a student has met the outcomes in a way Canvas cannot
+        show. Your justification is kept in the audit record; only evidence you
+        mark as public appears on the badge.
       </Text>
       <ChoiceSelect
         label="Badge"
         value={badge}
         placeholder="Choose a published badge"
-        options={(badges.data?.items ?? []).map((b) => ({ value: b.id, label: b.title }))}
+        options={(badges.data?.items ?? []).map((b) => ({
+          value: b.id,
+          label: b.title,
+        }))}
         onChange={(value) => {
           setBadge(value);
           setLearner("");
@@ -150,26 +239,51 @@ function ManualAward() {
       <SearchSelect
         label="Student"
         things="students"
-        placeholder={badge ? "Type a name, or choose from the list" : "Choose a badge first"}
-        emptyText={badge ? "No students in this badge's course yet" : "Choose a badge first"}
-        options={(learners.data?.learners ?? []).map((l) => ({ id: l.user_id, label: l.name ?? l.user_id }))}
+        placeholder={
+          badge
+            ? "Type a name, or choose from the list"
+            : "Choose a badge first"
+        }
+        emptyText={
+          badge
+            ? "No students in this badge's course yet"
+            : "Choose a badge first"
+        }
+        options={(learners.data?.learners ?? []).map((l) => ({
+          id: l.user_id,
+          label: l.name ?? l.user_id,
+        }))}
         value={learner}
         onChange={setLearner}
       />
-      <LimitedTextArea maxLength={4000}
+      <LimitedTextArea
+        maxLength={4000}
         label="Justification (at least 20 characters)"
         value={justification}
         onChange={(e) => setJustification(e.target.value)}
       />
-      <SimpleSelect renderLabel="Evidence type" value={kind} onChange={(_e, { value }) => setKind(String(value))}>
+      <SimpleSelect
+        renderLabel="Evidence type"
+        value={kind}
+        onChange={(_e, { value }) => setKind(String(value))}
+      >
         {Object.entries(EVIDENCE_KINDS).map(([k, label]) => (
           <SimpleSelect.Option key={k} id={`ek-${k}`} value={k}>
             {label}
           </SimpleSelect.Option>
         ))}
       </SimpleSelect>
-      <LimitedTextArea maxLength={2000} label="Evidence description (optional)" value={narrative} onChange={(e) => setNarrative(e.target.value)} />
-      <Checkbox label="Show this evidence on the public badge" checked={pub} onChange={(e) => setPub(e.target.checked)} />
+      <LimitedTextArea
+        maxLength={2000}
+        label="Evidence description (optional)"
+        value={narrative}
+        onChange={(e) => setNarrative(e.target.value)}
+      />
+      <Checkbox
+        label="Show this evidence on the public badge"
+        checked={pub}
+        onChange={(e) => setPub(e.target.checked)}
+      />
       {award.isError && <ErrorAlert error={award.error} />}
       {award.isSuccess && (
         <Alert variant="success" margin="small 0">
@@ -178,7 +292,12 @@ function ManualAward() {
             : "Awarded. The badge will be issued shortly."}
         </Alert>
       )}
-      <Button color="primary" margin="small 0" interaction={ok && !award.isPending ? "enabled" : "disabled"} onClick={() => award.mutate()}>
+      <Button
+        color="primary"
+        margin="small 0"
+        interaction={ok && !award.isPending ? "enabled" : "disabled"}
+        onClick={() => award.mutate()}
+      >
         Award badge
       </Button>
       {!ok && (
@@ -216,11 +335,20 @@ function BulkAward() {
   const [preview, setPreview] = useState<BulkAwardResult | null>(null);
   const badges = useQuery({
     queryKey: ["achievements", "awardable"],
-    queryFn: () => apiFetch<{ items: DefinitionSummary[] }>("/api/v1/achievements?awardable=true", token),
+    queryFn: () =>
+      apiFetch<{ items: DefinitionSummary[] }>(
+        "/api/v1/achievements?awardable=true",
+        token,
+      ),
   });
   const chosen = badges.data?.items.find((b) => b.id === badge);
   const refresh = useMutation({
-    mutationFn: () => apiSend<unknown>(`/api/v1/courses/${chosen?.course_id}/sync`, token, "POST"),
+    mutationFn: () =>
+      apiSend<unknown>(
+        `/api/v1/courses/${chosen?.course_id}/sync`,
+        token,
+        "POST",
+      ),
   });
   const run = useMutation({
     mutationFn: (confirm: boolean) =>
@@ -238,7 +366,8 @@ function BulkAward() {
   const reset = () => setPreview(null);
   const reasonLength = justification.trim().length;
   const ok = badge && list.trim() && reasonLength >= 20;
-  const toAward = preview && !preview.committed ? (preview.counts.will_award ?? 0) : 0;
+  const toAward =
+    preview && !preview.committed ? (preview.counts.will_award ?? 0) : 0;
   const notFound = preview?.counts.not_found ?? 0;
   const learners = (n: number) => `${n} ${n === 1 ? "student" : "students"}`;
   return (
@@ -247,9 +376,11 @@ function BulkAward() {
         Award a badge to a list of students
       </Heading>
       <Text as="p">
-        For evidence kept outside Canvas, such as a volunteering log or a workshop register. Paste student ID numbers
-        or university emails, one per line or separated by commas. Only students enrolled in the badge's course can
-        receive it. You will see who matches before anything is awarded.
+        For evidence kept outside Canvas, such as a volunteering log or a
+        workshop register. Paste student ID numbers or university emails, one
+        per line or separated by commas. Only students enrolled in the badge's
+        course can receive it. You will see who matches before anything is
+        awarded.
       </Text>
       <ChoiceSelect
         label="Badge to award"
@@ -273,7 +404,8 @@ function BulkAward() {
           reset();
         }}
       />
-      <LimitedTextArea maxLength={4000}
+      <LimitedTextArea
+        maxLength={4000}
         label="Justification for everyone on the list (at least 20 characters)"
         value={justification}
         onChange={(e) => {
@@ -293,14 +425,20 @@ function BulkAward() {
       )}
       {run.isError && <ErrorAlert error={run.error} />}
       <Flex gap="small" margin="small 0">
-        <Button interaction={ok && !run.isPending ? "enabled" : "disabled"} onClick={() => run.mutate(false)}>
+        <Button
+          interaction={ok && !run.isPending ? "enabled" : "disabled"}
+          onClick={() => run.mutate(false)}
+        >
           Check the list
         </Button>
       </Flex>
       {preview && (
         <>
           <div role="status">
-            <Alert variant={preview.committed ? "success" : "info"} margin="small 0">
+            <Alert
+              variant={preview.committed ? "success" : "info"}
+              margin="small 0"
+            >
               {preview.committed
                 ? `Done: ${preview.counts.awarded ?? 0} awarded, ${preview.counts.awaiting_confirmation ?? 0} waiting for a second member of staff.`
                 : toAward
@@ -315,11 +453,16 @@ function BulkAward() {
           {notFound > 0 && chosen?.course_id && (
             <View as="div" margin="small 0">
               <Text as="p">
-                Students who joined the course in Canvas today may not be listed yet. Refresh the course from Canvas,
-                wait a minute, then check the list again.
+                Students who joined the course in Canvas today may not be listed
+                yet. Refresh the course from Canvas, wait a minute, then check
+                the list again.
               </Text>
               <Button
-                interaction={refresh.isPending || refresh.isSuccess ? "disabled" : "enabled"}
+                interaction={
+                  refresh.isPending || refresh.isSuccess
+                    ? "disabled"
+                    : "enabled"
+                }
                 onClick={() => refresh.mutate()}
               >
                 Refresh the course from Canvas
@@ -333,7 +476,11 @@ function BulkAward() {
             </View>
           )}
           <TableScroll>
-            <Table caption={preview.committed ? "List award results" : "List award preview"}>
+            <Table
+              caption={
+                preview.committed ? "List award results" : "List award preview"
+              }
+            >
               <Table.Head>
                 <Table.Row>
                   <Table.ColHeader id="b-id">Entry</Table.ColHeader>
@@ -357,9 +504,16 @@ function BulkAward() {
           </TableScroll>
           {/* After the table, so the results are read before anyone awards. */}
           {toAward > 0 && (
-            <Button color="primary" margin="small 0" interaction={run.isPending ? "disabled" : "enabled"} onClick={() => run.mutate(true)}>
+            <Button
+              color="primary"
+              margin="small 0"
+              interaction={run.isPending ? "disabled" : "enabled"}
+              onClick={() => run.mutate(true)}
+            >
               {`${preview.second_approval ? "Record for" : "Award to"} ${learners(toAward)}`}
-              {toAward < preview.rows.length ? ` (of ${preview.rows.length} entries)` : ""}
+              {toAward < preview.rows.length
+                ? ` (of ${preview.rows.length} entries)`
+                : ""}
             </Button>
           )}
         </>
@@ -371,7 +525,8 @@ function BulkAward() {
 /** Most waiting awards the page asks for, and the most one "award all" may carry. */
 const MOST = 500;
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many: string) =>
+  `${n} ${n === 1 ? one : many}`;
 
 /** Awards waiting for staff to confirm: each on its own, or everyone shown in one go. */
 function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
@@ -379,8 +534,11 @@ function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
   const qc = useQueryClient();
   const [badge, setBadge] = useState("");
   const [done, setDone] = useState<ConfirmAllResult | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const rows = q.data ?? [];
-  const badges = [...new Map(rows.map((d) => [d.definition_id, d.badge_title])).entries()];
+  const badges = [
+    ...new Map(rows.map((d) => [d.definition_id, d.badge_title])).entries(),
+  ];
   // A badge with nothing left waiting drops out of the filter, back to everything.
   const only = badges.some(([id]) => id === badge) ? badge : "";
   const shown = only ? rows.filter((d) => d.definition_id === only) : rows;
@@ -389,8 +547,11 @@ function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
   const manual = shown.length - ready.length;
   const all = useMutation({
     mutationFn: () =>
-      apiSend<ConfirmAllResult>("/api/v1/awards/confirm-all", token, "POST", { decision_ids: ready.map((d) => d.id) }),
+      apiSend<ConfirmAllResult>("/api/v1/awards/confirm-all", token, "POST", {
+        decision_ids: ready.map((d) => d.id),
+      }),
     onSuccess: (res) => {
+      setNotice(null);
       setDone(res);
       qc.invalidateQueries({ queryKey: ["awards"] });
     },
@@ -399,8 +560,8 @@ function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
   return (
     <>
       <Text as="p">
-        These students meet the requirements of badges that staff confirm. Each award is checked against the latest
-        Canvas data before it is made.
+        These students meet the requirements of badges that staff confirm. Each
+        award is checked against the latest Canvas data before it is made.
       </Text>
       {q.isPending && <Loading what="awards" />}
       {q.isError && <ErrorAlert error={q.error} />}
@@ -414,20 +575,37 @@ function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
             {left.length > 0 && (
               <List margin="x-small 0 0">
                 {left.map((r) => (
-                  <List.Item key={r.id}>{`${r.learner_name ?? "A student"}, ${r.badge_title}: ${r.message ?? "could not be awarded"}`}</List.Item>
+                  <List.Item
+                    key={r.id}
+                  >{`${r.learner_name ?? "A student"}, ${r.badge_title}: ${r.message ?? "could not be awarded"}`}</List.Item>
                 ))}
               </List>
             )}
           </Alert>
         </div>
       )}
-      {q.data && rows.length === 0 && <Text as="p">Nothing is waiting for confirmation.</Text>}
+      <div role="status">
+        {notice && (
+          <Alert variant="success" margin="small 0">
+            {notice}
+          </Alert>
+        )}
+      </div>
+      {q.data && rows.length === 0 && (
+        <Text as="p">Nothing is waiting for confirmation.</Text>
+      )}
       {rows.length >= MOST && (
         <Text as="p">{`Showing the first ${MOST}. The rest will appear as you work through these.`}</Text>
       )}
       {badges.length > 1 && (
         <View as="div" maxWidth="28rem" margin="0 0 small">
-          <SimpleSelect renderLabel="Show" value={only || "all"} onChange={(_e, { value }) => setBadge(value === "all" ? "" : String(value))}>
+          <SimpleSelect
+            renderLabel="Show"
+            value={only || "all"}
+            onChange={(_e, { value }) =>
+              setBadge(value === "all" ? "" : String(value))
+            }
+          >
             <SimpleSelect.Option id="wb-all" value="all">
               {`All badges (${rows.length})`}
             </SimpleSelect.Option>
@@ -442,7 +620,10 @@ function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
       {ready.length > 1 && (
         <View as="div" margin="0 0 small">
           {all.isPending ? (
-            <Text as="p" role="status">{`Awarding ${ready.length} badges. This can take a minute.`}</Text>
+            <Text
+              as="p"
+              role="status"
+            >{`Awarding ${ready.length} badges. This can take a minute.`}</Text>
           ) : (
             <ConfirmButton
               color="primary"
@@ -475,7 +656,14 @@ function Waiting({ q }: { q: UseQueryResult<Decision[]> }) {
             </Table.Head>
             <Table.Body>
               {shown.map((d) => (
-                <DecisionRow key={d.id} d={d} />
+                <DecisionRow
+                  key={d.id}
+                  d={d}
+                  onDone={(m) => {
+                    setDone(null);
+                    setNotice(m);
+                  }}
+                />
               ))}
             </Table.Body>
           </Table>
@@ -491,10 +679,17 @@ export function Awards() {
   const { token } = useAuth();
   // The tab lives in the address (/awards?tab=list), so a refresh or a shared link lands on it.
   const [params, setParams] = useSearchParams();
-  const tab = Math.max(0, TABS.findIndex((t) => t === params.get("tab")));
+  const tab = Math.max(
+    0,
+    TABS.findIndex((t) => t === params.get("tab")),
+  );
   const q = useQuery({
     queryKey: ["awards"],
-    queryFn: () => apiFetch<Decision[]>(`/api/v1/awards?status=awaiting_confirmation&limit=${MOST}`, token),
+    queryFn: () =>
+      apiFetch<Decision[]>(
+        `/api/v1/awards?status=awaiting_confirmation&limit=${MOST}`,
+        token,
+      ),
   });
   const count = q.data?.length ?? 0;
   const show = (index: number) =>
@@ -513,16 +708,30 @@ export function Awards() {
       <Tabs onRequestTabChange={(_e, { index }) => show(index)}>
         <Tabs.Panel
           id="awards-waiting"
-          renderTitle={count ? `Waiting to confirm (${count >= MOST ? `${MOST}+` : count})` : "Waiting to confirm"}
+          renderTitle={
+            count
+              ? `Waiting to confirm (${count >= MOST ? `${MOST}+` : count})`
+              : "Waiting to confirm"
+          }
           isSelected={tab === 0}
           unmountOnExit={false}
         >
           <Waiting q={q} />
         </Tabs.Panel>
-        <Tabs.Panel id="awards-student" renderTitle="One student" isSelected={tab === 1} unmountOnExit={false}>
+        <Tabs.Panel
+          id="awards-student"
+          renderTitle="One student"
+          isSelected={tab === 1}
+          unmountOnExit={false}
+        >
           <ManualAward />
         </Tabs.Panel>
-        <Tabs.Panel id="awards-list" renderTitle="A list of students" isSelected={tab === 2} unmountOnExit={false}>
+        <Tabs.Panel
+          id="awards-list"
+          renderTitle="A list of students"
+          isSelected={tab === 2}
+          unmountOnExit={false}
+        >
           <BulkAward />
         </Tabs.Panel>
       </Tabs>

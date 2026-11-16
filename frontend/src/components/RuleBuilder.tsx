@@ -15,20 +15,47 @@ import {
   View,
 } from "@instructure/ui";
 
-import type { CanvasAssignment, CanvasModule, GroupRule, LeafRule, Rule, RuleSet } from "../api";
+import type {
+  CanvasAssignment,
+  CanvasModule,
+  GroupRule,
+  LeafRule,
+  Rule,
+  RuleSet,
+} from "../api";
 import { ChoiceSelect } from "./ChoiceSelect";
 import { LimitedTextArea } from "./Fields";
 
-export const RULE_TYPES: { value: LeafRule["type"]; label: string; hint: string }[] = [
-  { value: "module_completed", label: "Complete a module", hint: "Uses the module's completion requirements in Canvas." },
-  { value: "modules_completed", label: "Complete several modules", hint: "All the chosen modules must be complete." },
-  { value: "assignment_submitted", label: "Submit an assignment", hint: "A submission must exist; it does not need a mark." },
+export const RULE_TYPES: {
+  value: LeafRule["type"];
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "module_completed",
+    label: "Complete a module",
+    hint: "Uses the module's completion requirements in Canvas.",
+  },
+  {
+    value: "modules_completed",
+    label: "Complete several modules",
+    hint: "All the chosen modules must be complete.",
+  },
+  {
+    value: "assignment_submitted",
+    label: "Submit an assignment",
+    hint: "A submission must exist; it does not need a mark.",
+  },
   {
     value: "assignment_score",
     label: "Reach a score on an assignment",
     hint: "Only released (posted) marks count. Missing, excused or unreleased marks stay pending.",
   },
-  { value: "manual_approval", label: "Staff confirm", hint: "A member of staff records that the student met this." },
+  {
+    value: "manual_approval",
+    label: "Staff confirm",
+    hint: "A member of staff records that the student met this.",
+  },
 ];
 
 export function blankRule(type: LeafRule["type"]): LeafRule {
@@ -51,23 +78,60 @@ export function ruleProblems(rs: RuleSet): string[] {
   const out: string[] = [];
   if (rs.rules.length === 0) out.push("Add at least one requirement.");
   const leaf = (r: LeafRule, where: string) => {
-    if (r.type === "module_completed" && !r.module_id) out.push(`${where}: choose a module.`);
-    if (r.type === "modules_completed" && r.module_ids.length < 2) out.push(`${where}: choose at least two modules.`);
-    if ((r.type === "assignment_submitted" || r.type === "assignment_score") && !r.assignment_id)
+    if (r.type === "module_completed" && !r.module_id)
+      out.push(`${where}: choose a module.`);
+    if (r.type === "modules_completed" && r.module_ids.length < 2)
+      out.push(`${where}: choose at least two modules.`);
+    if (
+      (r.type === "assignment_submitted" || r.type === "assignment_score") &&
+      !r.assignment_id
+    )
       out.push(`${where}: choose an assignment.`);
-    if (r.type === "assignment_score" && !(r.threshold_percent > 0 && r.threshold_percent <= 100))
+    if (
+      r.type === "assignment_score" &&
+      !(r.threshold_percent > 0 && r.threshold_percent <= 100)
+    )
       out.push(`${where}: the score must be above 0 and at most 100 per cent.`);
-    if (r.type === "manual_approval" && (r.instructions ?? "").trim().length < 5)
+    if (
+      r.type === "manual_approval" &&
+      (r.instructions ?? "").trim().length < 5
+    )
       out.push(`${where}: say what staff are confirming.`);
   };
   rs.rules.forEach((r, i) => {
     const where = `Requirement ${i + 1}`;
     if (r.type === "group") {
-      if (r.rules.length < 2) out.push(`${where}: a group needs at least two requirements.`);
+      if (r.rules.length < 2)
+        out.push(`${where}: a group needs at least two requirements.`);
       r.rules.forEach((c, j) => leaf(c, `${where}.${j + 1}`));
     } else leaf(r, where);
   });
   return out;
+}
+
+/** How an unpublished Canvas item is named in the lists, so it is not chosen by mistake. */
+const UNPUBLISHED = " (not published in Canvas)";
+const nameOf = (x: { name: string; published: boolean }) =>
+  x.published ? x.name : x.name + UNPUBLISHED;
+
+function UnpublishedWarning({
+  what,
+  names,
+}: {
+  what: "module" | "assignment";
+  names: string[];
+}) {
+  if (names.length === 0) return null;
+  return (
+    <Alert variant="warning" margin="small 0 0">
+      {names.length === 1
+        ? `The ${what} “${names[0]}” is`
+        : `The ${what}s ${names.map((n) => `“${n}”`).join(", ")} are`}{" "}
+      not published in Canvas. Students cannot see{" "}
+      {names.length === 1 ? "it" : "them"}, so nobody can earn this badge until{" "}
+      {names.length === 1 ? "it is" : "they are"} published in Canvas.
+    </Alert>
+  );
 }
 
 interface Sources {
@@ -89,16 +153,31 @@ function LeafEditor({
   label: string;
 }) {
   const modules = sources.modules.filter((m) => m.usable);
-  const types = sources.manualOnly ? RULE_TYPES.filter((t) => t.value === "manual_approval") : RULE_TYPES;
+  const types = sources.manualOnly
+    ? RULE_TYPES.filter((t) => t.value === "manual_approval")
+    : RULE_TYPES;
   return (
-    <View as="div" padding="small" borderWidth="small" borderRadius="medium" margin="0 0 small" display="block">
+    <View
+      as="div"
+      padding="small"
+      borderWidth="small"
+      borderRadius="medium"
+      margin="0 0 small"
+      display="block"
+    >
       <SimpleSelect
         renderLabel={`${label}: type`}
         value={rule.type}
-        onChange={(_e, { value }) => onChange(blankRule(value as LeafRule["type"]))}
+        onChange={(_e, { value }) =>
+          onChange(blankRule(value as LeafRule["type"]))
+        }
       >
         {types.map((t) => (
-          <SimpleSelect.Option key={t.value} id={`${label}-${t.value}`} value={t.value}>
+          <SimpleSelect.Option
+            key={t.value}
+            id={`${label}-${t.value}`}
+            value={t.value}
+          >
             {t.label}
           </SimpleSelect.Option>
         ))}
@@ -108,8 +187,9 @@ function LeafEditor({
       </Text>
       {rule.type === "module_completed" && modules.length === 0 && (
         <Text as="p">
-          This course has no modules with completion requirements in Canvas yet. Add requirements to a module in
-          Canvas (Modules, then the module&rsquo;s settings), or choose another type of requirement.
+          This course has no modules with completion requirements in Canvas yet.
+          Add requirements to a module in Canvas (Modules, then the
+          module&rsquo;s settings), or choose another type of requirement.
         </Text>
       )}
       {rule.type === "module_completed" && modules.length > 0 && (
@@ -117,7 +197,7 @@ function LeafEditor({
           label="Module"
           value={rule.module_id}
           placeholder="Choose a module"
-          options={modules.map((m) => ({ value: m.id, label: m.name }))}
+          options={modules.map((m) => ({ value: m.id, label: nameOf(m) }))}
           onChange={(value) => onChange({ ...rule, module_id: value })}
         />
       )}
@@ -126,29 +206,60 @@ function LeafEditor({
           name={`${label}-modules`}
           description="Modules"
           value={rule.module_ids}
-          onChange={(value) => onChange({ ...rule, module_ids: value.map(String) })}
+          onChange={(value) =>
+            onChange({ ...rule, module_ids: value.map(String) })
+          }
         >
           {modules.map((m) => (
-            <Checkbox key={m.id} value={m.id} label={m.name} />
+            <Checkbox key={m.id} value={m.id} label={nameOf(m)} />
           ))}
         </CheckboxGroup>
       )}
-      {(rule.type === "assignment_submitted" || rule.type === "assignment_score") && (
-        sources.assignments.filter((a) => rule.type === "assignment_submitted" || a.score_rules_allowed).length === 0 ? (
+      {(rule.type === "assignment_submitted" ||
+        rule.type === "assignment_score") &&
+        (sources.assignments.filter(
+          (a) => rule.type === "assignment_submitted" || a.score_rules_allowed,
+        ).length === 0 ? (
           <Text as="p">
-            This course has no assignments that can be used here yet. Choose another type of requirement.
+            This course has no assignments that can be used here yet. Choose
+            another type of requirement.
           </Text>
         ) : (
-        <ChoiceSelect
-          label="Assignment"
-          value={rule.assignment_id}
-          placeholder="Choose an assignment"
-          options={sources.assignments
-            .filter((a) => rule.type === "assignment_submitted" || a.score_rules_allowed)
-            .map((a) => ({ value: a.id, label: a.name }))}
-          onChange={(value) => onChange({ ...rule, assignment_id: value })}
+          <ChoiceSelect
+            label="Assignment"
+            value={rule.assignment_id}
+            placeholder="Choose an assignment"
+            options={sources.assignments
+              .filter(
+                (a) =>
+                  rule.type === "assignment_submitted" || a.score_rules_allowed,
+              )
+              .map((a) => ({ value: a.id, label: nameOf(a) }))}
+            onChange={(value) => onChange({ ...rule, assignment_id: value })}
+          />
+        ))}
+      {(rule.type === "module_completed" ||
+        rule.type === "modules_completed") && (
+        <UnpublishedWarning
+          what="module"
+          names={modules
+            .filter((m) => !m.published)
+            .filter((m) =>
+              rule.type === "module_completed"
+                ? rule.module_id === m.id
+                : rule.module_ids.includes(m.id),
+            )
+            .map((m) => m.name)}
         />
-        )
+      )}
+      {(rule.type === "assignment_submitted" ||
+        rule.type === "assignment_score") && (
+        <UnpublishedWarning
+          what="assignment"
+          names={sources.assignments
+            .filter((a) => !a.published && a.id === rule.assignment_id)
+            .map((a) => a.name)}
+        />
       )}
       {rule.type === "assignment_score" && (
         <NumberInput
@@ -156,11 +267,14 @@ function LeafEditor({
           showArrows={false}
           width="10rem"
           value={String(rule.threshold_percent)}
-          onChange={(_e, v) => onChange({ ...rule, threshold_percent: Number(v) })}
+          onChange={(_e, v) =>
+            onChange({ ...rule, threshold_percent: Number(v) })
+          }
         />
       )}
       {rule.type === "manual_approval" && (
-        <LimitedTextArea maxLength={500}
+        <LimitedTextArea
+          maxLength={500}
           label="What a member of staff confirms"
           value={rule.instructions ?? ""}
           onChange={(e) => onChange({ ...rule, instructions: e.target.value })}
@@ -179,16 +293,20 @@ export function RuleBuilder({
   onChange: (rs: RuleSet) => void;
   sources: Sources;
 }) {
-  const setRule = (i: number, r: Rule) => onChange({ ...value, rules: value.rules.map((x, j) => (j === i ? r : x)) });
-  const remove = (i: number) => onChange({ ...value, rules: value.rules.filter((_, j) => j !== i) });
-  const firstType: LeafRule["type"] = sources.manualOnly ? "manual_approval" : "module_completed";
+  const setRule = (i: number, r: Rule) =>
+    onChange({ ...value, rules: value.rules.map((x, j) => (j === i ? r : x)) });
+  const remove = (i: number) =>
+    onChange({ ...value, rules: value.rules.filter((_, j) => j !== i) });
+  const firstType: LeafRule["type"] = sources.manualOnly
+    ? "manual_approval"
+    : "module_completed";
   const usable = sources.modules.filter((m) => m.usable).length;
   return (
     <View as="div" display="block">
       {!sources.manualOnly && sources.modules.length > 0 && usable === 0 && (
         <Alert variant="warning" margin="0 0 small">
-          None of this course's modules have completion requirements in Canvas, so module rules cannot be
-          used yet.
+          None of this course's modules have completion requirements in Canvas,
+          so module rules cannot be used yet.
         </Alert>
       )}
       <RadioInputGroup
@@ -207,7 +325,14 @@ export function RuleBuilder({
           if (r.type === "group") {
             const g = r as GroupRule;
             return (
-              <View key={i} as="fieldset" padding="small" borderWidth="small" margin="0 0 small" display="block">
+              <View
+                key={i}
+                as="fieldset"
+                padding="small"
+                borderWidth="small"
+                margin="0 0 small"
+                display="block"
+              >
                 <Heading level="h4" as="legend">
                   {label}: a group
                 </Heading>
@@ -216,7 +341,9 @@ export function RuleBuilder({
                   description="Within this group, meet"
                   value={g.mode}
                   layout="columns"
-                  onChange={(_e, v) => setRule(i, { ...g, mode: v as GroupRule["mode"] })}
+                  onChange={(_e, v) =>
+                    setRule(i, { ...g, mode: v as GroupRule["mode"] })
+                  }
                 >
                   <RadioInput value="ALL" label="all" />
                   <RadioInput value="ANY" label="any one" />
@@ -228,12 +355,22 @@ export function RuleBuilder({
                         rule={c}
                         label={`${label}.${j + 1}`}
                         sources={sources}
-                        onChange={(nc) => setRule(i, { ...g, rules: g.rules.map((x, k) => (k === j ? nc : x)) })}
+                        onChange={(nc) =>
+                          setRule(i, {
+                            ...g,
+                            rules: g.rules.map((x, k) => (k === j ? nc : x)),
+                          })
+                        }
                       />
                     </Flex.Item>
                     <Button
                       size="small"
-                      onClick={() => setRule(i, { ...g, rules: g.rules.filter((_, k) => k !== j) })}
+                      onClick={() =>
+                        setRule(i, {
+                          ...g,
+                          rules: g.rules.filter((_, k) => k !== j),
+                        })
+                      }
                     >
                       Remove {label}.{j + 1}
                     </Button>
@@ -242,7 +379,12 @@ export function RuleBuilder({
                 <Button
                   size="small"
                   interaction={g.rules.length >= 8 ? "disabled" : "enabled"}
-                  onClick={() => setRule(i, { ...g, rules: [...g.rules, blankRule(firstType)] })}
+                  onClick={() =>
+                    setRule(i, {
+                      ...g,
+                      rules: [...g.rules, blankRule(firstType)],
+                    })
+                  }
                 >
                   Add to group
                 </Button>{" "}
@@ -255,7 +397,12 @@ export function RuleBuilder({
           return (
             <Flex key={i} alignItems="start" gap="small">
               <Flex.Item shouldGrow>
-                <LeafEditor rule={r} label={label} sources={sources} onChange={(nr) => setRule(i, nr)} />
+                <LeafEditor
+                  rule={r}
+                  label={label}
+                  sources={sources}
+                  onChange={(nr) => setRule(i, nr)}
+                />
               </Flex.Item>
               <Button size="small" onClick={() => remove(i)}>
                 Remove {label}
@@ -266,7 +413,9 @@ export function RuleBuilder({
       </View>
       <Button
         interaction={value.rules.length >= 12 ? "disabled" : "enabled"}
-        onClick={() => onChange({ ...value, rules: [...value.rules, blankRule(firstType)] })}
+        onClick={() =>
+          onChange({ ...value, rules: [...value.rules, blankRule(firstType)] })
+        }
       >
         Add requirement
       </Button>{" "}
@@ -278,7 +427,11 @@ export function RuleBuilder({
               ...value,
               rules: [
                 ...value.rules,
-                { type: "group", mode: "ANY", rules: [blankRule(firstType), blankRule(firstType)] },
+                {
+                  type: "group",
+                  mode: "ANY",
+                  rules: [blankRule(firstType), blankRule(firstType)],
+                },
               ],
             })
           }
@@ -293,6 +446,8 @@ export function RuleBuilder({
 export function hasScoreRule(rs: RuleSet | null | undefined): boolean {
   if (!rs) return false;
   return rs.rules.some((r) =>
-    r.type === "group" ? r.rules.some((c) => c.type === "assignment_score") : r.type === "assignment_score",
+    r.type === "group"
+      ? r.rules.some((c) => c.type === "assignment_score")
+      : r.type === "assignment_score",
   );
 }

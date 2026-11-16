@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- The medium findings from the third round of hands-on testing:
+  - The wizard marks unpublished Canvas modules and assignments "(not published in Canvas)", and
+    warns when one is chosen: students cannot see it, so nobody could earn the badge. The
+    readiness warning says the same.
+  - The requirements step says when the course's modules and assignments were last read from
+    Canvas, and has **Refresh from Canvas**. Lists more than an hour old are refreshed on their
+    own.
+  - Confirming or declining a waiting award now says what happened. The "Why" column shows what
+    the student did, for example "Catalogue quiz: 80% (needs 70%)".
+  - A saved draft can jump straight to any step whose earlier steps are complete, instead of
+    paging through every step from the start.
 - Two people editing the same draft badge no longer silently overwrite each other (third round
   of hands-on testing). Each badge response carries a `revision`. The wizard sends it back as
   `If-Match`, so a save from a form opened before a colleague's save is refused with

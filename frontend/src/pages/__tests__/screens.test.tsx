@@ -605,6 +605,164 @@ describe("Create Micro-Credential wizard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("lets a saved draft jump straight to a later step", async () => {
+    const base = definition();
+    const withArt = {
+      ...base,
+      working_version: {
+        ...base.working_version,
+        asset_id: "a-1" as string | null,
+      },
+    };
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": withArt,
+      "PATCH /api/v1/achievements/d-1": withArt,
+    });
+    renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit badge" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /5\. Requirements/ }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: /Step 5 of 7/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks unpublished Canvas items and warns when one is chosen", async () => {
+    const base = definition();
+    const withArt = {
+      ...base,
+      working_version: {
+        ...base.working_version,
+        asset_id: "a-1" as string | null,
+      },
+    };
+    const hidden = {
+      id: "m-hidden",
+      name: "Hidden induction",
+      published: false,
+      has_requirements: true,
+      requirement_type: "all",
+      usable: true,
+    };
+    const modules = COURSE_ROUTES["GET /api/v1/courses/c-1/canvas/modules"];
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/courses/c-1/canvas/modules": {
+        ...modules,
+        items: [...modules.items, hidden],
+      },
+      "GET /api/v1/achievements/d-1": {
+        ...withArt,
+        rules: {
+          mode: "ALL",
+          rules: [{ type: "module_completed", module_id: "m-hidden" }],
+        },
+      },
+      "PATCH /api/v1/achievements/d-1": withArt,
+    });
+    renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit badge" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /5\. Requirements/ }),
+    );
+    expect(
+      await screen.findByText(/The module “Hidden induction” is/),
+    ).toHaveTextContent(
+      /nobody can earn this badge until it is published in Canvas/,
+    );
+    await userEvent.click(screen.getByLabelText("Module"));
+    expect(
+      await screen.findByRole("option", {
+        name: "Hidden induction (not published in Canvas)",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("says when the Canvas lists were read and refreshes them on request", async () => {
+    const base = definition();
+    const withArt = {
+      ...base,
+      working_version: {
+        ...base.working_version,
+        asset_id: "a-1" as string | null,
+      },
+    };
+    const recent = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    let polls = 0;
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": withArt,
+      "PATCH /api/v1/achievements/d-1": withArt,
+      "GET /api/v1/courses/c-1/sync": () => ({
+        last_run: null,
+        last_success_at: polls++ > 0 ? new Date().toISOString() : recent,
+      }),
+      "POST /api/v1/courses/c-1/sync": { queued: true },
+    });
+    renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit badge" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /5\. Requirements/ }),
+    );
+    expect(
+      await screen.findByText(/Modules and assignments as read from Canvas on/),
+    ).toBeInTheDocument();
+    // Read five minutes ago: not refreshed on its own.
+    expect(
+      calls.some((c) => c.method === "POST" && c.url.endsWith("/sync")),
+    ).toBe(false);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Refresh from Canvas" }),
+    );
+    expect(
+      await screen.findByText(
+        "The lists are up to date with Canvas.",
+        {},
+        { timeout: 8000 },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      calls.some(
+        (c) => c.method === "POST" && c.url === "/api/v1/courses/c-1/sync",
+      ),
+    ).toBe(true);
+  });
+
+  it("refreshes Canvas lists that are more than an hour old on its own", async () => {
+    const base = definition();
+    const withArt = {
+      ...base,
+      working_version: {
+        ...base.working_version,
+        asset_id: "a-1" as string | null,
+      },
+    };
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": withArt,
+      "PATCH /api/v1/achievements/d-1": withArt,
+      "GET /api/v1/courses/c-1/sync": {
+        last_run: null,
+        last_success_at: "2026-11-14T09:00:00Z",
+      },
+      "POST /api/v1/courses/c-1/sync": { queued: true },
+    });
+    renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit badge" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /5\. Requirements/ }),
+    );
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) => c.method === "POST" && c.url === "/api/v1/courses/c-1/sync",
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("does not touch a draft that was opened and left unchanged", async () => {
     const calls = stubApi({
       ...COURSE_ROUTES,
@@ -951,12 +1109,28 @@ describe("awards and progress", () => {
           evidence: [],
           rejection_reason: null,
           decided_at: "2026-11-13T10:00:00Z",
-          current_eligibility: null,
+          current_eligibility: {
+            outcome: "met",
+            rules: [
+              {
+                type: "assignment_score",
+                outcome: "met",
+                source: {
+                  assignment_name: "Catalogue quiz",
+                  score_percent: 80,
+                  threshold_percent: 70,
+                },
+              },
+            ],
+          },
         },
       ],
       "POST /api/v1/awards/dec-1/confirm": { id: "dec-1", status: "ready" },
     });
     renderAt("/awards");
+    expect(
+      await screen.findByText("Catalogue quiz: 80% (needs 70%)"),
+    ).toBeInTheDocument();
     await userEvent.click(
       await screen.findByRole("button", { name: "Award to Sam Student" }),
     );
@@ -965,6 +1139,11 @@ describe("awards and progress", () => {
         true,
       ),
     );
+    expect(
+      await screen.findByText(
+        /Awarded Academic Writing Foundations to Sam Student/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("awards everyone waiting in one go, and says who was left and why", async () => {
