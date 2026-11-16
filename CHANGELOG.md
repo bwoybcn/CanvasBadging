@@ -75,6 +75,14 @@ All notable changes to this project are documented here. The format follows
     (docs/integrations/canvas.md, step 3). Without it a course is only seen to have ended when
     it was concluded by hand or is past its own end date, not when its term ended.
 
+- Dependency updates (finding 17): `jsonschema` 4.26.0; `pyld` 3.3.0 (used only by the
+  independent test verifier); the GitHub Actions used by CI moved to their current major
+  versions. Dependabot now groups its weekly updates and leaves out the jumps that have to be
+  made on purpose, each with its reason (`.github/dependabot.yml`). CONTRIBUTING.md lists the
+  repository settings the owner should keep (protect `main`, delete merged branches).
+- CI: the 1EdTech inspector's Maven dependencies are cached, the step stops after 12 minutes,
+  and a failed run says why at the end of its log.
+
 ### Fixed
 - Findings 7 to 9 of the whole-product review of 16 November:
   - A person who holds only the **Badge reviewer** role was shown "This page is for course

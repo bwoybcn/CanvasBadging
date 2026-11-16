@@ -1,17 +1,58 @@
+# Weekly dependency updates, grouped so that a week brings a handful of pull requests, not one
+# per package. Big jumps that have to be made on purpose are left out below, each with its
+# reason; remove the line when the reason no longer holds.
 version: 2
 updates:
   - package-ecosystem: uv
     directory: /backend
     schedule: { interval: weekly }
+    groups:
+      backend-minor-and-patch:
+        update-types: [minor, patch]
+
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: weekly }
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # The types must match the Node version the images run (22), not the newest Node.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7 is the rewritten compiler. typescript-eslint 8 refuses to run with it
+      # ("typescript-eslint does not support TS 7.0", tried 16 November 2026).
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: npm
     directory: /signer
     schedule: { interval: weekly }
+    groups:
+      signer-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    groups:
+      actions:
+        patterns: ["*"]
+
   - package-ecosystem: docker
     directory: /docker
     schedule: { interval: weekly }
+    ignore:
+      # Stay on a long-term-support Node (even major numbers); move on purpose, with
+      # "engines" in signer/package.json and the CI Node version.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+      # A new Python minor is a new language version: backend/pyproject.toml (requires-python)
+      # and CI have to move with it, after the libraries support it.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

@@ -35,8 +35,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - run: uv sync --frozen
@@ -46,7 +46,7 @@ jobs:
         run: uv run mypy
       - name: Module boundaries (import-linter)
         run: uv run lint-imports
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -85,11 +85,11 @@ jobs:
       POSTGRES_USER: postgres
       OUT: ${{ github.workspace }}/conformance-out
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Start the stack (database, signer, API)
@@ -116,14 +116,15 @@ jobs:
           node verify.mjs active "$OUT"/active/*.json
           node verify.mjs revoked "$OUT"/revoked/*.json
           node verify.mjs active "$OUT"/student/*.json
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
       - name: Cache the inspector's Maven dependencies
-        # The inspector's dependencies come from 1EdTech's own repository server. When that
-        # server stalled (16 November 2026), this job failed once and then hung for a quarter
-        # of an hour without a word. The cache keeps a good copy, keyed on the pinned commit.
+        # The inspector's dependencies come from several outside Maven repositories. When one
+        # of them (repo.osgeo.org, for GeoTools) answered 502 on 16 November 2026, this job
+        # failed five times and once hung for a quarter of an hour without a word. The cache
+        # keeps a good copy, keyed on the pinned commit.
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
@@ -149,7 +150,7 @@ jobs:
           grep -E '^=== |^\[ERROR\]|WARNING:|ERROR:|FATAL:|Tests run:|BUILD (SUCCESS|FAILURE)|should pass|not checked' \
             "$OUT/1edtech-inspector.log" | cut -c1-400 | tail -n 80 || true
           exit "$code"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: conformance-credentials
@@ -164,8 +165,8 @@ jobs:
         if: always()
         run: pkill -f "[o]c api" || true; pkill -f "[o]c worker" || true
       - name: Why the 1EdTech inspector failed
-        # Last, so that the reason is at the end of the job log: a failed download from
-        # 1EdTech's own repository server reads very differently from a rejected credential.
+        # Last, so that the reason is at the end of the job log: a failed download from an
+        # outside Maven repository reads very differently from a rejected credential.
         if: failure()
         run: |
           f="$OUT/1edtech-inspector.log"
@@ -194,11 +195,11 @@ jobs:
       POSTGRES_USER: postgres
       SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Start the stack (database, signer, API with the built frontend, worker)
@@ -236,7 +237,7 @@ jobs:
             (cd "$GITHUB_WORKSPACE/backend" && nohup uv run oc worker >> "$RUNNER_TEMP/worker.log" 2>&1 &);
             sleep 3
         run: scripts/backup-restore-drill.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-results
@@ -260,8 +261,8 @@ jobs:
       run:
         working-directory: signer
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -278,8 +279,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -293,11 +294,11 @@ jobs:
     name: Dependency audit and licences
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: pip-audit (runtime dependencies)
@@ -321,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, signer, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build and start the stack
         run: docker compose up -d --build
       - name: Smoke test
@@ -341,14 +342,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, signer, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build, start and check the production stack
-        run: scripts/smoke-production.sh
+        shell: bash
+        run: |
+          set -o pipefail
+          scripts/smoke-production.sh 2>&1 | tee "$RUNNER_TEMP/smoke.log"
       - name: Logs
         if: always()
         run: >-
           docker compose -p oc-prod-smoke -f docker/compose.production.yaml
-          --env-file .smoke-production/production.env logs --no-color
+          --env-file .smoke-production/production.env logs --no-color --tail 200
       - name: Stop
         if: always()
         run: scripts/smoke-production.sh down
+      - name: Result
+        # Last, so the outcome of each check is at the end of the job log.
+        if: always()
+        run: grep -vE '^(#[0-9]+ | Container | Network | Volume | Image )' "$RUNNER_TEMP/smoke.log" | tail -n 40 || true

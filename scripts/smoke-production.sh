@@ -73,7 +73,8 @@ echo "no development sign-in"
 for service_port in "api 8000" "signer 8790" "postgres 5432"; do
   # shellcheck disable=SC2086
   published=$("${compose[@]}" port $service_port 2>/dev/null || true)
-  case "$published" in "" | :0) ;; *) fail "$service_port is published on the host at $published" ;; esac
+  # Unpublished reads as nothing, ":0" or "0.0.0.0:0", depending on the Compose version.
+  case "${published##*:}" in "" | 0) ;; *) fail "$service_port is published on the host at $published" ;; esac
 done
 echo "api, signer and database are not published"
 

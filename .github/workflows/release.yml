@@ -32,7 +32,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REQUESTED: ${{ inputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check the version
         run: |
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
