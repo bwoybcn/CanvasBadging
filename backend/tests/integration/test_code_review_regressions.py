@@ -37,8 +37,8 @@ from opencredential.issuance import decisions
 from opencredential.jobs import tasks
 from opencredential.settings import get_settings
 from opencredential.verification.sources import known_issuer_local, local_did_document
-from tests.integration.w4_factory import build_tenant
-from tests.integration.w5_world import COURSE_REF, World, build_world
+from tests.integration.issuance_factory import build_tenant
+from tests.integration.world import COURSE_REF, World, build_world
 
 pytestmark = pytest.mark.db
 

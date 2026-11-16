@@ -24,7 +24,7 @@ from opencredential.integrations.base import AccountRecord
 from opencredential.lti import provision
 from opencredential.lti.claims import LaunchData
 from opencredential.settings import get_settings
-from tests.integration.w5_world import World, build_world
+from tests.integration.world import World, build_world
 
 pytestmark = pytest.mark.db
 

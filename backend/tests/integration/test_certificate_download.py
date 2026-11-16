@@ -30,7 +30,7 @@ from opencredential.settings import get_settings
 from opencredential.signer_client import SignerClient
 from opencredential.status import service as status_service
 from opencredential.storage import get_store
-from tests.integration.w4_factory import Tenant, build_tenant
+from tests.integration.issuance_factory import Tenant, build_tenant
 
 pytestmark = pytest.mark.db
 

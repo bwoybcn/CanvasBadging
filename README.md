@@ -9,10 +9,43 @@ Licence: [AGPL-3.0-or-later](LICENSE). Documentation: CC BY-SA 4.0.
 
 ## Status
 
-Phase 1 of the [implementation plan](docs/architecture/architecture.md) (repository and local
-foundation) is in place. Not yet built: Canvas LTI launch (W3), credential signing and
-verification (W4), badge authoring and rules engine (W5), student sharing (W6), governance (W7).
-**OpenCredential does not issue credentials yet, and claims no Open Badges conformance yet.**
+OpenCredential works end to end and is tested on every change, but it has **not yet been used
+with real students**. It is at version 0.1.0 with no published release.
+
+What works today:
+
+- **Inside Canvas.** Staff and students open "Badges" from the course menu (LTI 1.3). The class
+  list comes from Canvas, and progress comes from Canvas modules, assignments and released
+  marks.
+- **Creating badges.** A step-by-step wizard with ready-made templates, artwork, review by a
+  second person where the institution asks for it, and versions.
+- **Awarding.** Automatically from Canvas data, confirmed by course staff, or by hand for one
+  student or a list of student ID numbers. Badges for activity outside a module (library,
+  volunteering, schemes) are supported.
+- **Genuine Open Badges 3.0.** Every award is a signed verifiable credential
+  (`eddsa-rdfc-2022`) that can be revoked. On every change, 1EdTech's own validator and the
+  Digital Credentials Consortium verifier check the badges the product issues
+  ([conformance report](docs/reports/conformance.md)). OpenCredential is **not 1EdTech
+  certified**.
+- **For students.** Progress towards each badge, badges private until the student shares
+  them, a public page anyone can check, a download of the credential, a badge image, a
+  printable certificate and a LinkedIn link.
+- **For administrators.** Areas and issuers, signing keys, roles, policies, reports, an audit
+  log, retention and erasure of personal data.
+- **Running it.** A development stack in one command, and a production kit with TLS, rate
+  limits and a release build ([deployment](docs/deployment/README.md)).
+
+What is still to do before real use:
+
+- It has only run against a Canvas installed on a developer's computer. It has not run on a
+  hosted Canvas, and reading the class list has not been confirmed there.
+- The permanent web address that badges are checked at has not been chosen. It is written
+  into every badge, so it must be settled before the first real badge is issued.
+- Nobody is notified of anything yet: no email and no Canvas message.
+- A manual screen-reader pass and a usability test with lecturers have not been done.
+
+The evidence for each requirement is in [docs/reports/dod.md](docs/reports/dod.md) and
+[docs/reports/rtm-evidence.md](docs/reports/rtm-evidence.md).
 
 ## Quick start (development)
 
@@ -43,10 +76,10 @@ the pieces without Docker, tests and troubleshooting.
 | `signer/` | Node 22 / TypeScript signer service, the only process that touches private keys |
 | `frontend/` | React + TypeScript + Instructure UI single-page app |
 | `examples/` | Reusable demonstration data (Academic Skills Passport) |
-| `docker/` | Dockerfiles, Postgres bootstrap, dev Caddy config |
+| `docker/` | Dockerfiles, Postgres bootstrap, the development proxy and the production kit |
 | `docs/` | Architecture, ADRs, API, development, security, deployment |
 | `tests/` | Cross-cutting suites: end-to-end (Playwright) and standards conformance |
-| `scripts/` | Smoke test and licence gate |
+| `scripts/` | Smoke tests, backup and restore, and the licence gate |
 
 ## Contributing and security
 

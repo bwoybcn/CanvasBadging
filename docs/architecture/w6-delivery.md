@@ -5,7 +5,7 @@
 > A student can earn, download and share a credential, and an external party can verify it
 > without Canvas access.
 
-`backend/tests/integration/test_w6_sharing.py::test_phase6_exit_earn_download_share_and_outsider_verifies`
+`backend/tests/integration/test_sharing_and_export.py::test_phase6_exit_earn_download_share_and_outsider_verifies`
 runs it end to end on PostgreSQL and the real signer: a fake Canvas reports a module complete,
 sync and the rules engine award the badge, the issuance service signs it, the student sees it in
 the collection, downloads it (valid against the official schema and verified by the independent

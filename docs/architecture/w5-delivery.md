@@ -29,7 +29,7 @@ Scope: spec Phases 3 and 4 (§20), with §5 (authoring), §6 (rules engine and a
 | 4. Missing or unreleased grade stays pending | `test_scenario_4_missing_or_unreleased_grade_stays_pending` |
 | 5. Manual award with justification | `test_scenario_5_manual_award_with_justification` |
 
-All in `backend/tests/integration/test_w5_scenarios.py`. The same file covers rejection, competency mismatch, credit wording, rule source checks, issuer delegation, malicious SVG, stale and failed Canvas data, Canvas changes, second approval, Rule E, failed-job retry with tenant isolation and admin-only policy. `test_w5_jobs_and_seed.py` runs a real procrastinate worker over sync and evaluation jobs, and checks that the engine reproduces all 108 seeded golden outcomes. `backend/tests/unit/test_rules_engine.py` holds the U-RULES-* cases.
+All in `backend/tests/integration/test_authoring_and_award_scenarios.py`. The same file covers rejection, competency mismatch, credit wording, rule source checks, issuer delegation, malicious SVG, stale and failed Canvas data, Canvas changes, second approval, Rule E, failed-job retry with tenant isolation and admin-only policy. `test_worker_sync_and_demo_outcomes.py` runs a real procrastinate worker over sync and evaluation jobs, and checks that the engine reproduces all 108 seeded golden outcomes. `backend/tests/unit/test_rules_engine.py` holds the U-RULES-* cases.
 
 ## Hand-off contracts
 

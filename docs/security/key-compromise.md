@@ -1,7 +1,7 @@
 # Runbook: issuer signing-key compromise
 
 Spec §15.5, ADR-0005. This procedure is covered by an automated drill,
-`test_key_compromise_procedure` in `backend/tests/integration/test_w4_issuance.py`, which runs
+`test_key_compromise_procedure` in `backend/tests/integration/test_issuance_and_verification.py`, which runs
 steps 3 to 7 against a `did:web` issuer on every CI run. W8 adds a live tabletop drill.
 
 ## What counts as a compromise

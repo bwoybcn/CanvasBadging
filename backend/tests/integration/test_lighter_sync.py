@@ -23,7 +23,7 @@ from opencredential.db.session import tenant_session
 from opencredential.governance.templates import STARTER_TEMPLATES
 from opencredential.jobs import tasks
 from opencredential.settings import get_settings
-from tests.integration.w5_world import World, build_world
+from tests.integration.world import World, build_world
 
 pytestmark = pytest.mark.db
 

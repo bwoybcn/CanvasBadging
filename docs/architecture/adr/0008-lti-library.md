@@ -12,5 +12,5 @@ A small in-house `lti` module covering only what we use: OIDC login initiation, 
 We own about 500 lines of protocol code and must keep it current, but no stale dependency sits in the auth path. If W3 finds a maintained library that fits FastAPI cleanly, a superseding ADR may adopt it.
 
 ## Implementation notes (W3, 13 Nov 2026)
-Implemented in `opencredential.lti` (about 900 lines with pages and roster). No maintained library fitting FastAPI was found, so this ADR stands. Canvas on the local install offers `lti_storage_target`, so third-party-cookie resilience is: a short-lived binding cookie (`SameSite=None; Secure` over HTTPS), and when it is missing, `lti.put_data` at login and `lti.get_data` at launch through Canvas's `post_message_forwarding` frame. Negative integration tests: `backend/tests/integration/test_w3_lti_launch.py`.
+Implemented in `opencredential.lti` (about 900 lines with pages and roster). No maintained library fitting FastAPI was found, so this ADR stands. Canvas on the local install offers `lti_storage_target`, so third-party-cookie resilience is: a short-lived binding cookie (`SameSite=None; Secure` over HTTPS), and when it is missing, `lti.put_data` at login and `lti.get_data` at launch through Canvas's `post_message_forwarding` frame. Negative integration tests: `backend/tests/integration/test_lti_launch.py`.
 

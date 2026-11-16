@@ -9,12 +9,12 @@ design reasoning is in the [threat model](threat-model.md). The reporting policy
 
 | Control (spec §15.3) | How | Evidence |
 |---|---|---|
-| Authentication | LTI 1.3 launch only (development login is absent in production). The result is a 30-minute bearer token kept in the tab's `sessionStorage`, with no cookies, so it works with third-party cookies blocked. While the person is working the token is renewed, for at most 8 hours from the launch; an idle tab signs out after 30 minutes, and an erased or deactivated account cannot renew. | `test_w3_lti_launch.py`, `unit/test_sessions.py`, `test_w8_session_renewal.py`, `test_dev_login_routes_absent_in_production` |
-| CSRF | There is no cookie-based API session, so a forged cross-site request carries no credentials. The LTI login and OAuth flows use single-use `state`. | `test_w3_lti_launch.py`, `test_forged_oauth_state_is_refused` |
+| Authentication | LTI 1.3 launch only (development login is absent in production). The result is a 30-minute bearer token kept in the tab's `sessionStorage`, with no cookies, so it works with third-party cookies blocked. While the person is working the token is renewed, for at most 8 hours from the launch; an idle tab signs out after 30 minutes, and an erased or deactivated account cannot renew. | `test_lti_launch.py`, `unit/test_sessions.py`, `test_session_renewal.py`, `test_dev_login_routes_absent_in_production` |
+| CSRF | There is no cookie-based API session, so a forged cross-site request carries no credentials. The LTI login and OAuth flows use single-use `state`. | `test_lti_launch.py`, `test_forged_oauth_state_is_refused` |
 | XSS | React escapes output. Server-rendered public pages escape all user text. The SPA has a strict CSP (`script-src 'self'`, `object-src 'none'`). | `test_script_in_badge_text_is_escaped_on_public_pages`, `test_security_headers` |
 | SQL injection | Only SQLAlchemy bound parameters are used. | `test_injection_strings_in_queries_are_inert` |
 | File uploads | SVGs pass an allow-list sanitiser; PNG metadata chunks are dropped; size limits apply; files are served with `nosniff`. | `unit/test_artwork.py`, `test_svg_upload_cannot_carry_script` |
-| Role-based access | Every route has a server-side check. Roles come from Canvas and stored delegations, never from the request. | `test_w8_security.py` matrix |
+| Role-based access | Every route has a server-side check. Roles come from Canvas and stored delegations, never from the request. | `test_security.py` matrix |
 | Tenant isolation | PostgreSQL row-level security, composite foreign keys, and an app role that does not own the tables. | `test_tenant_isolation.py`, `test_admin_of_one_institution_cannot_touch_another` |
 | Secrets | Canvas tokens are encrypted at rest and never returned. Signing keys sit in the signer behind envelope encryption. Development secrets are refused in production. | `test_no_canvas_token_or_secret_in_any_api_response`, `unit/test_settings.py` |
 | Key rotation | `did:web` verification methods can be rotated; old public keys stay published. | `test_did_web_rotation_keeps_old_credentials_verifiable` |

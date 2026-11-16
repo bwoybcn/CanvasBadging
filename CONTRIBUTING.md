@@ -19,6 +19,10 @@ your contribution is licensed the same way.
 3. Run the checks CI runs:
    - backend: `uv run ruff check . && uv run ruff format --check . && uv run mypy && uv run lint-imports && uv run pytest`
    - signer and frontend: `npm run lint && npm test && npm run build`
+
+   Name a test file after the feature it tests, and make each test stand on its own: the backend
+   suite runs in a shuffled order every time. [backend/tests/README.md](backend/tests/README.md)
+   lists where each feature is tested and how to repeat the order of a failed run.
 4. Database changes go through Alembic (`uv run alembic revision --autogenerate -m "..."`), then
    review the generated file. Row-level security policies, triggers and grants are hand-written.
    The schema-drift test fails if models and migrations disagree.

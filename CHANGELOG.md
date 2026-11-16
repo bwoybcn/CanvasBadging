@@ -48,6 +48,12 @@ All notable changes to this project are documented here. The format follows
 - The wizard takes an optional link to each skill's official description.
 
 ### Changed
+- **Tests are named by feature and stand alone** (whole-product review, finding 20). The backend
+  test files that were named after build stages (`test_w3_…` to `test_w8_…`) are renamed for
+  what they test, and `backend/tests/README.md` lists where each feature is tested. The suite
+  now runs in a shuffled order on every run (`pytest-randomly`); the three tests that only
+  passed in file order are fixed. The README's Status section says what the product does today
+  and what is still to do before real use.
 - **Less is read from Canvas, and for less long** (whole-product review, finding 2; migration
   0016):
   - Submissions and marks are read and kept only for the assignments that a published badge's

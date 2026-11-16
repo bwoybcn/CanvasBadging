@@ -20,7 +20,7 @@ from opencredential.db import models as m
 from opencredential.db.session import tenant_session
 from opencredential.issuance import decisions
 from opencredential.settings import get_settings
-from tests.integration.w4_factory import build_tenant
+from tests.integration.issuance_factory import build_tenant
 
 pytestmark = pytest.mark.db
 

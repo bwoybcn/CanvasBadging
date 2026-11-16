@@ -32,7 +32,7 @@ from opencredential.status.compromise import respond_to_compromise
 from opencredential.verification.service import Outcome, Verifier
 from opencredential.verification.sources import DefaultSources, Unavailable, own_origins
 from tests.independent import verifier as independent
-from tests.integration.w4_factory import Tenant, build_tenant
+from tests.integration.issuance_factory import Tenant, build_tenant
 
 pytestmark = pytest.mark.db
 
@@ -514,7 +514,7 @@ def test_http_export_verify_and_revoke(tenant: Tenant, signer: SignerClient) -> 
         assert ach.status_code == 200 and ach.json()["name"] == "Academic Writing Foundations"
 
 
-def test_issue_task_accepts_w5_contract(tenant: Tenant, signer: SignerClient) -> None:
+def test_issue_task_accepts_the_queued_job_arguments(tenant: Tenant, signer: SignerClient) -> None:
     """W5 defers oc:issue_credential(decision_id, institution_id, subject_type, subject_id, ...)."""
     from opencredential.jobs.tasks import issue_credential
 

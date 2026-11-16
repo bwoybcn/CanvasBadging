@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from opencredential.api.app import create_app
 from opencredential.integrations import registry
 from opencredential.settings import get_settings
-from tests.integration.w5_world import World, build_world
+from tests.integration.world import World, build_world
 
 pytestmark = pytest.mark.db
 
