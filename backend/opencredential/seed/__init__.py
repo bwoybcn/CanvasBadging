@@ -302,6 +302,9 @@ def _build(db: Session, data: dict[str, Any], key: Any) -> SeedResult:
             description=b["short_description"],
             learning_outcomes=b["learning_outcomes"],
             criteria_narrative=b["criteria_narrative"],
+            # Skills as an author types them in the wizard: the independent verifiers in CI
+            # then check the alignments every issued badge carries.
+            skills=b.get("skills", []),
             category=b["category"],
             achievement_type=b["achievement_type"],
             demonstration_kind=b["demonstration_kind"],
