@@ -137,9 +137,18 @@ jobs:
           cp "$OUT"/student/*.json "$OUT"/active/
           cp "$GITHUB_WORKSPACE/tests/conformance/1edtech/OpenCredentialConformanceTest.java" \
             inspector-vc/src/test/java/org/oneedtech/inspect/vc/
+          # The inspector prints a long report for every credential, and Maven prints every
+          # download. Keep all of it in a file (uploaded with the credentials below) and show
+          # only the lines that say what happened.
+          set +e
           OC_CONFORMANCE_ACTIVE_DIR="$OUT/active" OC_CONFORMANCE_REVOKED_DIR="$OUT/revoked" \
-            mvn -B -q -pl inspector-vc -am test -Dtest=OpenCredentialConformanceTest \
-              -Dsurefire.failIfNoSpecifiedTests=false
+            mvn -B -pl inspector-vc -am test -Dtest=OpenCredentialConformanceTest \
+              -Dsurefire.failIfNoSpecifiedTests=false > "$OUT/1edtech-inspector.log" 2>&1
+          code=$?
+          set -e
+          grep -E '^=== |^\[ERROR\]|WARNING:|ERROR:|FATAL:|Tests run:|BUILD (SUCCESS|FAILURE)|should pass|not checked' \
+            "$OUT/1edtech-inspector.log" | cut -c1-400 | tail -n 80 || true
+          exit "$code"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -154,6 +163,15 @@ jobs:
         # failing the job. Stop what this job started so the cache can be saved.
         if: always()
         run: pkill -f "[o]c api" || true; pkill -f "[o]c worker" || true
+      - name: Why the 1EdTech inspector failed
+        # Last, so that the reason is at the end of the job log: a failed download from
+        # 1EdTech's own repository server reads very differently from a rejected credential.
+        if: failure()
+        run: |
+          f="$OUT/1edtech-inspector.log"
+          [ -f "$f" ] || { echo "The inspector did not run."; exit 0; }
+          grep -E '^\[ERROR\]|WARNING:|ERROR:|FATAL:|Tests run:|BUILD (SUCCESS|FAILURE)|should pass|not checked' "$f" \
+            | cut -c1-400 | tail -n 40 || true
 
   e2e:
     # W8 (spec §19.3, §19.5): the twelve end-to-end scenarios and the accessibility suite, in a
