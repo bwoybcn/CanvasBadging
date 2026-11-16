@@ -38,6 +38,14 @@ describe("config", () => {
   it("refuses committed development secrets in production", () => {
     expect(() => loadConfig({ OC_ENV: "production" })).toThrow(/Refusing to start in production/);
   });
+  it("never guesses its mode", () => {
+    // Unset or mistyped used to mean development, which accepts the committed secrets.
+    expect(() => loadConfig({})).toThrow(/OC_ENV must be set/);
+    for (const bad of ["prod", "Production", "", "live"]) {
+      expect(() => loadConfig({ OC_ENV: bad })).toThrow(/OC_ENV must be set/);
+    }
+    expect(loadConfig({ OC_ENV: "development" }).kekRef).toBe("dev:committed");
+  });
   it("accepts real secrets in production", () => {
     const kek = Buffer.alloc(32, 7).toString("base64");
     const c = loadConfig({ OC_ENV: "production", SIGNER_KEK: kek, OC_SIGNER_SHARED_SECRET: "x".repeat(40) });
@@ -46,6 +54,30 @@ describe("config", () => {
 });
 
 describe("HTTP API", () => {
+  it("refuses to sign in production with a key wrapped by the development KEK", async () => {
+    // Such a key exists when a signer once ran without its own SIGNER_KEK. It was not marked
+    // as a development key, so only the way it was wrapped gives it away.
+    const store = new MemoryStore();
+    const key = await generateDidKey();
+    const wrapped = encrypt(Buffer.from(DEV_KEK_B64, "base64"), key.secretKeyMultibase, KEY_ID);
+    await store.insert({ issuerKeyId: KEY_ID, ...wrapped, kekRef: "dev:committed", isDev: false });
+    expect(await store.devKeysPresent()).toBe(true);
+    const secret = "x".repeat(40);
+    const prod = loadConfig({
+      OC_ENV: "production",
+      SIGNER_KEK: Buffer.alloc(32, 7).toString("base64"),
+      OC_SIGNER_SHARED_SECRET: secret,
+    });
+    const res = await buildApp(prod, store).inject({
+      method: "POST",
+      url: "/v1/sign",
+      headers: { authorization: `Bearer ${secret}` },
+      payload: { issuer_key_id: KEY_ID, verification_method_id: key.verificationMethodId, document: {} },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe("DEV_KEY_FORBIDDEN");
+  });
+
   it("answers health checks without auth", async () => {
     const app = buildApp(config, new MemoryStore());
     const res = await app.inject({ method: "GET", url: "/healthz" });

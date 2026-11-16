@@ -27,7 +27,7 @@ export class MemoryStore implements KeyStore {
     return true;
   }
   async devKeysPresent() {
-    return [...this.rows.values()].some((r) => r.isDev);
+    return [...this.rows.values()].some((r) => (r.isDev || r.kekRef.startsWith("dev:")) && !r.destroyedAt);
   }
   async ping() {}
   async close() {}

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -15,6 +16,7 @@ from sqlalchemy import text
 from opencredential import __version__
 from opencredential.api.deps import SettingsDep
 from opencredential.db.session import app_engine
+from opencredential.jobs import health as job_health
 from opencredential.paths import ALEMBIC_INI
 
 router = APIRouter(tags=["health"])
@@ -53,4 +55,46 @@ def readyz(settings: SettingsDep) -> JSONResponse:
     return JSONResponse(
         {"status": "ok" if ok else "unavailable", "checks": checks},
         status_code=200 if ok else 503,
+    )
+
+
+@router.get(
+    "/healthz/jobs",
+    summary="Background work: is a worker running, and has a job failed in the last day",
+    responses={503: {"description": "No worker is running, or a job failed in the last 24 hours"}},
+)
+def jobs_health() -> JSONResponse:
+    """For a monitoring tool to poll. Not for a load balancer: an API that cannot issue badges
+    in the background can still serve pages, so ``/readyz`` does not look at this.
+
+    Counts only, across the whole installation: no institution, course or person.
+    """
+    now = datetime.now(UTC)
+    try:
+        with app_engine().connect() as conn:
+            state = job_health.snapshot(
+                conn, since=now - timedelta(seconds=job_health.RECENT_FAILURE_SECONDS), now=now
+            )
+    except Exception as exc:
+        return JSONResponse(
+            {"status": "unavailable", "checks": {"database": f"error: {type(exc).__name__}"}},
+            status_code=503,
+            headers={"Cache-Control": "no-store"},
+        )
+    checks = {
+        "worker": "ok" if state.worker_ok else "no worker has reported in the last two minutes",
+        "failed_jobs": "ok"
+        if state.failed_recent_count == 0
+        else f"{state.failed_recent_count} failed in the last 24 hours",
+    }
+    ok = all(v == "ok" for v in checks.values())
+    return JSONResponse(
+        {
+            "status": "ok" if ok else "attention",
+            "checks": checks,
+            "failed_last_24_hours": state.failed_recent_count,
+            "failed_waiting": state.failed_total,
+        },
+        status_code=200 if ok else 503,
+        headers={"Cache-Control": "no-store"},
     )

@@ -199,6 +199,10 @@ def _assignment_common(
         return UNKNOWN, "ASSIGNMENT_NOT_FOUND", src
     if not a.published:
         return UNKNOWN, "ASSIGNMENT_UNPUBLISHED", src
+    if not a.submissions_fetched:
+        # A rule has only just started using this assignment; its submissions arrive with the
+        # next refresh. Until then "no submission" would be a guess.
+        return UNKNOWN, "DATA_NOT_SYNCED", src
     sub = s.submissions.get(aid)
     fetched = sub.fetched_at if sub else a.fetched_at
     src["fetched_at"] = _iso(fetched)
@@ -243,13 +247,14 @@ def _score(rule: AssignmentScore, s: LearnerSnapshot) -> tuple[str, str, dict[st
         return NOT_MET, "NOT_SUBMITTED", src
     if sub.excused:
         return UNKNOWN, "EXCUSED", src
+    if sub.workflow_state == "graded" and sub.posted_at is None:
+        # Marked but not released. The mark itself is never stored or recorded here: it is
+        # not yet the student's result.
+        return UNKNOWN, "AWAITING_RELEASE", src
     if sub.score is None or sub.workflow_state != "graded":
         if sub.submitted_at is None and sub.workflow_state == "unsubmitted":
             return NOT_MET, "NOT_SUBMITTED", src
         return UNKNOWN, "AWAITING_GRADE", src
-    if sub.posted_at is None:
-        # Never record the unreleased mark itself (it is not yet the learner's result).
-        return UNKNOWN, "AWAITING_RELEASE", src
     if not sub.grade_matches_current_submission:
         return UNKNOWN, "GRADE_OUTDATED", src
     # Exact decimal comparison: score / points * 100 >= threshold.

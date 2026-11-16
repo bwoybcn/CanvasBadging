@@ -33,6 +33,7 @@ from opencredential.db.models import (
     CredentialEvidence,
     CredentialStatus,
     EligibilityEvaluation,
+    ErasedIdentity,
     ExternalIdentity,
     LmsModuleProgress,
     LmsSubmission,
@@ -211,6 +212,31 @@ def erase(
             .values(note=None)
         )
     )
+    # Leave a fingerprint of each Canvas identifier (not the identifier), so that Canvas, where
+    # the person may still be enrolled, cannot bring them back at the next launch or class-list
+    # refresh. ``oc admin readmit`` removes the markers if the person later asks to return.
+    from opencredential.lti.provision import PERSON_IDENTITY_KINDS, identity_digest
+
+    markers = 0
+    for identity in db.scalars(
+        select(ExternalIdentity).where(
+            ExternalIdentity.user_id == user_id, ExternalIdentity.kind.in_(PERSON_IDENTITY_KINDS)
+        )
+    ):
+        db.add(
+            ErasedIdentity(
+                institution_id=user.institution_id,
+                user_id=user.id,
+                canvas_integration_id=identity.canvas_integration_id,
+                kind=identity.kind,
+                value_digest=identity_digest(
+                    identity.canvas_integration_id, identity.kind, identity.value
+                ),
+            )
+        )
+        markers += 1
+    db.flush()
+    counts["return_blocked_for_identifiers"] = markers
     counts["identities_deleted"] = _n(
         db.execute(delete(ExternalIdentity).where(ExternalIdentity.user_id == user_id))
     )

@@ -6,7 +6,98 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+- **`OC_ENV` is now required** by the api, the worker and the signer, and must be exactly
+  `development`, `test` or `production` (whole-product review, finding 4). An unset or
+  misspelt value used to mean development mode, which accepts the secrets committed to this
+  repository. **Upgrading:** set `OC_ENV` wherever you start a service without Docker Compose
+  or a `backend/.env` file. `compose.yaml` is the development stack and fixes the mode itself.
+- In production the api and the worker refuse to start, and the signer refuses to sign, while
+  an active signing key was wrapped with the committed development key-encryption key, not
+  only while one is flagged as a development key (migration 0015). The worker now makes the
+  same startup checks as the api.
+- A basic **request limit inside the app** for the routes anyone can reach without signing in
+  (finding 5): 60 a minute for each client address on the public badge checks
+  (`POST /api/v1/verify`, share pages) and 600 a minute on the LTI login and launch steps. A
+  refused request gets 429 with `Retry-After`. The proxy limit stays the first line.
+  `OC_RATE_LIMIT_VERIFY_PER_MINUTE` and `OC_RATE_LIMIT_SIGNIN_PER_MINUTE` change them.
+- `OC_FORWARDED_ALLOW_IPS` says which proxy's `X-Forwarded-For` the api believes. **Upgrading
+  behind a proxy on another host or container:** set it to the proxy's address, or every
+  visitor counts as the proxy and shares one allowance.
+
+### Added
+- **A production kit** (finding 6): `docker/compose.production.yaml` runs the whole stack on
+  one host in production mode behind an nginx proxy with TLS and rate limits, with every secret
+  required and nothing but the proxy published. `docker/production.env.example` lists the
+  settings. CI builds, starts and checks it on every change (`scripts/smoke-production.sh`).
+  The deployment guide opens with a quick start for it.
+- **A release build**: the Release workflow checks the version, builds the api and signer
+  images, pushes them to the GitHub container registry and publishes the release with its
+  notes from this file (`docs/development/releasing.md`).
+- **Someone is told when background work fails.** `GET /healthz/jobs` is for a monitoring tool:
+  200 while a worker is running and no job has failed in the last day, otherwise 503 with the
+  reason. With `OC_ALERT_WEBHOOK_URL` set, the worker posts to that chat channel within ten
+  minutes of a job failing, and once a day while failed jobs are still waiting
+  (`OC_ALERT_WEBHOOK_FORMAT`: `text` or `teams`). Both carry task names and counts only.
+- `oc api --workers N` (or `OC_API_WORKERS`) starts several API processes, so one burst of slow
+  requests no longer holds up everyone else.
+- A **Help** link in the menu of every screen. The Help page names who to ask at the
+  institution, links to the guides and answers the most common questions. Institution
+  administrators set the contact (a name, an email address and a help page of their own) in
+  Institution settings (whole-product review, finding 10; migration 0014).
+- The wizard takes an optional link to each skill's official description.
+
+### Changed
+- **Less is read from Canvas, and for less long** (whole-product review, finding 2; migration
+  0016):
+  - Submissions and marks are read and kept only for the assignments that a published badge's
+    rules use. Every assignment's submissions for every student used to be copied every 30
+    minutes. The list of assignments (names and points, no student data) is still kept for the
+    badge editor. Submissions held for an assignment no badge uses any more are deleted at the
+    next refresh, and nightly.
+  - A mark that Canvas has not released to the student is never stored, only the fact that one
+    exists, so students still see "Awaiting published result". Unreleased marks already held
+    are cleared by the migration.
+  - Publishing or restoring a badge that uses an assignment not read before queues a refresh
+    from Canvas at once. Until it has run, that requirement shows as not yet confirmed rather
+    than "not submitted".
+  - **A course that has ended in Canvas stops being read.** Once a day each course is checked:
+    concluded, deleted, or past the end date of the course or its term counts as ended. The
+    course is read for 60 more days so marks released late still count, then archived: no more
+    reads and nothing more awarded from Canvas activity. Issued badges are not affected. The
+    progress and submissions held for it are deleted a year after it ended. This retention
+    rule existed before but never ran, because nothing ever recorded that a course had ended.
+    Both periods are settings under Administration, Personal data and retention
+    (`sync_days_after_course_end`, `snapshot_days_after_course_end`). Course staff see a
+    notice on the course's Badges home, and can switch badges back on if the course is opened
+    again in Canvas.
+  - **Upgrading:** tick **Allow Include Parameters** on the Canvas API developer key
+    (docs/integrations/canvas.md, step 3). Without it a course is only seen to have ended when
+    it was concluded by hand or is past its own end date, not when its term ended.
+
+- Dependency updates (finding 17): `jsonschema` 4.26.0; `pyld` 3.3.0 (used only by the
+  independent test verifier); the GitHub Actions used by CI moved to their current major
+  versions. Dependabot now groups its weekly updates and leaves out the jumps that have to be
+  made on purpose, each with its reason (`.github/dependabot.yml`). CONTRIBUTING.md lists the
+  repository settings the owner should keep (protect `main`, delete merged branches).
+- CI: the 1EdTech inspector's Maven dependencies are cached, the step stops after 12 minutes,
+  and a failed run says why at the end of its log.
+
 ### Fixed
+- Findings 7 to 9 of the whole-product review of 16 November:
+  - A person who holds only the **Badge reviewer** role was shown "This page is for course
+    staff" instead of the Review queue, and had no menu link to it. The server now tells the
+    screens who can review (`may_review` on the profile, from the institution's approver
+    roles), so course staff who are approvers get the Review queue link too.
+  - Skills typed into a badge never reached the issued badge or its public page. They are now
+    written into every badge as Open Badges alignments, with their framework and code. A skill
+    without a link of its own points at the badge's published definition, which lists the same
+    skills.
+  - Erasing a person's data did not hold while they were still enrolled in Canvas: the next
+    class-list refresh or launch created them again with their name and email. Erasure now
+    leaves a keyed one-way fingerprint of each Canvas identifier (`erased_identities`,
+    migration 0014). Class-list refreshes leave the person out, a launch tells them why, and
+    `oc admin readmit` lets them return if they ask.
 - The lower findings from the third round of hands-on testing:
   - "Remove Requirement" buttons keep their width beside a long message.
   - On the Issuers page, each issuer's delegation controls name that issuer ("Let a course or

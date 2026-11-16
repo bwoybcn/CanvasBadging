@@ -18,6 +18,10 @@ import psycopg
 import pytest
 from psycopg import sql
 
+# The service never guesses its mode (OC_ENV has no default), so the tests state theirs before
+# anything reads the settings.
+os.environ.setdefault("OC_ENV", "test")
+
 TEST_DB = "opencredential_test"
 ADMIN_URL = os.environ.get(
     "OC_TEST_ADMIN_URL", "postgresql://postgres:postgres@localhost:5432/postgres"

@@ -18,11 +18,48 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from opencredential import audit
-from opencredential.db.models import Course, ExternalIdentity, Membership, User
+from opencredential import audit, secretbox
+from opencredential.db.models import Course, ErasedIdentity, ExternalIdentity, Membership, User
 from opencredential.lti.claims import LaunchData
+from opencredential.settings import get_settings
 
 LTI_SOURCES = ("lti", "nrps")
+#: Canvas identifiers that name one person, checked against the markers erasure leaves behind.
+PERSON_IDENTITY_KINDS = ("lti_sub", "canvas_user_id", "sis_user_id", "lti11_user_id")
+
+
+class ErasedPerson(PermissionError):
+    """Canvas named a person whose data was erased here. They are not created again."""
+
+    def __init__(self) -> None:
+        super().__init__("USER_ERASED")
+
+
+def identity_digest(integration_id: uuid.UUID, kind: str, value: str) -> str:
+    """The fingerprint stored in :class:`ErasedIdentity` for one Canvas identifier."""
+    return secretbox.keyed_digest(
+        get_settings(), "erased-identity", f"{integration_id}:{kind}:{value}"
+    )
+
+
+def is_erased(db: Session, integration_id: uuid.UUID, identifiers: dict[str, str | None]) -> bool:
+    """Whether any of these Canvas identifiers belongs to a person erased from this Canvas."""
+    digests = [
+        identity_digest(integration_id, kind, value) for kind, value in identifiers.items() if value
+    ]
+    if not digests:
+        return False
+    return (
+        db.scalar(
+            select(ErasedIdentity.id)
+            .where(
+                ErasedIdentity.canvas_integration_id == integration_id,
+                ErasedIdentity.value_digest.in_(digests),
+            )
+            .limit(1)
+        )
+        is not None
+    )
 
 
 @dataclass(frozen=True)
@@ -105,13 +142,22 @@ def upsert_user(
     if user_id is None and canvas_user_id:
         user_id = find_user(db, integration_id, "canvas_user_id", canvas_user_id)
     user = db.get(User, user_id) if user_id else None
+    if user is not None and user.status == "deleted":
+        raise ErasedPerson
     if user is None:
+        # Erasure removes the identifiers above, so an erased person looks new here. The
+        # markers it leaves are what stop the next launch or class-list refresh from creating
+        # them again, with their name and email, while they are still enrolled in Canvas.
+        if is_erased(
+            db,
+            integration_id,
+            {"lti_sub": sub, "canvas_user_id": canvas_user_id, "sis_user_id": sis_user_id},
+        ):
+            raise ErasedPerson
         user = User(institution_id=institution_id, status="active")
         db.add(user)
         db.flush()
         created = True
-    if user.status == "deleted":
-        raise PermissionError("USER_ERASED")
     # Canvas is the source of truth for names and email; only overwrite with real values.
     if name:
         user.display_name = name

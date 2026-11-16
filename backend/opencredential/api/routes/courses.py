@@ -182,6 +182,23 @@ def request_sync(
     return {"queued": job is not None, "job_id": job}
 
 
+def _running_again(db: TenantDb, course: Course) -> bool:
+    from opencredential.integrations.base import LmsError
+    from opencredential.integrations.registry import get_adapter
+    from opencredential.sync import integration_for, lifecycle
+
+    try:
+        adapter = get_adapter(integration_for(db, course), course.canvas_course_id)
+    except LmsError:
+        return False
+    try:
+        return lifecycle.running_again(course, adapter)
+    finally:
+        close = getattr(adapter, "close", None)
+        if callable(close):
+            close()
+
+
 class CourseActivationOut(BaseModel):
     id: uuid.UUID
     status: str
@@ -208,7 +225,16 @@ def activate_course(
     reconciliation and an initial sync is queued at once. Idempotent."""
     course = _activation_course(db, actor, course_id)
     if course.status == "archived":
-        raise Conflict("COURSE_ARCHIVED", "This course is archived and cannot be switched on.")
+        # Archived because it ended in Canvas. It can come back only if Canvas says it is
+        # running again (its end date was moved, or it was opened again).
+        if not _running_again(db, course):
+            raise Conflict(
+                "COURSE_ARCHIVED",
+                "This course has ended in Canvas, so badges are switched off for it. If the "
+                "course is opened again in Canvas, you can switch badges on here.",
+            )
+        course.ended_at = None
+        course.archived_at = None
     job = None
     if course.status != "active":
         course.status = "active"

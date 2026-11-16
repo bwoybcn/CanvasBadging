@@ -248,6 +248,52 @@ def admin_grant(
         typer.echo(f"{email} is inst_admin of {institution}")
 
 
+@admin_app.command("readmit")
+def admin_readmit(
+    institution: str = typer.Option(..., help="Institution slug"),
+    user_id: str = typer.Option(
+        ..., help="Id of the erased account (in the audit record of the erasure)"
+    ),
+) -> None:
+    """Let a person whose data was erased use Badges again (operator only, on their request).
+
+    Erasure leaves markers that stop Canvas from re-creating the person. This removes them.
+    The person then gets a new, empty account the next time they open Badges or their class
+    list is read; nothing that was erased comes back, and badges issued before the erasure stay
+    with the old, nameless record.
+    """
+    from sqlalchemy import delete
+
+    from opencredential import audit
+    from opencredential.db.models import ErasedIdentity, User
+    from opencredential.db.session import owner_session
+
+    with owner_session() as db:
+        iid = _institution_id(db, institution)
+        try:
+            uid = uuid.UUID(user_id)
+        except ValueError:
+            typer.echo("user-id must be the account's id (a UUID)", err=True)
+            raise typer.Exit(1) from None
+        user = db.get(User, uid)
+        if user is None or user.institution_id != iid or user.status != "deleted":
+            typer.echo("no erased account with that id in this institution", err=True)
+            raise typer.Exit(1)
+        mine = (ErasedIdentity.institution_id == iid, ErasedIdentity.user_id == uid)
+        removed = len(list(db.scalars(select(ErasedIdentity.id).where(*mine))))
+        db.execute(delete(ErasedIdentity).where(*mine))
+        audit.record(
+            db,
+            action="privacy.readmit",
+            resource_type="user",
+            resource_id=uid,
+            institution_id=iid,
+            actor_kind="system",
+            data={"markers_removed": removed, "via": "cli"},
+        )
+        typer.echo(f"removed {removed} marker(s); the person can use Badges again")
+
+
 @admin_app.command("set-verification-host")
 def admin_set_verification_host(
     institution: str = typer.Option(..., help="Institution slug"),

@@ -425,6 +425,7 @@ describe("administration", () => {
     const calls = admin({
       "GET /api/v1/admin/people?q=Sa": [{ id: "u-s1", display_name: "Sam Student" }],
       "GET /api/v1/institutions/current/retention": {
+        sync_days_after_course_end: 60,
         snapshot_days_after_course_end: 365,
         evaluation_days: 730,
         failed_job_days: 90,

@@ -367,7 +367,10 @@ export function CredentialDetail() {
                 <Heading level="h3">Related skills</Heading>
                 <List>
                   {d.skills.map((s) => (
-                    <List.Item key={`${s.name}-${s.url}`}>{s.url ? <Link href={s.url}>{s.name ?? s.url}</Link> : s.name}</List.Item>
+                    <List.Item key={`${s.name}-${s.url}`}>
+                      {s.url ? <Link href={s.url}>{s.name ?? s.url}</Link> : s.name}
+                      {s.framework ? ` (${s.framework})` : ""}
+                    </List.Item>
                   ))}
                 </List>
               </>

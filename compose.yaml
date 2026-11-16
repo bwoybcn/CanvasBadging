@@ -6,7 +6,9 @@
 # Every secret below is a committed DEVELOPMENT value. Production refuses to start with them.
 
 x-backend-env: &backend-env
-  OC_ENV: ${OC_ENV:-development}
+  # This file is the development stack and nothing else, so the mode is fixed here.
+  # For a real installation use docker/compose.production.yaml (docs/deployment/production.md).
+  OC_ENV: development
   OC_DATABASE_URL: postgresql+psycopg://oc_app:oc_app_dev@postgres:5432/opencredential
   OC_DATABASE_OWNER_URL: postgresql+psycopg://oc_owner:oc_owner_dev@postgres:5432/opencredential
   OC_SIGNER_URL: http://signer:8790
@@ -46,7 +48,7 @@ services:
     build: { context: ., dockerfile: docker/signer.Dockerfile }
     image: opencredential-signer:dev
     environment:
-      OC_ENV: ${OC_ENV:-development}
+      OC_ENV: development
       SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@postgres:5432/opencredential
       # SIGNER_KEK unset -> committed development KEK (refused in production)
     depends_on:

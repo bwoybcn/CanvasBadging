@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Float, UniqueConstraint
+from sqlalchemy import Float, UniqueConstraint, text
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
@@ -68,6 +68,12 @@ class LmsAssignment(TenantMixin, Base):
     points_possible: Mapped[float | None] = mapped_column(Float)
     published: Mapped[bool] = mapped_column(Boolean, default=True)
     deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: Whether this assignment's submissions are read from Canvas. Only assignments a live
+    #: badge rule uses are (data minimisation): for the others no student's submission or mark
+    #: is held, and a rule that starts using one waits for the next refresh.
+    submissions_synced: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=text("true")
+    )
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 

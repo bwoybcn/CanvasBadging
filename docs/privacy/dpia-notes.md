@@ -26,8 +26,9 @@ choice.
 |---|---|---|---|---|
 | Name (display, given, family), email | Canvas LTI launch and roster | `users` | The person; staff of their courses; administrators in scope | While the account is active; removed on erasure |
 | Canvas user id, LTI subject | Canvas | `external_identities` | Administrators | As above |
+| Fingerprints of an erased person's Canvas identifiers (keyed one-way hashes, not the identifiers) | Made at erasure | `erased_identities` | Nobody; used only to stop Canvas re-creating the person | Until the person asks to return (`oc admin readmit`) |
 | Course roles | Canvas launch and roster; delegated staff roles | `memberships` | Administrators in scope | Until removed in Canvas, or the role expires |
-| Module progress, submission state, scores (released marks only) | Canvas API | `lms_module_progress`, `lms_submissions` | Course staff; the learner sees their own progress | 365 days after the course is archived (`snapshot_days_after_course_end`) |
+| Module progress; submission state and released marks, only for assignments a published badge uses | Canvas API | `lms_module_progress`, `lms_submissions` | Course staff; the learner sees their own progress | 365 days after the course ended in Canvas (`snapshot_days_after_course_end`). Submissions for an assignment that no badge uses any more are deleted at the next refresh, and nightly |
 | Eligibility evaluations (rule results, with the source of each) | Computed | `eligibility_evaluations` | Course staff, administrators | 730 days, unless an award relies on it (`evaluation_days`) |
 | Award decisions and manual-award justifications | Staff | `award_decisions` | Course staff, administrators | Kept with the credential |
 | Issued credentials | Signed by the institution's issuer | `credentials` (immutable) | The learner; administrators in scope; anyone the learner shares it with | Kept (needed to answer for what was signed; see [erasure.md](../administration/erasure.md)) |
@@ -63,7 +64,8 @@ suspect. The student guide explains this.
 
 | Principle | How |
 |---|---|
-| Data minimisation | Only the Canvas data that badge rules need is read (modules, submissions, released scores). No names in credentials by default. Audit logs show learners only by id. |
+| Data minimisation | Only the Canvas data that badge rules need is read. Module progress is read for the course. Submissions and marks are read and kept only for the assignments a published badge's rules use; for every other assignment only its name and points are held (the badge editor lists them), with no student data. A mark that has not been released to the student is never stored, only the fact that one exists. No names in credentials by default. Audit logs show learners only by id. |
+| Storage limitation | A course that has ended in Canvas (concluded, or past the end date of the course or its term) is noticed within a day. It is still read for `sync_days_after_course_end` (default 60 days, so marks released late still count), then archived: no more reads, evaluations or awards from Canvas data. The progress and submissions held for it are deleted `snapshot_days_after_course_end` after it ended (default 365 days). Both are set under Administration, Personal data and retention. |
 | Purpose limitation | Canvas access is read-only and limited to the scopes in [canvas.md](../integrations/canvas.md#3-create-the-api-developer-key). Data is used only for evaluation, awards and the learner's own view. |
 | Clear sharing controls | Private by default. The learner previews exactly what becomes public. Stopping sharing works at once and does not revoke the credential. |
 | Tenant isolation | PostgreSQL row-level security per institution, tested by `test_tenant_isolation.py` and the W8 cross-tenant suite |

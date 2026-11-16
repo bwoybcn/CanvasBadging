@@ -27,14 +27,16 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
     env:
+      # No part of the product guesses its mode: every job that starts it says which one.
+      OC_ENV: test
       OC_TEST_ADMIN_URL: postgresql://postgres:postgres@localhost:5432/postgres
       OC_TEST_REQUIRE_SIGNER: "1"
     defaults:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
       - run: uv sync --frozen
@@ -44,7 +46,7 @@ jobs:
         run: uv run mypy
       - name: Module boundaries (import-linter)
         run: uv run lint-imports
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -77,16 +79,17 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
     env:
+      OC_ENV: development
       PGHOST: localhost
       PGPASSWORD: postgres
       POSTGRES_USER: postgres
       OUT: ${{ github.workspace }}/conformance-out
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Start the stack (database, signer, API)
@@ -113,11 +116,21 @@ jobs:
           node verify.mjs active "$OUT"/active/*.json
           node verify.mjs revoked "$OUT"/revoked/*.json
           node verify.mjs active "$OUT"/student/*.json
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
+      - name: Cache the inspector's Maven dependencies
+        # The inspector's dependencies come from several outside Maven repositories. When one
+        # of them (repo.osgeo.org, for GeoTools) answered 502 on 16 November 2026, this job
+        # failed five times and once hung for a quarter of an hour without a word. The cache
+        # keeps a good copy, keyed on the pinned commit.
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: dcpv-m2-4c6631fb5ea206ee60c2e7128749b44d70801098
       - name: 1EdTech OB 3.0 inspector (digital-credentials-public-validator)
+        timeout-minutes: 12
         run: |
           git clone --filter=blob:none https://github.com/1EdTech/digital-credentials-public-validator.git "$RUNNER_TEMP/dcpv"
           cd "$RUNNER_TEMP/dcpv"
@@ -125,10 +138,19 @@ jobs:
           cp "$OUT"/student/*.json "$OUT"/active/
           cp "$GITHUB_WORKSPACE/tests/conformance/1edtech/OpenCredentialConformanceTest.java" \
             inspector-vc/src/test/java/org/oneedtech/inspect/vc/
+          # The inspector prints a long report for every credential, and Maven prints every
+          # download. Keep all of it in a file (uploaded with the credentials below) and show
+          # only the lines that say what happened.
+          set +e
           OC_CONFORMANCE_ACTIVE_DIR="$OUT/active" OC_CONFORMANCE_REVOKED_DIR="$OUT/revoked" \
-            mvn -B -q -pl inspector-vc -am test -Dtest=OpenCredentialConformanceTest \
-              -Dsurefire.failIfNoSpecifiedTests=false
-      - uses: actions/upload-artifact@v4
+            mvn -B -pl inspector-vc -am test -Dtest=OpenCredentialConformanceTest \
+              -Dsurefire.failIfNoSpecifiedTests=false > "$OUT/1edtech-inspector.log" 2>&1
+          code=$?
+          set -e
+          grep -E '^=== |^\[ERROR\]|WARNING:|ERROR:|FATAL:|Tests run:|BUILD (SUCCESS|FAILURE)|should pass|not checked' \
+            "$OUT/1edtech-inspector.log" | cut -c1-400 | tail -n 80 || true
+          exit "$code"
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: conformance-credentials
@@ -142,6 +164,15 @@ jobs:
         # failing the job. Stop what this job started so the cache can be saved.
         if: always()
         run: pkill -f "[o]c api" || true; pkill -f "[o]c worker" || true
+      - name: Why the 1EdTech inspector failed
+        # Last, so that the reason is at the end of the job log: a failed download from an
+        # outside Maven repository reads very differently from a rejected credential.
+        if: failure()
+        run: |
+          f="$OUT/1edtech-inspector.log"
+          [ -f "$f" ] || { echo "The inspector did not run."; exit 0; }
+          grep -E '^\[ERROR\]|WARNING:|ERROR:|FATAL:|Tests run:|BUILD (SUCCESS|FAILURE)|should pass|not checked' "$f" \
+            | cut -c1-400 | tail -n 40 || true
 
   e2e:
     # W8 (spec §19.3, §19.5): the twelve end-to-end scenarios and the accessibility suite, in a
@@ -158,16 +189,17 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 3s --health-timeout 3s --health-retries 20
     env:
+      OC_ENV: development
       PGHOST: localhost
       PGPASSWORD: postgres
       POSTGRES_USER: postgres
       SIGNER_DATABASE_URL: postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Start the stack (database, signer, API with the built frontend, worker)
@@ -205,7 +237,7 @@ jobs:
             (cd "$GITHUB_WORKSPACE/backend" && nohup uv run oc worker >> "$RUNNER_TEMP/worker.log" 2>&1 &);
             sleep 3
         run: scripts/backup-restore-drill.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: e2e-results
@@ -229,8 +261,8 @@ jobs:
       run:
         working-directory: signer
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -247,8 +279,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -262,11 +294,11 @@ jobs:
     name: Dependency audit and licences
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: pip-audit (runtime dependencies)
@@ -290,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, signer, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build and start the stack
         run: docker compose up -d --build
       - name: Smoke test
@@ -301,3 +333,30 @@ jobs:
       - name: Stop
         if: always()
         run: docker compose down -v
+
+  production-kit:
+    # Whole-product review, finding 6: the production stack (docker/compose.production.yaml) is
+    # built and started in production mode behind its proxy, with generated secrets, and checked
+    # for what a real installation relies on. Nothing about it is only ever described.
+    name: Production kit smoke test (compose.production.yaml)
+    runs-on: ubuntu-latest
+    needs: [backend, signer, frontend]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build, start and check the production stack
+        shell: bash
+        run: |
+          set -o pipefail
+          scripts/smoke-production.sh 2>&1 | tee "$RUNNER_TEMP/smoke.log"
+      - name: Logs
+        if: always()
+        run: >-
+          docker compose -p oc-prod-smoke -f docker/compose.production.yaml
+          --env-file .smoke-production/production.env logs --no-color --tail 200
+      - name: Stop
+        if: always()
+        run: scripts/smoke-production.sh down
+      - name: Result
+        # Last, so the outcome of each check is at the end of the job log.
+        if: always()
+        run: grep -vE '^(#[0-9]+ | Container | Network | Volume | Image )' "$RUNNER_TEMP/smoke.log" | tail -n 40 || true

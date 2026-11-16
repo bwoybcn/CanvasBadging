@@ -227,6 +227,74 @@ def test_phase6_exit_earn_download_share_and_outsider_verifies(
     assert w.get("s1", "/api/v1/learners/me/credentials").json()[0]["status"] == "active"
 
 
+def test_skills_typed_by_the_author_reach_the_issued_badge(
+    client: TestClient, signer: SignerClient
+) -> None:
+    """Skills are authored as name, framework, code and link. They used to be dropped unless
+    they had a link, which the screens could not give, so no badge carried its skills."""
+    w = build_world(client)
+    _give_world_a_real_key(w, signer)
+    with registry.override(w.lms):
+        w.publish(
+            MODULE_RULES,
+            skills=[
+                {"name": "Academic writing", "framework": "UoL Skills"},
+                {
+                    "name": "Referencing",
+                    "framework": "ESCO",
+                    "code": "S1.2",
+                    "url": "https://skills.example/referencing",
+                },
+            ],
+        )
+        w.lms.complete_module(COURSE_REF, "lms-s1", "m1")
+        assert w.sync_and_evaluate()["decisions"] == 1
+    (decision,) = w.decisions()
+    assert issue(w.iid, decision.id, signer=signer, settings=get_settings()).outcome == "issued"
+    with w.db() as db:
+        cred = db.scalar(select(m.Credential).where(m.Credential.user_id == w.users["s1"]))
+        assert cred is not None and cred.status_list_id is not None
+        status_service.publish(db, cred.status_list_id, signer, get_settings())
+        cred_id = cred.id
+
+    downloaded = w.get("s1", f"/api/v1/credentials/{cred_id}/export").json()
+    assert validate_achievement_credential(downloaded) == []
+    independent.verify(downloaded)
+    achievement = downloaded["credentialSubject"]["achievement"]
+    assert achievement["alignment"] == [
+        {
+            "type": ["Alignment"],
+            "targetName": "Academic writing",
+            # No link was given, so it points at the badge's own published definition.
+            "targetUrl": f"{achievement['id']}#skill-1",
+            "targetFramework": "UoL Skills",
+        },
+        {
+            "type": ["Alignment"],
+            "targetName": "Referencing",
+            "targetUrl": "https://skills.example/referencing",
+            "targetFramework": "ESCO",
+            "targetCode": "S1.2",
+        },
+    ]
+    # That published definition lists the same skills.
+    outsider = TestClient(client.app)
+    published = outsider.get(urlsplit(achievement["id"]).path).json()
+    assert published["alignment"] == achievement["alignment"]
+
+    # The student's page and the public page name them, linking only where a link was given.
+    detail = w.get("s1", f"/api/v1/credentials/{cred_id}").json()
+    assert detail["skills"] == [
+        {"name": "Academic writing", "url": None, "framework": "UoL Skills"},
+        {"name": "Referencing", "url": "https://skills.example/referencing", "framework": "ESCO"},
+    ]
+    url = w.put("s1", f"/api/v1/credentials/{cred_id}/share", {}).json()["share"]["url"]
+    page = outsider.get(f"/verify/{_share_id(url)}").text
+    assert "<li>Academic writing (UoL Skills)</li>" in page
+    link = '<a href="https://skills.example/referencing" rel="nofollow noopener">Referencing</a>'
+    assert f"<li>{link} (ESCO)</li>" in page
+
+
 # ---- Scenario 6: student export ----------------------------------------------------------
 
 

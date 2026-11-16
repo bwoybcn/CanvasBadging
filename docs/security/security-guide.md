@@ -45,6 +45,14 @@ the repository or a shell history:
 With `OC_ENV=production`, the API and signer refuse to start if any of these is a committed
 development value or too short.
 
+The mode is never guessed. The api, the worker and the signer each stop at startup unless
+`OC_ENV` is exactly `development`, `test` or `production`. This matters because development
+mode accepts the committed secrets: a service left in it by a typing mistake would sign
+sessions, or wrap signing keys, with values published in this repository. As a second check,
+each signing key records which key-encryption key wrapped it. In production the api and the
+worker refuse to start, and the signer refuses to sign, while an active key is a development
+key or was wrapped with the committed development key-encryption key.
+
 ### Keys
 
 * Give `SIGNER_KEK` **only** to the signer container. Losing it means losing every signing key.
@@ -62,14 +70,24 @@ development value or too short.
 * Only the reverse proxy should be reachable from the internet. The signer, PostgreSQL and the
   worker must not be.
 * Terminate TLS at the proxy and pass `X-Forwarded-Proto: https` so the API sets HSTS.
-* **Rate limiting:** the API has no general per-client limit (Canvas sync has its own limit per
-  course). Add a limit at the proxy for `/lti/`, `/api/` and the public `/verify` routes. Here is
-  an example for nginx:
-
-  ```nginx
-  limit_req_zone $binary_remote_addr zone=oc:10m rate=10r/s;
-  location / { limit_req zone=oc burst=40 nodelay; proxy_pass http://api:8000; }
-  ```
+* **Rate limiting** has two layers.
+  * *At the proxy* (the real limit). The production kit's nginx configuration
+    (`docker/nginx/production.conf.template`) allows each client address 50 requests a second
+    with a burst of 300, and 2 a second with a burst of 30 on the routes that check a badge
+    without signing in (`POST /api/v1/verify` and `/verify/<id>`). If you use your own proxy,
+    set the equivalent. A whole campus can arrive from one address, so do not set the general
+    limit low; raise `OC_PROXY_RATE` if staff or students on campus see "429".
+  * *In the app* (the second line, for an installation whose proxy limit was forgotten or
+    misconfigured). Per client address and per API process: 60 a minute on the public badge
+    checks and 600 a minute on the LTI login and launch steps
+    (`OC_RATE_LIMIT_VERIFY_PER_MINUTE`, `OC_RATE_LIMIT_SIGNIN_PER_MINUTE`). A refused request
+    gets 429 with `Retry-After`. Signed-in routes are not limited in the app, and Canvas sync
+    has its own limit per course.
+* **The proxy must be believed, and only the proxy.** Both layers count by client address. Set
+  `OC_FORWARDED_ALLOW_IPS` on the api to the proxy's address (or `*` when nothing else can
+  reach the api, as in the kit), and make the proxy *replace* `X-Forwarded-For` with the
+  address it saw. Otherwise every visitor shares the proxy's address and its one allowance,
+  or a client can pick its own address by sending the header itself.
 
 ### Database
 
@@ -91,13 +109,13 @@ upgrade. Record who checked each item and when.
 
 | # | Check | How to check |
 |---|---|---|
-| 1 | `OC_ENV=production` on api, worker and signer | `POST /dev/login` returns 404; the signer starts (it refuses the development KEK in production) |
+| 1 | `OC_ENV=production` on api, worker and signer | `POST /dev/login` returns 404; the signer starts (it refuses the development KEK in production). Check the variable in each of the three service definitions: a service with it missing or misspelt does not start |
 | 2 | Every secret above is unique and was generated for this installation | The services start (they refuse committed values) |
 | 3 | `SIGNER_KEK` is held only by the signer and is backed up offline | Inspect the deployment manifests |
 | 4 | A `did:web` issuer on the institution's own verification domain is authorised, and the demo `did:key` is retired | Administration, Issuers; `https://<domain>/issuers/<slug>/did.json` resolves |
 | 5 | TLS everywhere; HSTS present | `curl -sI https://<host>/api/v1/verify` shows `Strict-Transport-Security` |
 | 6 | Signer and database not reachable from outside | A port scan from outside the network |
-| 7 | Proxy rate limiting configured | Send a burst and get 429s |
+| 7 | Proxy rate limiting configured, and the api believes the proxy's `X-Forwarded-For` (`OC_FORWARDED_ALLOW_IPS`) | Send a burst to `/api/v1/verify` and get 429s; the api's request log shows visitors' addresses, not the proxy's |
 | 8 | Only the migration job holds the owner password | Inspect the deployment manifests |
 | 9 | The Canvas developer keys have only the scopes in [canvas.md](../integrations/canvas.md#3-create-the-api-developer-key) | Canvas Admin, Developer Keys |
 | 10 | The backup and restore drill was run on this installation | [backup-restore.md](../operations/backup-restore.md) |

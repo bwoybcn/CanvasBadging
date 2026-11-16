@@ -52,3 +52,21 @@ Names that belong to someone else stay as they are: "Credential ID" and "Credent
 LinkedIn's field names, and "Learner Credential Wallet" is a product. The end-to-end pass over
 every screen (`tests/end_to_end/specs/a11y.spec.ts`) fails if "learner" or "micro-credential"
 comes back.
+
+## Repository settings (for the owner)
+
+These are set in GitHub, not in the code, so nothing in the repository can enforce them.
+Whole-product review, finding 17.
+
+- **Protect `main`.** Settings, Branches, Add branch ruleset (or "Add classic branch protection
+  rule") for `main`: require a pull request before merging, require status checks to pass
+  (tick every job of the CI workflow: Backend, Signer, Frontend, Dependency audit and licences,
+  Independent OB 3.0 verifiers, End-to-end scenarios and accessibility, Docker Compose smoke
+  test, Production kit smoke test), and block force pushes. Until this is set, anyone with
+  write access can push straight to `main` without the checks.
+- **Delete merged branches automatically.** Settings, General, Pull Requests, tick
+  "Automatically delete head branches". Branches of pull requests that were merged before this
+  was ticked can be deleted from the Branches page; nothing is lost, the commits are in `main`.
+- **Dependency updates** arrive weekly from Dependabot, grouped (`.github/dependabot.yml`). The
+  jumps that have to be made on purpose (a new Node or Python version, TypeScript 7) are listed
+  there with the reason each is held back.

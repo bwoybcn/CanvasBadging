@@ -193,7 +193,15 @@ def public_view(
         # Part of the badge's definition, like the criteria; shown on the public page too.
         "learning_outcomes": list(version.learning_outcomes or []) if version else [],
         "skills": [
-            {"name": a.get("targetName"), "url": a.get("targetUrl")}
+            {
+                "name": a.get("targetName"),
+                # A skill without a link of its own points back at this badge's definition
+                # (machine-readable); that is no use as a link for a person.
+                "url": None
+                if str(a.get("targetUrl") or "").startswith(f"{achievement.get('id')}#")
+                else a.get("targetUrl"),
+                "framework": a.get("targetFramework"),
+            }
             for a in achievement.get("alignment") or []
             if isinstance(a, dict)
         ],

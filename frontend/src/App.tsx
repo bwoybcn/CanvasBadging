@@ -24,6 +24,7 @@ import { CourseProgress } from "./pages/CourseProgress";
 import { CreateBadge } from "./pages/CreateBadge";
 import { CredentialDetail } from "./pages/CredentialDetail";
 import { DevLogin } from "./pages/DevLogin";
+import { Help } from "./pages/Help";
 import { Home } from "./pages/Home";
 import { Keeping } from "./pages/Keeping";
 import { MyCredentials } from "./pages/MyCredentials";
@@ -44,15 +45,17 @@ export function AppRoutes() {
           ["/", <Home />],
           ["/badges", <StaffOnly><BadgeList /></StaffOnly>],
           ["/badges/new", <StaffOnly><CreateBadge /></StaffOnly>],
-          ["/badges/:id", <StaffOnly><BadgeDetail /></StaffOnly>],
+          // A Badge reviewer may hold no staff role, and still has to open the queue and the badge.
+          ["/badges/:id", <StaffOnly orReviewers><BadgeDetail /></StaffOnly>],
           ["/badges/:id/edit", <StaffOnly><CreateBadge /></StaffOnly>],
-          ["/reviews", <StaffOnly><ReviewQueue /></StaffOnly>],
+          ["/reviews", <StaffOnly orReviewers><ReviewQueue /></StaffOnly>],
           ["/awards", <StaffOnly><Awards /></StaffOnly>],
           ["/courses/:id/progress", <StaffOnly><CourseProgress /></StaffOnly>],
           ["/me/progress", <MyProgress />],
           ["/me/credentials", <MyCredentials />],
           ["/me/credentials/:id", <CredentialDetail />],
           ["/me/keeping", <Keeping />],
+          ["/help", <Help />],
           ["/admin", <AdminHome />],
           ["/admin/institution", <InstitutionSettings />],
           ["/admin/policy", <AdminPolicy />],

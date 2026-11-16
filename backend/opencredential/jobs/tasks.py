@@ -33,11 +33,12 @@ from opencredential.db.models import (
     LtiLaunchState,
     LtiNonceUsed,
 )
-from opencredential.db.session import tenant_session
+from opencredential.db.session import app_engine, tenant_session
 from opencredential.eligibility import service as eligibility
 from opencredential.integrations.base import LmsError, LmsTransientError
 from opencredential.integrations.registry import get_adapter
 from opencredential.jobs import enqueue
+from opencredential.jobs import health as job_health
 from opencredential.jobs.defer import defer
 from opencredential.logging import get_logger
 from opencredential.settings import get_settings
@@ -284,6 +285,73 @@ async def recover_stalled_jobs(context: procrastinate.JobContext, timestamp: int
     if stalled:
         log.warning("jobs.stalled_requeued", count=len(stalled))
     return len(stalled)
+
+
+@blueprint.periodic(cron="47 1 * * *", periodic_id="check_course_ends")
+@blueprint.task(name="check_course_ends", queue="maintenance", queueing_lock="check_course_ends")
+def check_course_ends(timestamp: int) -> dict[str, int]:
+    """Once a day: notice courses that have ended in Canvas, and archive those that ended longer
+    ago than the institution keeps reading them (:mod:`opencredential.sync.lifecycle`). One
+    course that cannot be read does not stop the others; it is looked at again tomorrow."""
+    from opencredential.sync import lifecycle
+
+    counts = {"checked": 0, lifecycle.ENDED: 0, lifecycle.REOPENED: 0, lifecycle.ARCHIVED: 0}
+    for iid in _each_institution():
+        with tenant_session(iid) as db:
+            course_ids = [c.id for c in lifecycle.courses_to_check(db)]
+        for cid in course_ids:
+            adapter = None
+            try:
+                with tenant_session(iid) as db:
+                    course = db.get(Course, cid)
+                    if course is None:
+                        continue
+                    adapter = get_adapter(integration_for(db, course), course.canvas_course_id)
+                    change = lifecycle.check(db, course, adapter)
+            except LmsError as exc:  # no Canvas connection for this course yet
+                log.info("course_end.skipped", course_id=str(cid), code=exc.code)
+                continue
+            except Exception as exc:  # one course must not stop the rest; it is retried tomorrow
+                log.warning("course_end.failed", course_id=str(cid), error=type(exc).__name__)
+                continue
+            finally:
+                close = getattr(adapter, "close", None)
+                if callable(close):
+                    close()
+            counts["checked"] += 1
+            if change:
+                counts[change] += 1
+                log.info("course_end.changed", course_id=str(cid), change=change)
+    log.info("course_end.checked", **counts)
+    return counts
+
+
+ALERT_EVERY_MINUTES = 10
+#: The tick at which the once-a-day reminder goes out (08:00 UTC).
+ALERT_REMINDER_SECOND_OF_DAY = 8 * 3600
+
+
+@blueprint.periodic(cron=f"*/{ALERT_EVERY_MINUTES} * * * *", periodic_id="alert_failed_jobs")
+@blueprint.task(name="alert_failed_jobs", queue="maintenance", queueing_lock="alert_failed_jobs")
+def alert_failed_jobs(timestamp: int) -> int:
+    """Tell the configured chat channel about jobs that failed since the last tick, and once a
+    day about failed jobs still waiting. Does nothing unless ``OC_ALERT_WEBHOOK_URL`` is set.
+    Returns how many newly failed jobs it reported."""
+    settings = get_settings()
+    if not settings.alert_webhook_url:
+        return 0
+    until = datetime.fromtimestamp(timestamp, UTC)
+    since = until - timedelta(minutes=ALERT_EVERY_MINUTES)
+    with app_engine().connect() as conn:
+        state = job_health.snapshot(conn, since=since, until=until)
+    reminder = timestamp % 86400 == ALERT_REMINDER_SECOND_OF_DAY
+    message = job_health.alert_text(
+        state, site=settings.public_base_url, minutes=ALERT_EVERY_MINUTES, reminder=reminder
+    )
+    if message is None:
+        return 0
+    job_health.send_alert(settings.alert_webhook_url, message, settings.alert_webhook_format)
+    return state.failed_recent_count
 
 
 # ---- issuance and status (W4) -------------------------------------------------------------

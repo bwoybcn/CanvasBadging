@@ -54,6 +54,10 @@
       "short_description": "Plans, drafts and revises a short academic text using appropriate structure and referencing.",
       "learning_outcomes": ["Structure an academic argument", "Use a recognised referencing style consistently", "Revise writing in response to feedback"],
       "criteria_narrative": "Complete the Academic Writing Foundations module and submit a short academic essay.",
+      "skills": [
+        {"name": "Academic writing", "framework": "Demo University graduate attributes", "code": "GA-COM-1"},
+        {"name": "Referencing"}
+      ],
       "demonstration_kind": "completing",
       "achievement_type": "Badge",
       "award_policy": "automatic",

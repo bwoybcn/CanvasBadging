@@ -206,6 +206,23 @@ def can_review(
     return False
 
 
+def may_review_some(actor: Actor, policy: dict[str, Any]) -> bool:
+    """Whether this person can be the approver of *some* badge under the current policy.
+
+    The screens use it to offer the Review queue. It grants nothing: each badge is still checked
+    with :func:`can_review`. Kept next to that function so the two cannot drift apart again (a
+    person holding only the ``reviewer`` role was once refused the queue by the screens).
+    """
+    roles = set(policy.get("approver_roles") or ["dept_admin", "inst_admin"])
+    if actor.has("reviewer", "org_unit"):
+        return True
+    if "inst_admin" in roles and actor.is_inst_admin:
+        return True
+    if "dept_admin" in roles and actor.has("dept_admin"):
+        return True
+    return "lecturer" in roles and bool(actor.course_ids(COURSE_STAFF))
+
+
 def require_review(
     db: Session, actor: Actor, definition: AchievementDefinition, policy: dict[str, Any]
 ) -> None:

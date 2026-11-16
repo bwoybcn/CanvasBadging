@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Institution configuration (spec §10.1). */
-import { Alert, Button, Heading, TextArea, TextInput, View } from "@instructure/ui";
+import { Alert, Button, Heading, Text, TextArea, TextInput, View } from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -14,6 +14,9 @@ interface Config {
   name: string;
   description: string | null;
   website_url: string | null;
+  help_contact_name?: string | null;
+  help_email?: string | null;
+  help_url?: string | null;
   branding: { primary_colour?: string; secondary_colour?: string };
   verification_host: string | null;
   categories: string[];
@@ -40,6 +43,9 @@ function ConfigForm({ initial }: { initial: Config }) {
     name: initial.name,
     description: initial.description ?? "",
     website_url: initial.website_url ?? "",
+    help_contact_name: initial.help_contact_name ?? "",
+    help_email: initial.help_email ?? "",
+    help_url: initial.help_url ?? "",
     primary_colour: initial.branding.primary_colour ?? "",
     secondary_colour: initial.branding.secondary_colour ?? "",
     categories: initial.categories.join("\n"),
@@ -53,6 +59,9 @@ function ConfigForm({ initial }: { initial: Config }) {
         name: c.name,
         description: c.description || null,
         website_url: c.website_url || null,
+        help_contact_name: c.help_contact_name || null,
+        help_email: c.help_email || null,
+        help_url: c.help_url || null,
         branding: { primary_colour: c.primary_colour || null, secondary_colour: c.secondary_colour || null },
         categories: c.categories.split("\n").map((s) => s.trim()).filter(Boolean),
         linkedin_org_id: c.linkedin_org_id || null,
@@ -80,6 +89,16 @@ function ConfigForm({ initial }: { initial: Config }) {
         value={c.secondary_colour}
         onChange={(v) => setC((p) => ({ ...p, secondary_colour: v }))}
       />
+      <Heading level="h2" margin="medium 0 small">
+        Help for your users
+      </Heading>
+      <Text as="p">
+        Shown on the Help page that every screen links to, so staff and students know who to ask. All three are
+        optional.
+      </Text>
+      <TextInput maxLength={120} renderLabel="Who to contact (a team or a person)" value={c.help_contact_name} onChange={set("help_contact_name")} />
+      <TextInput maxLength={254} type="email" renderLabel="Help email address" value={c.help_email} onChange={set("help_email")} />
+      <TextInput maxLength={500} renderLabel="Your own help page (https://)" value={c.help_url} onChange={set("help_url")} />
       <Heading level="h2" margin="medium 0 small">
         Verification
       </Heading>

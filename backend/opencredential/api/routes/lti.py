@@ -176,10 +176,14 @@ def _complete(
                 request_id=getattr(request.state, "request_id", None),
             )
     except PermissionError as exc:
-        return _rejected(
-            request,
-            LaunchRejected(str(exc), "Your account cannot use Badges here.", 403),
+        message = (
+            "Your Badges data was erased at your request, so Badges is not available to you "
+            "here. Badges you already downloaded still work. If you want to use Badges again, "
+            "ask your institution's Badges administrator."
+            if str(exc) == "USER_ERASED"
+            else "Your account cannot use Badges here."
         )
+        return _rejected(request, LaunchRejected(str(exc), message, 403))
     token, _ = sessions.issue(
         settings,
         user_id=result.user_id,

@@ -28,6 +28,7 @@ from opencredential.db.models.awards import (
 from opencredential.db.models.identity import (
     CanvasAccount,
     Course,
+    ErasedIdentity,
     ExternalIdentity,
     Membership,
     OrgUnit,
@@ -70,6 +71,7 @@ __all__ = [
     "CredentialStatusEvent",
     "DefinitionReview",
     "EligibilityEvaluation",
+    "ErasedIdentity",
     "ExternalIdentity",
     "Institution",
     "Issuer",

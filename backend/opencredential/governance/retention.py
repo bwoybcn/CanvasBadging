@@ -3,8 +3,10 @@
 
 What is purged, per institution settings:
 
-* Canvas progress and submission snapshots for courses archived longer than
-  ``snapshot_days_after_course_end``.
+* Canvas progress and submission snapshots for courses that ended in Canvas longer ago than
+  ``snapshot_days_after_course_end`` (and are archived here: :mod:`opencredential.sync.lifecycle`
+  notices the end and archives the course ``sync_days_after_course_end`` later).
+* Submissions held for an assignment that no live badge rule uses any more, in any course.
 * Eligibility evaluations older than ``evaluation_days`` that no award relies on.
 * Failed background jobs older than ``failed_job_days``.
 * Audit events older than ``audit_event_years`` (minimum one year, enforced in the database).
@@ -19,7 +21,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
 from opencredential import audit
@@ -32,6 +34,7 @@ from opencredential.db.models import (
     LmsSubmission,
 )
 from opencredential.db.models.tenancy import DEFAULT_RETENTION
+from opencredential.sync import prune_unused_submissions
 
 
 def _n(result: Any) -> int:
@@ -53,15 +56,17 @@ def apply(
     counts: dict[str, int] = {}
 
     snapshot_cutoff = now - timedelta(days=int(r["snapshot_days_after_course_end"]))
-    ended = select(Course.id).where(
-        Course.status == "archived", Course.updated_at < snapshot_cutoff
-    )
+    # Counted from when the course ended in Canvas. Courses archived before that was recorded
+    # fall back to when they were archived or last changed.
+    ended_at = func.coalesce(Course.ended_at, Course.archived_at, Course.updated_at)
+    ended = select(Course.id).where(Course.status == "archived", ended_at < snapshot_cutoff)
     counts["module_progress"] = _n(
         db.execute(delete(LmsModuleProgress).where(LmsModuleProgress.course_id.in_(ended)))
     )
     counts["submissions"] = _n(
         db.execute(delete(LmsSubmission).where(LmsSubmission.course_id.in_(ended)))
     )
+    counts["unused_submissions"] = prune_unused_submissions(db)
 
     eval_cutoff = now - timedelta(days=int(r["evaluation_days"]))
     referenced = select(AwardDecision.evaluation_id).where(AwardDecision.evaluation_id.is_not(None))

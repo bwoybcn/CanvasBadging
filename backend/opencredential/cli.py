@@ -164,11 +164,27 @@ def worker(queue: list[str] = typer.Option(None, help="Queues to consume (defaul
 
 
 @app.command()
-def api(host: str = "0.0.0.0", port: int = 8000) -> None:  # noqa: S104
+def api(
+    host: str = "0.0.0.0",  # noqa: S104
+    port: int = 8000,
+    workers: int = typer.Option(
+        None, min=1, max=64, help="API processes to start (default: OC_API_WORKERS, or 1)"
+    ),
+) -> None:
     """Run the HTTP API with uvicorn."""
     import uvicorn
 
-    uvicorn.run("opencredential.main:app", host=host, port=port, proxy_headers=True)
+    from opencredential.settings import get_settings
+
+    settings = get_settings()
+    uvicorn.run(
+        "opencredential.main:app",
+        host=host,
+        port=port,
+        workers=workers or settings.api_workers,
+        proxy_headers=True,
+        forwarded_allow_ips=settings.forwarded_allow_ips,
+    )
 
 
 @app.command()

@@ -929,17 +929,39 @@ def publish(
         },
     )
     if definition.course_id is not None:
+        _queue_evaluation(db, actor, definition.course_id)
+    return version
+
+
+def _queue_evaluation(db: Session, actor: authz.Actor, course_id: uuid.UUID) -> None:
+    """Re-evaluate the course now that its live rules changed. Submissions are only held for
+    assignments a live rule uses, so if a rule now uses one that has not been read, a refresh
+    from Canvas is queued too (it evaluates again when it finishes)."""
+    from opencredential.sync import needs_submission_read
+
+    db.flush()
+    enqueue.defer(
+        db,
+        enqueue.EVALUATE_COURSE,
+        queue="eligibility",
+        institution_id=actor.institution_id,
+        args={"course_id": str(course_id), "triggered_by": "reeval"},
+        subject_type="course",
+        subject_id=course_id,
+        queueing_lock=f"evaluate_course:{course_id}",
+    )
+    course = db.get(Course, course_id)
+    if course is not None and course.status == "active" and needs_submission_read(db, course_id):
         enqueue.defer(
             db,
-            enqueue.EVALUATE_COURSE,
-            queue="eligibility",
+            enqueue.SYNC_COURSE,
+            queue="sync",
             institution_id=actor.institution_id,
-            args={"course_id": str(definition.course_id), "triggered_by": "reeval"},
+            args={"course_id": str(course_id), "kind": "hint"},
             subject_type="course",
-            subject_id=definition.course_id,
-            queueing_lock=f"evaluate_course:{definition.course_id}",
+            subject_id=course_id,
+            queueing_lock=f"sync:{course_id}",
         )
-    return version
 
 
 def archive(
@@ -1011,16 +1033,7 @@ def restore(
         data={"state": definition.state},
     )
     if definition.course_id is not None:
-        enqueue.defer(
-            db,
-            enqueue.EVALUATE_COURSE,
-            queue="eligibility",
-            institution_id=actor.institution_id,
-            args={"course_id": str(definition.course_id), "triggered_by": "reeval"},
-            subject_type="course",
-            subject_id=definition.course_id,
-            queueing_lock=f"evaluate_course:{definition.course_id}",
-        )
+        _queue_evaluation(db, actor, definition.course_id)
 
 
 def discard_new_version(

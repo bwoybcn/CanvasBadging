@@ -60,6 +60,10 @@ class InstitutionIn(BaseModel):
     name: str | None = Field(default=None, max_length=200)
     description: str | None = Field(default=None, max_length=4000)
     website_url: str | None = Field(default=None, max_length=500)
+    #: Who people ask for help with badges; shown on the Help page. All optional.
+    help_contact_name: str | None = Field(default=None, max_length=120)
+    help_email: str | None = Field(default=None, max_length=254)
+    help_url: str | None = Field(default=None, max_length=500)
     logo_asset_id: uuid.UUID | None = None
     branding: Branding | None = None
     #: Read-only here: only the operator sets it (``oc admin set-verification-host``). Sending the
@@ -101,6 +105,7 @@ def setup_checklist(db: TenantDb, actor: ActorDep, settings: SettingsDep) -> dic
 
 class RetentionIn(BaseModel):
     snapshot_days_after_course_end: int | None = None
+    sync_days_after_course_end: int | None = None
     evaluation_days: int | None = None
     failed_job_days: int | None = None
     audit_event_years: int | None = None

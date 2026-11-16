@@ -8,6 +8,10 @@ run repeatedly (idempotent upserts keyed by Canvas ids).
 * Partial failure: a learner whose progress cannot be read is listed in the run's
   ``error.failed`` map; the snapshot loader turns that into ``DATA_UNAVAILABLE`` (``unknown``)
   for that learner only.
+* Data minimisation: submissions and marks are read and kept only for assignments that a live
+  badge rule uses. The list of assignments (names and points, no student data) is still kept
+  whole, because the badge editor offers it. A mark that Canvas has not released to the student
+  is never stored. Submissions held for an assignment no rule uses any more are deleted.
 * Source changes: a module or assignment used by a *live* badge that disappears, loses its
   completion requirements or changes points possible flags the rule (``source_status``) and is
   audited. Affected rules evaluate to ``unknown`` until a lecturer reviews the badge, so
@@ -21,7 +25,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from opencredential import audit
@@ -89,6 +93,79 @@ CANVAS_DATA_RULES = frozenset(
 )
 
 
+#: Rule types that read a student's submission or mark for one assignment.
+SUBMISSION_RULES = frozenset({"assignment_submitted", "assignment_score"})
+
+
+def used_assignment_ids(rules: list[AwardRule]) -> set[str]:
+    """Canvas assignments whose submissions a rule in ``rules`` reads."""
+    return {
+        str(r.params["assignment_id"])
+        for r in rules
+        if r.type in SUBMISSION_RULES and r.params.get("assignment_id")
+    }
+
+
+def needs_submission_read(db: Session, course_id: uuid.UUID) -> bool:
+    """Whether a live rule uses an assignment whose submissions have not been read yet (a badge
+    was just published or restored). The caller queues a refresh so students are not left
+    waiting for the next scheduled one."""
+    used = used_assignment_ids(_live_rules_for(db, course_id))
+    if not used:
+        return False
+    read = set(
+        db.scalars(
+            select(LmsAssignment.canvas_assignment_id).where(
+                LmsAssignment.course_id == course_id, LmsAssignment.submissions_synced.is_(True)
+            )
+        )
+    )
+    return bool(used - read)
+
+
+def prune_unused_submissions(db: Session) -> int:
+    """Delete stored submissions for assignments that no live badge rule uses, in every course
+    of the current institution. A sync does the same for its own course; this catches courses
+    that are no longer read at all (their last badge was archived, or badges were switched off).
+    Returns the number of rows removed."""
+    in_use = (
+        select(AwardRule.id)
+        .join(AwardRuleSet, AwardRuleSet.id == AwardRule.rule_set_id)
+        .join(
+            AchievementDefinition,
+            AchievementDefinition.current_version_id == AwardRuleSet.version_id,
+        )
+        .where(
+            AchievementDefinition.state != "archived",
+            AwardRule.type.in_(SUBMISSION_RULES),
+        )
+    )
+    removed = db.execute(
+        delete(LmsSubmission).where(
+            ~in_use.where(
+                AchievementDefinition.course_id == LmsSubmission.course_id,
+                AwardRule.params["assignment_id"].astext == LmsSubmission.canvas_assignment_id,
+            )
+            .correlate(LmsSubmission)
+            .exists()
+        )
+    )
+    db.execute(
+        update(LmsAssignment)
+        .where(
+            LmsAssignment.submissions_synced.is_(True),
+            ~in_use.where(
+                AchievementDefinition.course_id == LmsAssignment.course_id,
+                AwardRule.params["assignment_id"].astext == LmsAssignment.canvas_assignment_id,
+            )
+            .correlate(LmsAssignment)
+            .exists(),
+        )
+        .values(submissions_synced=False)
+    )
+    return int(getattr(removed, "rowcount", 0) or 0)
+
+
 def needs_canvas_data(db: Session, course: Course) -> bool:
     """Whether any live badge in ``course`` has a rule that reads Canvas progress. Courses whose
     badges are only awarded by staff (manual awards, list awards, staff approval), such as many
@@ -97,6 +174,10 @@ def needs_canvas_data(db: Session, course: Course) -> bool:
 
 
 def _live_rules(db: Session, course: Course) -> list[AwardRule]:
+    return _live_rules_for(db, course.id)
+
+
+def _live_rules_for(db: Session, course_id: uuid.UUID) -> list[AwardRule]:
     return list(
         db.scalars(
             select(AwardRule)
@@ -106,7 +187,7 @@ def _live_rules(db: Session, course: Course) -> list[AwardRule]:
                 AchievementDefinition.current_version_id == AwardRuleSet.version_id,
             )
             .where(
-                AchievementDefinition.course_id == course.id,
+                AchievementDefinition.course_id == course_id,
                 AchievementDefinition.state != "archived",
             )
         )
@@ -158,6 +239,8 @@ def sync_course(
     }
     changes: list[tuple[AwardRule, str, str]] = []
     live = _live_rules(db, course)
+    #: Only these assignments have their submissions read and kept.
+    used = used_assignment_ids(live)
 
     def rules_using(kind_: str, ref_id: str) -> list[AwardRule]:
         out = []
@@ -217,6 +300,7 @@ def sync_course(
                     points_possible=arec.points_possible,
                     published=arec.published,
                     deleted=False,
+                    submissions_synced=aid in used,
                     fetched_at=now,
                 )
             )
@@ -238,7 +322,10 @@ def sync_course(
             False,
             now,
         )
+        a.submissions_synced = aid in used
     for aid, a in old_assignments.items():
+        if aid not in assignments:
+            a.submissions_synced = False
         if aid not in assignments and not a.deleted:
             a.deleted, a.fetched_at = True, now
             for r in rules_using("assignment", aid):
@@ -293,8 +380,13 @@ def sync_course(
         (s.user_id, s.canvas_assignment_id): s
         for s in db.scalars(select(LmsSubmission).where(LmsSubmission.course_id == course.id))
     }
+    # Submissions nobody's badge depends on are not kept (and the ones below are not fetched).
+    for key in [k for k in sub_rows if k[1] not in used]:
+        db.delete(sub_rows.pop(key))
+    wanted = sorted(aid for aid in assignments if aid in used)
     try:
-        subs = adapter.list_submissions(ref, list(assignments), list(by_lms)) if by_lms else []
+        # An empty list would mean "every assignment" to Canvas, so do not ask at all.
+        subs = adapter.list_submissions(ref, wanted, list(by_lms)) if by_lms and wanted else []
     except LmsTransientError:
         raise
     except LmsError as exc:
@@ -304,12 +396,14 @@ def sync_course(
             failed.setdefault(str(uid), []).append("submissions")
     for srec in subs:
         suid = by_lms.get(srec.lms_user_id)
-        if suid is None:
+        if suid is None or srec.assignment_id not in used:
             continue
         values = {
             "workflow_state": srec.workflow_state,
             "submitted_at": srec.submitted_at,
-            "score": srec.score,
+            # A mark the student cannot see yet is not theirs to hold here: only that one
+            # exists (``workflow_state``) is kept, so the rule can say "awaiting release".
+            "score": srec.score if srec.posted_at is not None else None,
             "excused": srec.excused,
             "posted_at": srec.posted_at,
             "grade_matches_current_submission": srec.grade_matches_current_submission,

@@ -13,17 +13,65 @@ pre-production review before go-live.
 | Component | Image or command | Reachable from | Notes |
 |---|---|---|---|
 | Reverse proxy | any (Caddy, nginx, an ingress) | Internet | TLS, rate limiting, routes everything to `api` |
-| `api` | `docker/api.Dockerfile`, `oc api` | proxy only | FastAPI. Also serves the SPA (`OC_STATIC_DIR`), the public verification pages, DID documents and status lists. Stateless; run two or more. |
+| `api` | `docker/api.Dockerfile`, `oc api` | proxy only | FastAPI. Also serves the SPA (`OC_STATIC_DIR`), the public verification pages, DID documents and status lists. Stateless; run several processes (`OC_API_WORKERS`) or two or more replicas. |
 | `worker` | same image, `oc worker` | nothing inbound | Canvas sync, evaluation, issuance, status lists, retention. One or more. |
 | `signer` | `docker/signer.Dockerfile` | `api` and `worker` only | The only process that holds `SIGNER_KEK` and decrypts keys. Port 8790. |
 | PostgreSQL 16+ | managed or self-run | services only | Holds everything, including the job queue. There is no Redis. |
 | Artwork store | a volume at `OC_STORAGE_DIR` | `api` | Shared between API replicas (NFS, or one replica) |
+
+## Quick start: the production kit
+
+`docker/compose.production.yaml` is the whole stack for one host: an nginx proxy (TLS, rate
+limits), the api, the worker, the signer and PostgreSQL. CI builds it, starts it in production
+mode and checks it on every change (`scripts/smoke-production.sh`), so what is described here
+is what runs. Sections 1 to 13 below explain each part and what to change if you run the pieces
+another way (Kubernetes, a managed database, your own proxy).
+
+You need a Linux host with Docker and the Compose plugin, a DNS name pointing at it, and a TLS
+certificate for that name.
+
+1. **Get the release.** Clone the repository at the release you want
+   (`git clone --branch v1.0.0 https://github.com/bwoybcn/CanvasBadging.git`). The images for
+   each release are on the GitHub container registry; the Releases page lists them.
+2. **Fill in the settings.**
+   `cp docker/production.env.example docker/production.env && chmod 600 docker/production.env`,
+   then give every empty line a value. The file says how to generate each secret. Compose
+   refuses to start while one is missing, and the services refuse development values.
+   Store a copy of `SIGNER_KEK` offline now: without it the signing keys cannot be recovered.
+3. **Put the certificate in place.** Copy the certificate chain and its key to
+   `docker/certs/fullchain.pem` and `docker/certs/privkey.pem` (or point `OC_TLS_DIR` at the
+   folder that holds them). Reload the proxy after renewing:
+   `docker compose -f docker/compose.production.yaml --env-file docker/production.env exec proxy nginx -s reload`.
+4. **Start it.**
+   `docker compose -f docker/compose.production.yaml --env-file docker/production.env up -d`.
+   The first start creates the database roles, applies the migrations and creates the LTI key.
+5. **Check it.** `https://<host>/readyz` answers `{"status":"ok", …}`, `https://<host>/healthz/jobs`
+   answers `ok` once the worker has started, and `POST https://<host>/dev/login` answers 404.
+6. **Carry on with** section 2 (register the tool in Canvas and make the first
+   administrator), section 3 (what OpenCredential may read from Canvas), section 6 (the
+   institution's signing key), section 7 (backups), section 9 (monitoring: point your
+   monitoring tool at `/healthz/jobs`, and set `OC_ALERT_WEBHOOK_URL`) and the
+   [pre-production review](../security/security-guide.md).
+
+To run a command inside the stack, for example the ones in sections 2 and 3:
+`docker compose -f docker/compose.production.yaml --env-file docker/production.env exec api oc <command>`.
+
+To upgrade: read the changelog, take a backup, set the new `OC_VERSION` in
+`docker/production.env`, check out the matching tag, and run the `up -d` command again. It
+applies new migrations before the services restart.
 
 ## 1. Environment configuration
 
 Settings come from environment variables (backend prefix `OC_`). With `OC_ENV=production` the
 services refuse committed development secrets and short secrets, and the development sign-in is
 removed.
+
+`OC_ENV` must be set on **all three** services: api, worker and signer. None of them starts
+without it, and none accepts a value other than `development`, `test` or `production` (so
+`prod` or `Production` stops the service with a message, instead of quietly running in
+development mode with secrets anyone can read in the repository). In production the api and
+the worker also refuse to start, and the signer refuses to sign, while any active signing key
+was created in development or is wrapped with the committed development key-encryption key.
 
 | Variable | Example | Required |
 |---|---|---|
@@ -42,6 +90,11 @@ removed.
 | `OC_SESSION_TTL_MINUTES` | `30` (5 to 240): how long a session lasts without activity | no |
 | `OC_SESSION_MAX_MINUTES` | `480` (5 to 1440): how long after the Canvas launch an active session can keep being renewed. At or below the value above, sessions are never renewed. | no |
 | `OC_SYNC_MIN_INTERVAL_SECONDS` | `300` (how often a course can be refreshed on demand) | no |
+| `OC_API_WORKERS` | `4`: API processes `oc api` starts (default 1). About one for each spare CPU core. | no |
+| `OC_FORWARDED_ALLOW_IPS` | the proxy's address or network, or `*` when nothing but the proxy can reach the api (default `127.0.0.1`). Whose `X-Forwarded-For` and `X-Forwarded-Proto` are believed. | yes, behind a proxy on another host or container |
+| `OC_RATE_LIMIT_VERIFY_PER_MINUTE` | `60`: checks of a badge one client address may make a minute without signing in. `0` switches it off. | no |
+| `OC_RATE_LIMIT_SIGNIN_PER_MINUTE` | `600`: LTI login and launch steps one client address may make a minute. A whole campus can share an address, so keep it generous. | no |
+| `OC_ALERT_WEBHOOK_URL` / `OC_ALERT_WEBHOOK_FORMAT` | a chat channel webhook told when background jobs fail; `text` (Slack-style) or `teams` (a Microsoft Teams workflow) | no |
 | `OC_CANVAS_TIMEOUT_SECONDS` / `OC_CANVAS_MAX_RETRIES` | `20` / `4` | no |
 
 Signer: `OC_ENV`, `SIGNER_DATABASE_URL` (as `oc_signer`), `SIGNER_KEK` (32 bytes, base64),
@@ -99,13 +152,19 @@ use `oc_app` and `oc_signer`, which cannot bypass row-level security.
   it, it can never change. (For Liverpool this decision is still open.)
 * Terminate TLS at the proxy, forward `X-Forwarded-Proto: https`, and route all paths to `api`.
   Canvas loads the tool in an iframe, so do not send `X-Frame-Options: DENY`.
-* Add the rate limiting from the [security guide](../security/security-guide.md#network).
+* Limit requests at the proxy, as in the [security guide](../security/security-guide.md#network).
+  The kit's proxy (`docker/nginx/production.conf.template`) does. The app also has a basic
+  limit of its own on the public checker and the sign-in steps, as a second line.
+* Tell the api which proxy to believe: set `OC_FORWARDED_ALLOW_IPS` to the proxy's address. If
+  it is left at its default while the proxy runs on another host or container, every visitor
+  looks like the proxy: they share one rate-limit allowance and HSTS is not sent.
 
 ## 6. Signing-key provisioning
 
 1. Generate `SIGNER_KEK` (`openssl rand -base64 32`). Store it in your secrets manager, and
    keep an offline copy under the same controls as a root CA key.
-2. Start the signer with it. The signer refuses the development KEK when `OC_ENV=production`.
+2. Start the signer with it. The signer refuses the development KEK when `OC_ENV=production`,
+   and refuses to start at all when `OC_ENV` is missing or misspelt.
 3. In Administration, Issuers, create the institution's issuer and **authorise** it with the
    basis of its authority. The signer then generates an Ed25519 key, stores it encrypted, and
    publishes `did:web:<verification domain>:issuers:<slug>`.
@@ -134,8 +193,9 @@ on every pull request.
 | Check | Endpoint or source | Alert when |
 |---|---|---|
 | Liveness | `GET /healthz` (api), `GET /healthz` (signer) | not 200 |
-| Readiness | `GET /readyz` checks the database, the schema revision and the signer | 503 for more than 2 minutes |
-| Failed jobs | Administration, Failed issuance; or `jobs.procrastinate_jobs` with `status = 'failed'` | any new failure |
+| Readiness | `GET /readyz` checks the database, the schema revision and the signer. Point the load balancer here, not at `/healthz/jobs`. | 503 for more than 2 minutes |
+| Background work | `GET /healthz/jobs`: 200 while a worker is running and no job has failed in the last 24 hours, otherwise 503 with the reason (counts only, no personal data) | 503 |
+| Failed jobs, pushed to you | set `OC_ALERT_WEBHOOK_URL`: the worker posts to that chat channel within ten minutes of a job failing, and once a day (08:00 UTC) while failed jobs are still waiting. Deal with them in Administration, Reconciliation. | any message |
 | Awards not issued | Administration, Reconciliation | any entry older than an hour |
 | Status-list freshness | the `published_at` of each status list | older than 2 hours (the hourly job has stopped) |
 | Canvas sync | `sync_runs` with status `failed`, or the course progress page | repeated failures for a course |
@@ -188,6 +248,7 @@ See the incident table in
 
 ## Sizing (starting point)
 
-For about 30,000 learners: two `api` replicas (1 vCPU, 1 GB each), one `worker` (1 vCPU, 1 GB),
+For about 30,000 learners: two `api` replicas (1 vCPU, 1 GB each) or one with `OC_API_WORKERS=4`
+(the kit's default), one `worker` (1 vCPU, 1 GB),
 one `signer` (0.5 vCPU, 256 MB), and PostgreSQL with 2 vCPU, 4 GB and 50 GB of storage. Canvas's
 API rate limit, not OpenCredential, is usually what limits how fast it can sync.

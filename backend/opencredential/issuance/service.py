@@ -89,23 +89,35 @@ def _versions_url(base: str, version: AchievementVersion) -> str:
     return f"{base}/achievements/{version.id}"
 
 
-def _alignments(version: AchievementVersion) -> tuple[dict[str, str], ...]:
+def alignments(version: AchievementVersion, achievement_url: str) -> tuple[dict[str, str], ...]:
+    """The badge's skills as Open Badges ``Alignment`` entries.
+
+    Authors type a skill as ``{name, framework, code, url}`` (``authoring.Skill``). An alignment
+    must carry a ``targetUrl``; a skill the author gave no link for points at this badge's own
+    published definition (``…#skill-N``, like ``#criteria``), which lists the same skills. Skills
+    used to be dropped here unless they had a link, and the screens offered no way to give one,
+    so no issued badge carried its skills.
+    """
     out = []
-    for skill in version.skills or []:
+    for n, skill in enumerate(version.skills or [], start=1):
         name = skill.get("targetName") or skill.get("name")
-        url = skill.get("targetUrl") or skill.get("url")
-        if name and url:
-            out.append(
-                {
-                    "targetName": str(name),
-                    "targetUrl": str(url),
-                    **{
-                        k: str(skill[k])
-                        for k in ("targetDescription", "targetFramework", "targetCode")
-                        if skill.get(k)
-                    },
-                }
-            )
+        if not name or not str(name).strip():
+            continue
+        entry = {
+            "targetName": str(name).strip(),
+            "targetUrl": str(
+                skill.get("targetUrl") or skill.get("url") or f"{achievement_url}#skill-{n}"
+            ),
+        }
+        for key, authored in (
+            ("targetDescription", "description"),
+            ("targetFramework", "framework"),
+            ("targetCode", "code"),
+        ):
+            value = skill.get(key) or skill.get(authored)
+            if value:
+                entry[key] = str(value)
+        out.append(entry)
     return tuple(out)
 
 
@@ -162,7 +174,7 @@ def unsigned_credential(db: Session, cred: Credential, settings: Settings) -> di
                 image_url=image_url,
                 image_caption=caption,
                 tags=(version.category,) if version.category else (),
-                alignments=_alignments(version),
+                alignments=alignments(version, achievement_url),
             ),
             valid_from=cred.valid_from,
             valid_until=cred.valid_until,

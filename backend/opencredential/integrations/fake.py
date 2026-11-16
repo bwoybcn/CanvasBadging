@@ -16,6 +16,7 @@ from typing import Any
 from opencredential.integrations.base import (
     AccountRecord,
     AssignmentRecord,
+    CourseStateRecord,
     LmsError,
     LmsNotFound,
     ModuleProgressRecord,
@@ -45,6 +46,8 @@ class FakeLmsAdapter:
         #: The account tree (sub-account linking) and which account each course sits in.
         self.accounts: list[AccountRecord] = []
         self.course_accounts: dict[str, str] = {}
+        #: Courses that have ended in the LMS. A course not listed here is still running.
+        self.course_states: dict[str, CourseStateRecord] = {}
 
     # -- test helpers ---------------------------------------------------------------------
     def course(self, ref: str) -> FakeCourse:
@@ -102,6 +105,10 @@ class FakeLmsAdapter:
     def course_account(self, course_ref: str) -> str | None:
         self._fail("course_account")
         return self.course_accounts.get(course_ref)
+
+    def course_state(self, course_ref: str) -> CourseStateRecord:
+        self._fail("course_state")
+        return self.course_states.get(course_ref, CourseStateRecord(concluded=False))
 
     def list_modules(self, course_ref: str) -> Sequence[ModuleRecord]:
         self._fail("modules")

@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "dev": "tsc -p tsconfig.build.json && node dist/server.js",
+    "dev": "tsc -p tsconfig.build.json && node --env-file-if-exists=../backend/.env dist/server.js",
     "lint": "eslint . && tsc --noEmit",
     "test": "vitest run"
   },

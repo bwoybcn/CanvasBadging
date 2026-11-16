@@ -55,6 +55,12 @@ review by area**, **Badge templates**) and the records.
 
 Name, description, website, brand colours, achievement categories and LinkedIn organisation.
 Brand colours are chosen from a colour swatch, or pasted as a code such as #212b58.
+
+**Help for your users** names who staff and students should ask about badges: a team or
+person, an email address and a help page of your own. All three are optional. Every screen has
+a **Help** link in its menu; the Help page shows this contact, links to the guides and answers
+the most common questions. Until a contact is set, the page tells people to ask the team that
+supports Canvas.
 The settings page also shows the **public verification domain**, read-only. The verification
 domain is where issuers' `did:web` documents and revocation lists are published (ADR-0004).
 
@@ -255,9 +261,23 @@ See [erasure.md](erasure.md) for how erasure interacts with credentials.
 
 - **Download** everything held about a person as JSON (students can download their own from
   `GET /api/v1/learners/me/data-export`).
-- **Erase** a person's personal data (type `ERASE` to confirm).
-- **Retention**: Canvas snapshots after a course is archived, eligibility history not used by
-  an award, failed jobs and audit events. Applied nightly and on demand.
+- **Erase** a person's personal data (type `ERASE` to confirm). Canvas does not bring an
+  erased person back while they are still enrolled; the operator can let them return on request
+  (`oc admin readmit`, see [erasure.md](erasure.md)).
+- **Retention**: how long an ended course is still read from Canvas, how long students'
+  Canvas progress and submissions are kept after a course ends, eligibility history not used
+  by an award, failed jobs and audit events. Applied nightly and on demand.
+- **What is read from Canvas.** Module progress for the course, and submissions and released
+  marks only for the assignments that a published badge uses. A mark that has not been released
+  to the student is never stored. When the last badge using an assignment is archived, the
+  submissions held for it are deleted at the next refresh, or that night.
+- **When a course ends.** Once a day each course is checked against Canvas. A course that is
+  concluded there, or past the end date of the course or its term, is marked as ended. It is
+  still read for 60 days (your setting), so marks released late still count. Then it is
+  archived: it is no longer read and nothing more is awarded from Canvas activity. Badges
+  already issued are not affected. A year after the course ended (your setting), the progress
+  and submissions held for it are deleted. If a course is opened again in Canvas, course staff
+  can switch badges back on when they open Badges from that course.
 
 ## 11. Failed issuance
 

@@ -34,6 +34,7 @@ to the full walk-through in about five minutes.
 |---|---|
 | Demonstration environment | [demo.md](demo.md) |
 | Local development without Docker | [development/local-setup.md](development/local-setup.md) |
+| Publishing a release | [development/releasing.md](development/releasing.md) |
 | API guide | [api/README.md](api/README.md) |
 | API reference (OpenAPI snapshot) | [api/openapi.json](api/openapi.json) |
 | Architecture overview | [architecture/architecture.md](architecture/architecture.md) |

@@ -259,11 +259,15 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
 
     skills = ""
     if view["skills"]:
+
+        def _framework(s: dict[str, Any]) -> str:
+            return f" ({escape(s['framework'])})" if s.get("framework") else ""
+
         items = "".join(
             f'<li><a href="{escape(s["url"], quote=True)}" rel="nofollow noopener">'
-            f"{escape(s['name'] or s['url'])}</a></li>"
-            if s.get("url", "").startswith("https://")
-            else f"<li>{escape(s['name'] or '')}</li>"
+            f"{escape(s['name'] or s['url'])}</a>{_framework(s)}</li>"
+            if (s.get("url") or "").startswith("https://")
+            else f"<li>{escape(s['name'] or '')}{_framework(s)}</li>"
             for s in view["skills"]
         )
         skills = f'<section class="card"><h2>Skills</h2><ul>{items}</ul></section>'

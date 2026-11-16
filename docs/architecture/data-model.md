@@ -43,7 +43,8 @@ memberships             id, institution_id, user_id, scope_type (institution|org
                         source (lti|nrps|grant), granted_by?, expires_at?, revoked_at?
                         unique (user_id, scope_type, scope_id, role) where revoked_at is null
 courses                 id, institution_id, canvas_integration_id, canvas_course_id, lti_context_id, title, course_code,
-                        org_unit_id?, activated_at?, activated_by?, status
+                        org_unit_id?, activated_at?, activated_by?, status (inactive|active|archived),
+                        ended_at? (ended in Canvas), archived_at? (no longer read; sync/lifecycle.py)
                         unique (canvas_integration_id, canvas_course_id)
 ```
 
@@ -90,9 +91,11 @@ lms_modules             id, institution_id, course_id, canvas_module_id, name, r
                         workflow_state, fetched_at
 lms_module_progress     id, institution_id, course_id, user_id, canvas_module_id, state, completed_at?, fetched_at,
                         unique (course_id, user_id, canvas_module_id)
-lms_assignments         id, institution_id, course_id, canvas_assignment_id, name, points_possible, published, deleted, fetched_at
+lms_assignments         id, institution_id, course_id, canvas_assignment_id, name, points_possible, published, deleted,
+                        submissions_synced bool (true only while a live rule uses the assignment), fetched_at
 lms_submissions         id, institution_id, course_id, user_id, canvas_assignment_id, workflow_state, submitted_at?,
-                        score?, excused, posted_at?, grade_matches_current_submission, missing, late, fetched_at
+                        score? (released marks only), excused, posted_at?, grade_matches_current_submission, missing,
+                        late, fetched_at; rows exist only for assignments with submissions_synced
 sync_runs               id, institution_id, course_id, kind (initial|scheduled|on_demand|hint), started_at, finished_at?,
                         status (ok|partial|failed), error jsonb
 ```
@@ -159,7 +162,7 @@ background_jobs         view over procrastinate tables + app columns (kind, subj
 - **Account deletion / erasure:** null `users` PII columns, delete external identities and snapshots, keep `credentials` rows (signed JSON contains only the salted hash, no name/email by default) so verification still works; withdraw all share grants. Documented in `docs/security/erasure.md` (W7).
 - **Unshare** deletes nothing: sets `share_grants.revoked_at`.
 - **Revoke** changes status only.
-- Retention jobs purge: launch state (10 min), snapshots for inactive courses (policy, default 1 year after course end), audit events (policy, default 7 years), failed jobs (90 days).
+- Retention jobs purge: launch state (10 min), snapshots of courses that ended in Canvas (policy, default 1 year after the course ended; the course is archived 60 days after it ended, see `sync/lifecycle.py`), submissions for assignments no live rule uses, audit events (policy, default 7 years), failed jobs (90 days).
 
 ## Implementation notes (W2)
 

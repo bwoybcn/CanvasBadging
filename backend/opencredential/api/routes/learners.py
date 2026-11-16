@@ -4,17 +4,19 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 
 from opencredential.api.deps import ClaimsDep, TenantDb
 from opencredential.api.errors import ApiError
 from opencredential.authz import policy
 from opencredential.db.models import Course, Institution, Membership, User
 from opencredential.eligibility import progress
+from opencredential.sync import lifecycle
 
 router = APIRouter(prefix="/api/v1/learners", tags=["learners"])
 
@@ -44,6 +46,17 @@ class LaunchCourseOut(BaseModel):
     roles: list[str]
     #: ``lecturer`` view for course staff, ``student`` view otherwise (spec §4.1).
     view: str
+    #: When the course ended in Canvas, if it has, and when it stops (or stopped) being read.
+    ended_at: datetime | None = None
+    read_until: datetime | None = None
+
+
+class HelpOut(BaseModel):
+    """Who to ask for help with badges here, as set by an institution administrator."""
+
+    contact_name: str | None = None
+    email: str | None = None
+    url: str | None = None
 
 
 class MeOut(BaseModel):
@@ -59,6 +72,10 @@ class MeOut(BaseModel):
     canvas_admin_without_access: bool = False
     #: Who to ask for that access (institution administrators' names), only in that case.
     institution_admins: list[str] = []
+    #: Whether to offer the Review queue: this person can be the approver of some badge under
+    #: the institution's policy. Decided here so the screens keep no role list of their own.
+    may_review: bool = False
+    help: HelpOut = HelpOut()
 
 
 @router.get("/me", response_model=MeOut)
@@ -68,8 +85,14 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
     if user is None or institution is None or user.status != "active":
         raise ApiError(401, "SESSION_INVALID", "Your account is no longer active")
     rows = db.scalars(
-        select(Membership).where(Membership.user_id == user.id, Membership.revoked_at.is_(None))
+        select(Membership).where(
+            Membership.user_id == user.id,
+            Membership.revoked_at.is_(None),
+            # The same rule as ``policy.load_actor``: a role past its end date is not held.
+            or_(Membership.expires_at.is_(None), Membership.expires_at > func.now()),
+        )
     ).all()
+    actor = policy.load_actor(db, user.id, institution.id)
     course_ids = [m.scope_id for m in rows if m.scope_type == "course"]
     course_names = {
         c.id: c.title for c in db.scalars(select(Course).where(Course.id.in_(course_ids)))
@@ -104,6 +127,8 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
                 status=course.status,
                 roles=roles,
                 view="lecturer" if set(roles) & policy.COURSE_STAFF else "student",
+                ended_at=course.ended_at,
+                read_until=lifecycle.read_until(db, course),
             )
     canvas_admin_without_access = claims.platform_admin and not any(
         m.role == "inst_admin" for m in rows
@@ -139,6 +164,12 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
         ),
         memberships=memberships,
         session_method=claims.method,
+        help=HelpOut(
+            contact_name=institution.help_contact_name,
+            email=institution.help_email,
+            url=institution.help_url,
+        ),
+        may_review=policy.may_review_some(actor, policy.institution_policy(db, institution.id)),
     )
 
 

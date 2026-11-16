@@ -7,7 +7,10 @@ const config = loadConfig();
 const store = new PgKeyStore(config.databaseUrl);
 
 if (config.env === "production" && (await store.devKeysPresent())) {
-  console.error("Refusing to start in production: development keys are present in keys.private_keys");
+  console.error(
+    "Refusing to start in production: keys.private_keys holds development keys, or keys wrapped with the " +
+      "committed development KEK. Retire and destroy them, then create new keys under your own SIGNER_KEK.",
+  );
   process.exit(1);
 }
 

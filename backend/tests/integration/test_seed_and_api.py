@@ -8,10 +8,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select, text
 
 from opencredential import seed
-from opencredential.api.app import StartupRefused, check_production_safety, create_app
+from opencredential.api.app import create_app
 from opencredential.db import models as m
 from opencredential.db.session import owner_session, tenant_session
 from opencredential.settings import Settings, get_settings
+from opencredential.startup import StartupRefused, check_production_safety
 
 pytestmark = pytest.mark.db
 
@@ -164,6 +165,30 @@ def test_production_refuses_active_dev_key(seeded: seed.SeedResult) -> None:
     )
     with pytest.raises(StartupRefused):
         check_production_safety(prod)
+
+
+def test_production_refuses_keys_wrapped_with_the_development_kek(
+    seeded: seed.SeedResult,
+    owner_conn,  # type: ignore[no-untyped-def]
+) -> None:
+    """A signer that ran without its own SIGNER_KEK wraps keys with the committed development
+    key, whatever they are marked as. The first guard only reads the mark."""
+
+    def answer(fn: str) -> bool:
+        return bool(owner_conn.execute(f"select app.{fn}()").fetchone()[0])
+
+    try:
+        owner_conn.execute("UPDATE app.issuer_keys SET is_dev = false")
+        owner_conn.execute("UPDATE keys.private_keys SET is_dev = false")
+        assert answer("dev_keys_active") is False  # nothing is marked as a development key
+        assert answer("dev_wrapped_keys_active") is True  # but the test signer has no KEK
+        owner_conn.execute("UPDATE keys.private_keys SET kek_ref = 'env:SIGNER_KEK'")
+        assert answer("dev_wrapped_keys_active") is False
+    finally:
+        owner_conn.rollback()
+    # As seeded, both guards see development keys, and production refuses to start.
+    with owner_session() as db:
+        assert db.execute(text("select app.dev_wrapped_keys_active()")).scalar() is True
 
 
 def test_seed_refuses_production() -> None:

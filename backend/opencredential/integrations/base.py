@@ -88,6 +88,23 @@ class AccountRecord:
     parent_id: str | None
 
 
+@dataclass(frozen=True)
+class CourseStateRecord:
+    """Whether a course has ended in the LMS (Canvas: concluded, or its term has ended)."""
+
+    concluded: bool
+    #: The end date the LMS holds for the course or its term, when there is one and it has
+    #: passed. ``None`` when the LMS gives no date (a course concluded by hand).
+    ended_at: datetime | None = None
+
+
+@runtime_checkable
+class CourseLifecycle(Protocol):
+    """Optional adapter capability: tell whether a course has ended."""
+
+    def course_state(self, course_ref: str) -> CourseStateRecord: ...
+
+
 @runtime_checkable
 class AccountDirectory(Protocol):
     """Optional adapter capability: read the LMS account tree and where a course sits in it."""
