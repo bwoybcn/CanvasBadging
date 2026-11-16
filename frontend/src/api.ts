@@ -20,7 +20,11 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, token: string | null, init: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(
+  path: string,
+  token: string | null,
+  init: RequestInit = {},
+): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
   if (init.body) headers.set("content-type", "application/json");
@@ -28,7 +32,11 @@ export async function apiFetch<T>(path: string, token: string | null, init: Requ
   if (bearer) headers.set("authorization", `Bearer ${bearer}`);
   const res = await fetch(path, { ...init, headers });
   if (!res.ok) {
-    let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
+    let problem: Problem = {
+      status: res.status,
+      code: "HTTP_ERROR",
+      title: res.statusText,
+    };
     try {
       problem = await res.json();
     } catch {
@@ -49,7 +57,12 @@ export interface Me {
   id: string;
   display_name: string | null;
   institution: { id: string; slug: string; name: string; is_demo: boolean };
-  memberships: { role: string; scope_type: string; scope_id: string; scope_name: string | null }[];
+  memberships: {
+    role: string;
+    scope_type: string;
+    scope_id: string;
+    scope_name: string | null;
+  }[];
   session_method: string;
   email?: string | null;
   /** Present when the session came from a Canvas launch: the course it was opened in. */
@@ -75,10 +88,17 @@ export interface LaunchCourse {
 export type Json = Record<string, unknown>;
 
 /** JSON request helper: sends ``body`` as JSON with the given method. */
-export function apiSend<T>(path: string, token: string | null, method: string, body?: unknown): Promise<T> {
+export function apiSend<T>(
+  path: string,
+  token: string | null,
+  method: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<T> {
   return apiFetch<T>(path, token, {
     method,
     body: body === undefined ? undefined : JSON.stringify(body),
+    headers,
   });
 }
 
@@ -96,7 +116,11 @@ export interface Course {
 /** A badge's team where the course has badge teams switched on. */
 export interface BadgeTeam {
   enabled: boolean;
-  members: { user_id: string; name: string | null; role: "owner" | "editor" | "awarder" }[];
+  members: {
+    user_id: string;
+    name: string | null;
+    role: "owner" | "editor" | "awarder";
+  }[];
   candidates: { user_id: string; name: string | null }[];
   can_manage: boolean;
   /** The owner (still course staff) or an administrator may hand the badge to someone else. */
@@ -144,7 +168,13 @@ export type LeafRule =
   | { id?: string; type: "module_completed"; module_id: string }
   | { id?: string; type: "modules_completed"; module_ids: string[] }
   | { id?: string; type: "assignment_submitted"; assignment_id: string }
-  | { id?: string; type: "assignment_score"; assignment_id: string; operator: ">="; threshold_percent: number }
+  | {
+      id?: string;
+      type: "assignment_score";
+      assignment_id: string;
+      operator: ">=";
+      threshold_percent: number;
+    }
   | { id?: string; type: "manual_approval"; instructions: string };
 
 export interface GroupRule {
@@ -227,6 +257,8 @@ export interface Definition {
   can_edit: boolean;
   can_review: boolean;
   can_award?: boolean;
+  /** Sent back as If-Match when saving, so a save from an out-of-date form is refused. */
+  revision: string;
   effective_award_policy: AwardPolicy | null;
   review: ReviewRequirement;
 }
@@ -336,7 +368,14 @@ export interface Decision {
 export interface ConfirmAllResult {
   confirmed: number;
   left: number;
-  rows: { id: string; learner_name: string | null; badge_title: string; confirmed: boolean; code: string | null; message: string | null }[];
+  rows: {
+    id: string;
+    learner_name: string | null;
+    badge_title: string;
+    confirmed: boolean;
+    code: string | null;
+    message: string | null;
+  }[];
 }
 
 export interface Requirement {
@@ -350,7 +389,13 @@ export interface Requirement {
   explanation_code: string;
   message: string;
   as_of: string | null;
-  children?: { rule_id: string; description: string; outcome: string; confirmed: boolean; label: string }[];
+  children?: {
+    rule_id: string;
+    description: string;
+    outcome: string;
+    confirmed: boolean;
+    label: string;
+  }[];
 }
 
 export interface LearnerBadge {
@@ -420,7 +465,8 @@ export function problemLines(error: unknown): string[] {
     const p = error.problem;
     if (p.status === 401) return [SESSION_ENDED];
     // The server says only "validation failed" for a refused form: name the fields instead.
-    if (p.code === "VALIDATION_FAILED" && p.errors?.length) return fieldProblems(p.errors);
+    if (p.code === "VALIDATION_FAILED" && p.errors?.length)
+      return fieldProblems(p.errors);
     // A server error behind a proxy can arrive with no title at all; never show an empty message.
     return [p.detail || p.title || "Something went wrong. Please try again."];
   }
@@ -528,7 +574,10 @@ export interface ShareOut {
   preview: SharePreview;
 }
 
-export const CREDENTIAL_STATE: Record<CredentialState, { label: string; color: "success" | "danger" | "warning" }> = {
+export const CREDENTIAL_STATE: Record<
+  CredentialState,
+  { label: string; color: "success" | "danger" | "warning" }
+> = {
   active: { label: "Valid", color: "success" },
   revoked: { label: "Revoked", color: "danger" },
   suspended: { label: "Suspended", color: "warning" },
@@ -540,7 +589,12 @@ export function formatDate(value: string | null | undefined): string {
   const d = new Date(value);
   return Number.isNaN(d.getTime())
     ? value
-    : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    : d.toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      });
 }
 
 /* ---- W7: institutional governance ----------------------------------------------------------- */
@@ -549,13 +603,21 @@ export function formatDate(value: string | null | undefined): string {
  * Download an authenticated file (CSV, JSON) without putting the token in a URL (no cookies,
  * ADR-0015). Uses the server's Content-Disposition filename when there is one.
  */
-export async function downloadFile(path: string, token: string | null, filename: string): Promise<void> {
+export async function downloadFile(
+  path: string,
+  token: string | null,
+  filename: string,
+): Promise<void> {
   const headers = new Headers();
   const bearer = currentToken(token);
   if (bearer) headers.set("authorization", `Bearer ${bearer}`);
   const res = await fetch(path, { headers });
   if (!res.ok) {
-    let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
+    let problem: Problem = {
+      status: res.status,
+      code: "HTTP_ERROR",
+      title: res.statusText,
+    };
     try {
       problem = await res.json();
     } catch {
@@ -563,7 +625,9 @@ export async function downloadFile(path: string, token: string | null, filename:
     }
     throw new ApiError(problem);
   }
-  const match = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "");
+  const match = /filename="([^"]+)"/.exec(
+    res.headers.get("content-disposition") ?? "",
+  );
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -574,7 +638,6 @@ export async function downloadFile(path: string, token: string | null, filename:
   a.remove();
   URL.revokeObjectURL(url);
 }
-
 
 export interface OrgUnit {
   id: string;
@@ -587,7 +650,9 @@ export interface OrgUnit {
   manageable: boolean;
   /** This unit's own review overrides; a missing key inherits from above. */
   review_policy: AreaReviewPolicy;
-  effective_review: Required<AreaReviewPolicy> & { sources: Record<keyof AreaReviewPolicy, string | null> };
+  effective_review: Required<AreaReviewPolicy> & {
+    sources: Record<keyof AreaReviewPolicy, string | null>;
+  };
 }
 
 /** A Canvas account or sub-account, as last read from Canvas, and the area it is linked to. */
@@ -635,8 +700,17 @@ export interface AdminIssuer {
   authority_basis: string | null;
   authorised_at: string | null;
   may_issue: boolean;
-  active_key: { id: string; activated_at: string | null; is_dev: boolean } | null;
-  delegations: { id: string; scope_type: "org_unit" | "course"; scope_id: string; scope_name: string | null }[];
+  active_key: {
+    id: string;
+    activated_at: string | null;
+    is_dev: boolean;
+  } | null;
+  delegations: {
+    id: string;
+    scope_type: "org_unit" | "course";
+    scope_id: string;
+    scope_name: string | null;
+  }[];
 }
 
 export interface AdminCourse {
@@ -717,8 +791,19 @@ export interface ReportSummary {
   active: number;
   pending_awards: { awaiting_confirmation: number; awaiting_issuance: number };
   failed_issuance: { credentials_not_issued: number; failed_jobs: number };
-  by_course: { course_id: string | null; course_title: string; issued: number; revoked: number }[];
-  by_badge: { definition_id: string; badge_title: string; course_title: string | null; issued: number; revoked: number }[];
+  by_course: {
+    course_id: string | null;
+    course_title: string;
+    issued: number;
+    revoked: number;
+  }[];
+  by_badge: {
+    definition_id: string;
+    badge_title: string;
+    course_title: string | null;
+    issued: number;
+    revoked: number;
+  }[];
   by_month: { month: string; issued: number }[];
 }
 
@@ -761,8 +846,20 @@ export interface Reconciliation {
     last_error: string | null;
     problem: "never_started" | "signing_failed" | "stuck_before_signing";
   }[];
-  failed_jobs: { id: number; task: string; attempts: number; scheduled_at: string | null; subject_type: string | null; subject_id: string | null }[];
-  status_lists_overdue: { id: string; issuer_id: string; published_at: string | null; next_publish_due: string | null }[];
+  failed_jobs: {
+    id: number;
+    task: string;
+    attempts: number;
+    scheduled_at: string | null;
+    subject_type: string | null;
+    subject_id: string | null;
+  }[];
+  status_lists_overdue: {
+    id: string;
+    issuer_id: string;
+    published_at: string | null;
+    next_publish_due: string | null;
+  }[];
 }
 
 export const REVOCATION_REASONS: Record<string, string> = {
@@ -784,13 +881,20 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 /** DELETE that expects 204 No Content. */
-export async function apiDelete(path: string, token: string | null): Promise<void> {
+export async function apiDelete(
+  path: string,
+  token: string | null,
+): Promise<void> {
   const headers = new Headers({ accept: "application/json" });
   const bearer = currentToken(token);
   if (bearer) headers.set("authorization", `Bearer ${bearer}`);
   const res = await fetch(path, { method: "DELETE", headers });
   if (!res.ok) {
-    let problem: Problem = { status: res.status, code: "HTTP_ERROR", title: res.statusText };
+    let problem: Problem = {
+      status: res.status,
+      code: "HTTP_ERROR",
+      title: res.statusText,
+    };
     try {
       problem = await res.json();
     } catch {

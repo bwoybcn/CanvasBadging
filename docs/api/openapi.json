@@ -1574,6 +1574,11 @@
             "title": "Reviews",
             "type": "array"
           },
+          "revision": {
+            "description": "Send back as If-Match when saving the draft; a save from an out-of-date form is refused with 409 DRAFT_CHANGED",
+            "title": "Revision",
+            "type": "string"
+          },
           "rules": {
             "anyOf": [
               {
@@ -1608,6 +1613,7 @@
           "reviews",
           "can_edit",
           "can_review",
+          "revision",
           "effective_award_policy",
           "review"
         ],
@@ -5023,6 +5029,22 @@
               "title": "Definition Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -5556,6 +5578,22 @@
               "format": "uuid",
               "title": "Definition Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],

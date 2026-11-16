@@ -50,7 +50,11 @@ import { useAuth } from "../auth";
 import { ChoiceSelect } from "../components/ChoiceSelect";
 import { ColourField, LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
-import { hasScoreRule, RuleBuilder, ruleProblems } from "../components/RuleBuilder";
+import {
+  hasScoreRule,
+  RuleBuilder,
+  ruleProblems,
+} from "../components/RuleBuilder";
 
 /** Open Badges achievement types in plain words (the stored value stays the standard one). */
 export const ACHIEVEMENT_TYPE_LABELS: Record<string, string> = {
@@ -82,7 +86,12 @@ interface FormState {
   course_id: string;
   issuer_id: string;
   template_id?: string; // unset or "" = start from scratch
-  fields: Required<Pick<DraftFields, "title" | "short_description" | "description" | "criteria_narrative">> & {
+  fields: Required<
+    Pick<
+      DraftFields,
+      "title" | "short_description" | "description" | "criteria_narrative"
+    >
+  > & {
     category: string;
     achievement_type: string;
     demonstration_kind: string;
@@ -134,7 +143,9 @@ function fromDefinition(d: Definition): FormState {
       demonstration_kind: v.demonstration_kind,
       evidence_description: v.evidence_description ?? "",
       validity_days: v.validity_days ? String(v.validity_days) : "",
-      learning_outcomes: v.learning_outcomes.length ? v.learning_outcomes : [""],
+      learning_outcomes: v.learning_outcomes.length
+        ? v.learning_outcomes
+        : [""],
       skills: v.skills,
       asset_id: v.asset_id,
       award_policy: v.award_policy ?? "",
@@ -146,7 +157,8 @@ function fromDefinition(d: Definition): FormState {
 /** Fills the form from a badge template's defaults, so the author sees (and replaces) its wording. */
 export function fromTemplate(t: BadgeTemplate, current: FormState): FormState {
   const d = t.defaults as Partial<DraftFields> & Record<string, unknown>;
-  const str = (k: keyof FormState["fields"], v: unknown) => (typeof v === "string" ? { [k]: v } : {});
+  const str = (k: keyof FormState["fields"], v: unknown) =>
+    typeof v === "string" ? { [k]: v } : {};
   return {
     ...current,
     template_id: t.id,
@@ -161,8 +173,12 @@ export function fromTemplate(t: BadgeTemplate, current: FormState): FormState {
       ...str("demonstration_kind", d.demonstration_kind),
       ...str("evidence_description", d.evidence_description),
       ...str("award_policy", d.award_policy),
-      validity_days: typeof d.validity_days === "number" ? String(d.validity_days) : "",
-      learning_outcomes: Array.isArray(d.learning_outcomes) && d.learning_outcomes.length ? d.learning_outcomes : [""],
+      validity_days:
+        typeof d.validity_days === "number" ? String(d.validity_days) : "",
+      learning_outcomes:
+        Array.isArray(d.learning_outcomes) && d.learning_outcomes.length
+          ? d.learning_outcomes
+          : [""],
       skills: Array.isArray(d.skills) ? d.skills : [],
       asset_id: current.fields.asset_id,
     },
@@ -190,7 +206,8 @@ export function toDraftFields(f: FormState["fields"]): DraftFields {
 }
 
 /** Template wording such as "[Scheme name]" that the author has not replaced yet. */
-export const hasPlaceholder = (x: string | null | undefined) => /\[[^\]]+\]/.test(x ?? "");
+export const hasPlaceholder = (x: string | null | undefined) =>
+  /\[[^\]]+\]/.test(x ?? "");
 
 /**
  * A label for the artwork from the badge title: whole words of letters and digits, up to 14
@@ -208,31 +225,54 @@ export function shortLabel(title: string, max = 14): string {
 }
 
 /** Per-step checks so the author fixes problems where they are, not at the end. */
-export function stepProblems(step: number, s: FormState, catalogue?: Catalogue): string[] {
+export function stepProblems(
+  step: number,
+  s: FormState,
+  catalogue?: Catalogue,
+): string[] {
   const f = s.fields;
   const out: string[] = [];
-  if (step === 0 && !s.course_id) out.push("Choose the course this badge belongs to.");
-  if (step === 0 && !s.issuer_id) out.push("Choose the issuer that will award this badge.");
+  if (step === 0 && !s.course_id)
+    out.push("Choose the course this badge belongs to.");
+  if (step === 0 && !s.issuer_id)
+    out.push("Choose the issuer that will award this badge.");
   if (step === 1) {
     if (!f.title?.trim()) out.push("Give the badge a title.");
     if (!f.short_description?.trim()) out.push("Add a short description.");
     if (!f.category) out.push("Choose a category.");
     if ([f.title, f.short_description, f.description].some(hasPlaceholder))
-      out.push("Replace the template text in [square brackets] with your own details.");
+      out.push(
+        "Replace the template text in [square brackets] with your own details.",
+      );
     const competency = catalogue?.competency_categories.includes(f.category);
-    if (competency && !["demonstrating", "assessed"].includes(f.demonstration_kind))
+    if (
+      competency &&
+      !["demonstrating", "assessed"].includes(f.demonstration_kind)
+    )
       out.push(
         "A competency badge must be earned by demonstrating competence or assessed proficiency, not by attending or completing.",
       );
   }
   if (step === 2) {
-    if (!f.learning_outcomes.some((o) => o.trim())) out.push("Add at least one learning outcome.");
-    if (!f.criteria_narrative?.trim()) out.push("Describe the criteria in words.");
-    if ([f.criteria_narrative, f.evidence_description, ...f.learning_outcomes].some(hasPlaceholder))
-      out.push("Replace the template text in [square brackets] with your own details.");
+    if (!f.learning_outcomes.some((o) => o.trim()))
+      out.push("Add at least one learning outcome.");
+    if (!f.criteria_narrative?.trim())
+      out.push("Describe the criteria in words.");
+    if (
+      [
+        f.criteria_narrative,
+        f.evidence_description,
+        ...f.learning_outcomes,
+      ].some(hasPlaceholder)
+    )
+      out.push(
+        "Replace the template text in [square brackets] with your own details.",
+      );
   }
   if (step === 3 && !f.asset_id)
-    out.push("Add the badge artwork: choose a template and select Create artwork, or upload an image.");
+    out.push(
+      "Add the badge artwork: choose a template and select Create artwork, or upload an image.",
+    );
   if (step === 4) out.push(...ruleProblems(s.rules));
   return out;
 }
@@ -258,7 +298,8 @@ function ArtworkStep({
   const { token } = useAuth();
   const templates = useQuery({
     queryKey: ["artwork-templates"],
-    queryFn: () => apiFetch<ArtworkTemplate[]>("/api/v1/artwork-templates", token),
+    queryFn: () =>
+      apiFetch<ArtworkTemplate[]>("/api/v1/artwork-templates", token),
   });
   const current = useQuery({
     queryKey: ["asset", assetId],
@@ -304,7 +345,13 @@ function ArtworkStep({
     <View as="div" display="block">
       {shown?.data_url && (
         <Flex gap="medium" alignItems="center" margin="0 0 medium">
-          <Img src={shown.data_url} alt={shown.alt_text} width="8rem" height="8rem" constrain="contain" />
+          <Img
+            src={shown.data_url}
+            alt={shown.alt_text}
+            width="8rem"
+            height="8rem"
+            constrain="contain"
+          />
           <Text>
             Current artwork. Alternative text: <q>{shown.alt_text}</q>
           </Text>
@@ -326,11 +373,22 @@ function ArtworkStep({
             label="Template"
             value={template}
             placeholder="Choose a template"
-            options={(templates.data ?? []).map((t) => ({ value: t.key, label: t.name }))}
+            options={(templates.data ?? []).map((t) => ({
+              value: t.key,
+              label: t.name,
+            }))}
             onChange={setTemplate}
           />
-          <ColourField label="Main colour" value={primary} onChange={setPrimary} />
-          <ColourField label="Accent colour" value={secondary} onChange={setSecondary} />
+          <ColourField
+            label="Main colour"
+            value={primary}
+            onChange={setPrimary}
+          />
+          <ColourField
+            label="Accent colour"
+            value={secondary}
+            onChange={setSecondary}
+          />
           <TextInput
             renderLabel="Short label (up to 14 characters)"
             value={label}
@@ -345,10 +403,16 @@ function ArtworkStep({
             <Text weight="bold">Image file</Text>
           </label>
           <Text as="p" size="small">
-            SVG up to 200 KB or PNG up to 1 MB, square, at least 400 by 400 pixels. Scripts, external links and
-            embedded text in the file are removed.
+            SVG up to 200 KB or PNG up to 1 MB, square, at least 400 by 400
+            pixels. Scripts, external links and embedded text in the file are
+            removed.
           </Text>
-          <input id="artwork-file" ref={fileRef} type="file" accept="image/svg+xml,image/png" />
+          <input
+            id="artwork-file"
+            ref={fileRef}
+            type="file"
+            accept="image/svg+xml,image/png"
+          />
         </View>
       )}
       <TextInput
@@ -357,12 +421,19 @@ function ArtworkStep({
         maxLength={250}
         onChange={(_e, v) => setAlt(v)}
       />
-      <Button margin="small 0" color="secondary" onClick={() => make.mutate()} interaction={make.isPending ? "disabled" : "enabled"}>
+      <Button
+        margin="small 0"
+        color="secondary"
+        onClick={() => make.mutate()}
+        interaction={make.isPending ? "disabled" : "enabled"}
+      >
         {mode === "template" ? "Create artwork" : "Upload artwork"}
       </Button>
       {make.isError && (
         <Alert variant="error" margin="small 0">
-          {make.error instanceof Error && !("problem" in make.error) ? make.error.message : problemText(make.error)}
+          {make.error instanceof Error && !("problem" in make.error)
+            ? make.error.message
+            : problemText(make.error)}
         </Alert>
       )}
       {warnings.map((w) => (
@@ -390,6 +461,20 @@ export function CreateBadge() {
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   /** What the server last accepted, so an unchanged step is not saved (or audited) again. */
   const saved = useRef({ fields: "", rules: "" });
+  /** The draft as this form last saw it. If a colleague saves in between, our next save is
+   * refused (409 DRAFT_CHANGED) instead of silently replacing their work. */
+  const revision = useRef<string | null>(null);
+  const ifMatch = () =>
+    revision.current ? { "if-match": revision.current } : undefined;
+  const adopt = (d: Definition) => {
+    const form = fromDefinition(d);
+    saved.current = {
+      fields: JSON.stringify(toDraftFields(form.fields)),
+      rules: JSON.stringify(form.rules),
+    };
+    revision.current = d.revision;
+    setS(form);
+  };
 
   const existing = useQuery({
     queryKey: ["achievement", id],
@@ -400,9 +485,7 @@ export function CreateBadge() {
   useEffect(() => {
     if (existing.data && !loaded.current) {
       loaded.current = true;
-      const form = fromDefinition(existing.data);
-      saved.current = { fields: JSON.stringify(toDraftFields(form.fields)), rules: JSON.stringify(form.rules) };
-      setS(form);
+      adopt(existing.data);
     }
   }, [existing.data]);
 
@@ -410,48 +493,77 @@ export function CreateBadge() {
     queryKey: ["categories"],
     queryFn: () => apiFetch<Catalogue>("/api/v1/categories", token),
   });
-  const courses = useQuery({ queryKey: ["courses"], queryFn: () => apiFetch<Course[]>("/api/v1/courses", token) });
+  const courses = useQuery({
+    queryKey: ["courses"],
+    queryFn: () => apiFetch<Course[]>("/api/v1/courses", token),
+  });
   const staffCourses = useMemo(
-    () => (courses.data ?? []).filter((c) => c.roles.some((r) => STAFF_COURSE_ROLES.has(r))),
+    () =>
+      (courses.data ?? []).filter((c) =>
+        c.roles.some((r) => STAFF_COURSE_ROLES.has(r)),
+      ),
     [courses.data],
   );
   // With exactly one choice, preselect it (derived, so nothing is stored until the user changes it).
-  const courseId = s.course_id || (!editing && staffCourses.length === 1 ? staffCourses[0].id : "");
+  const courseId =
+    s.course_id ||
+    (!editing && staffCourses.length === 1 ? staffCourses[0].id : "");
   const issuers = useQuery({
     queryKey: ["issuers", courseId],
     enabled: !!courseId,
-    queryFn: () => apiFetch<IssuerRef[]>(`/api/v1/courses/${courseId}/issuers`, token),
+    queryFn: () =>
+      apiFetch<IssuerRef[]>(`/api/v1/courses/${courseId}/issuers`, token),
   });
-  const issuerId = s.issuer_id || (!editing && issuers.data?.length === 1 ? issuers.data[0].id : "");
+  const issuerId =
+    s.issuer_id ||
+    (!editing && issuers.data?.length === 1 ? issuers.data[0].id : "");
   const st: FormState = { ...s, course_id: courseId, issuer_id: issuerId };
   // The problems shown follow the form: one that has been fixed disappears straight away, and
   // the box goes when none are left (until Next is pressed again).
-  const liveProblems = shownProblems.length ? stepProblems(step, st, catalogue.data) : [];
+  const liveProblems = shownProblems.length
+    ? stepProblems(step, st, catalogue.data)
+    : [];
   const badgeTemplates = useQuery({
     queryKey: ["badge-templates", courseId],
     enabled: !!courseId && !editing,
-    queryFn: () => apiFetch<BadgeTemplate[]>(`/api/v1/templates?course_id=${courseId}`, token),
+    queryFn: () =>
+      apiFetch<BadgeTemplate[]>(
+        `/api/v1/templates?course_id=${courseId}`,
+        token,
+      ),
   });
   const modules = useQuery({
     queryKey: ["modules", st.course_id],
     enabled: !!st.course_id,
-    queryFn: () => apiFetch<{ items: CanvasModule[] }>(`/api/v1/courses/${st.course_id}/canvas/modules`, token),
+    queryFn: () =>
+      apiFetch<{ items: CanvasModule[] }>(
+        `/api/v1/courses/${st.course_id}/canvas/modules`,
+        token,
+      ),
   });
   const assignments = useQuery({
     queryKey: ["assignments", st.course_id],
     enabled: !!st.course_id,
     queryFn: () =>
-      apiFetch<{ items: CanvasAssignment[] }>(`/api/v1/courses/${st.course_id}/canvas/assignments`, token),
+      apiFetch<{ items: CanvasAssignment[] }>(
+        `/api/v1/courses/${st.course_id}/canvas/assignments`,
+        token,
+      ),
   });
 
   const save = useMutation({
     /** Saves what changed. `finish` (the last step) always sends everything and returns the badge. */
-    mutationFn: async ({ finish }: { finish: boolean }): Promise<Definition | null> => {
+    mutationFn: async ({
+      finish,
+    }: {
+      finish: boolean;
+    }): Promise<Definition | null> => {
       const fields = toDraftFields(s.fields);
       const fieldsKey = JSON.stringify(fields);
       const rulesKey = JSON.stringify(s.rules);
       // Half-built requirements stay in the form until they are complete.
-      const rulesReady = s.rules.rules.length > 0 && ruleProblems(s.rules).length === 0;
+      const rulesReady =
+        s.rules.rules.length > 0 && ruleProblems(s.rules).length === 0;
       let did = draftId;
       let d: Definition | null = null;
       if (!did) {
@@ -464,16 +576,32 @@ export function CreateBadge() {
         });
         did = d.id;
         setDraftId(did);
+        revision.current = d.revision;
         saved.current.fields = fieldsKey;
       } else if (finish || fieldsKey !== saved.current.fields) {
-        d = await apiSend<Definition>(`/api/v1/achievements/${did}`, token, "PATCH", fields);
+        d = await apiSend<Definition>(
+          `/api/v1/achievements/${did}`,
+          token,
+          "PATCH",
+          fields,
+          ifMatch(),
+        );
+        revision.current = d.revision;
         saved.current.fields = fieldsKey;
       }
       if (rulesReady && (finish || rulesKey !== saved.current.rules)) {
-        d = await apiSend<Definition>(`/api/v1/achievements/${did}/rules`, token, "PUT", s.rules);
+        d = await apiSend<Definition>(
+          `/api/v1/achievements/${did}/rules`,
+          token,
+          "PUT",
+          s.rules,
+          ifMatch(),
+        );
+        revision.current = d.revision;
         saved.current.rules = rulesKey;
       }
-      if (!d && finish) d = await apiFetch<Definition>(`/api/v1/achievements/${did}`, token);
+      if (!d && finish)
+        d = await apiFetch<Definition>(`/api/v1/achievements/${did}`, token);
       return d;
     },
     onSuccess: (d, { finish }) => {
@@ -493,7 +621,13 @@ export function CreateBadge() {
       if (!draftId || !saved.current.fields) return;
       const fields = toDraftFields(s.fields);
       if (JSON.stringify(fields) === saved.current.fields) return;
-      void apiSend(`/api/v1/achievements/${draftId}`, token, "PATCH", fields).catch(() => undefined);
+      void apiSend(
+        `/api/v1/achievements/${draftId}`,
+        token,
+        "PATCH",
+        fields,
+        ifMatch(),
+      ).catch(() => undefined);
     };
   });
   useEffect(() => () => saveOnLeave.current(), []);
@@ -528,17 +662,40 @@ export function CreateBadge() {
 
   if (editing && existing.isPending) return <Loading what="badge" />;
   if (editing && existing.isError) return <ErrorAlert error={existing.error} />;
-  if (editing && existing.data && !(existing.data.can_edit && existing.data.state === "draft"))
+  if (
+    editing &&
+    existing.data &&
+    !(existing.data.can_edit && existing.data.state === "draft")
+  )
     return (
       <Page title="Edit badge">
-        <Alert variant="info">Only drafts can be edited. Create a new version of a published badge to change it.</Alert>
+        <Alert variant="info">
+          Only drafts can be edited. Create a new version of a published badge
+          to change it.
+        </Alert>
       </Page>
     );
 
   const f = s.fields;
   const locked = !!draftId;
-  const sessionEnded = save.error instanceof ApiError && save.error.problem.status === 401;
-  const setF = (patch: Partial<FormState["fields"]>) => setS((p) => ({ ...p, fields: { ...p.fields, ...patch } }));
+  const sessionEnded =
+    save.error instanceof ApiError && save.error.problem.status === 401;
+  const changedByOthers =
+    save.error instanceof ApiError &&
+    save.error.problem.code === "DRAFT_CHANGED";
+  const loadLatest = async () => {
+    if (!draftId) return;
+    const d = await apiFetch<Definition>(
+      `/api/v1/achievements/${draftId}`,
+      token,
+    );
+    adopt(d);
+    qc.setQueryData(["achievement", d.id], d);
+    save.reset();
+    setShownProblems([]);
+  };
+  const setF = (patch: Partial<FormState["fields"]>) =>
+    setS((p) => ({ ...p, fields: { ...p.fields, ...patch } }));
   const cat = catalogue.data;
   const score = hasScoreRule(s.rules);
 
@@ -553,7 +710,10 @@ export function CreateBadge() {
                   {i + 1}. {name} (done)
                 </Link>
               ) : (
-                <Text weight={i === step ? "bold" : "normal"} aria-current={i === step ? "step" : undefined}>
+                <Text
+                  weight={i === step ? "bold" : "normal"}
+                  aria-current={i === step ? "step" : undefined}
+                >
                   {i + 1}. {name}
                 </Text>
               )}
@@ -561,11 +721,21 @@ export function CreateBadge() {
           ))}
         </List>
       </nav>
-      <Heading level="h2" margin="0 0 small" elementRef={(el) => (headingRef.current = el as HTMLHeadingElement)} tabIndex={-1}>
+      <Heading
+        level="h2"
+        margin="0 0 small"
+        elementRef={(el) => (headingRef.current = el as HTMLHeadingElement)}
+        tabIndex={-1}
+      >
         Step {step + 1} of {STEPS.length}: {STEPS[step]}
       </Heading>
       {liveProblems.length > 0 && (
-        <div role="alert" tabIndex={-1} ref={problemsRef} className="oc-problems">
+        <div
+          role="alert"
+          tabIndex={-1}
+          ref={problemsRef}
+          className="oc-problems"
+        >
           <Alert variant="error" margin="0 0 small">
             <Text weight="bold">Please fix the following:</Text>
             <List>
@@ -586,20 +756,33 @@ export function CreateBadge() {
             placeholder="Choose a course"
             interaction={locked ? "readonly" : "enabled"}
             options={staffCourses.map((c) => ({ value: c.id, label: c.title }))}
-            onChange={(value) => setS((p) => ({ ...p, course_id: value, issuer_id: "", template_id: "" }))}
+            onChange={(value) =>
+              setS((p) => ({
+                ...p,
+                course_id: value,
+                issuer_id: "",
+                template_id: "",
+              }))
+            }
           />
           <View as="div" margin="small 0" display="block">
             <ChoiceSelect
               label="Issuer"
               value={st.issuer_id}
-              placeholder={st.course_id ? "Choose an issuer" : "Choose a course first"}
+              placeholder={
+                st.course_id ? "Choose an issuer" : "Choose a course first"
+              }
               interaction={locked ? "readonly" : "enabled"}
-              options={(issuers.data ?? []).map((i) => ({ value: i.id, label: i.name }))}
+              options={(issuers.data ?? []).map((i) => ({
+                value: i.id,
+                label: i.name,
+              }))}
               onChange={(value) => setS((p) => ({ ...p, issuer_id: value }))}
             />
             {st.course_id && issuers.data?.length === 0 && (
               <Alert variant="warning" margin="small 0">
-                No issuer is set up to award badges in this course. Ask your department administrator.
+                No issuer is set up to award badges in this course. Ask your
+                department administrator.
               </Alert>
             )}
           </View>
@@ -611,30 +794,48 @@ export function CreateBadge() {
                 interaction={locked ? "readonly" : "enabled"}
                 onChange={(_e, { value }) => {
                   const t = badgeTemplates.data?.find((x) => x.id === value);
-                  setS((p) => (t ? fromTemplate(t, p) : { ...p, template_id: "", fields: { ...EMPTY.fields, asset_id: p.fields.asset_id } }));
+                  setS((p) =>
+                    t
+                      ? fromTemplate(t, p)
+                      : {
+                          ...p,
+                          template_id: "",
+                          fields: {
+                            ...EMPTY.fields,
+                            asset_id: p.fields.asset_id,
+                          },
+                        },
+                  );
                 }}
               >
                 <SimpleSelect.Option id="tpl-none" value="">
                   No template: start from scratch
                 </SimpleSelect.Option>
                 {(badgeTemplates.data ?? []).map((t) => (
-                  <SimpleSelect.Option key={t.id} id={`tpl-${t.id}`} value={t.id}>
+                  <SimpleSelect.Option
+                    key={t.id}
+                    id={`tpl-${t.id}`}
+                    value={t.id}
+                  >
                     {t.name}
                   </SimpleSelect.Option>
                 ))}
               </SimpleSelect>
               {st.template_id ? (
                 <Text as="p" size="small">
-                  {badgeTemplates.data?.find((x) => x.id === st.template_id)?.description ?? ""} The next steps are filled in from
-                  the template. Replace anything in [square brackets] with your own details.
+                  {badgeTemplates.data?.find((x) => x.id === st.template_id)
+                    ?.description ?? ""}{" "}
+                  The next steps are filled in from the template. Replace
+                  anything in [square brackets] with your own details.
                 </Text>
               ) : null}
             </View>
           )}
           {locked && !editing && (
             <Text as="p" size="small">
-              The course, issuer and template are fixed now that your draft is saved. To change them, delete the draft
-              from its badge page and start again.
+              The course, issuer and template are fixed now that your draft is
+              saved. To change them, delete the draft from its badge page and
+              start again.
             </Text>
           )}
         </View>
@@ -642,14 +843,21 @@ export function CreateBadge() {
 
       {step === 1 && cat && (
         <View as="div" display="block">
-          <TextInput renderLabel="Title" value={f.title ?? ""} maxLength={120} onChange={(_e, v) => setF({ title: v })} />
-          <LimitedTextArea maxLength={280}
+          <TextInput
+            renderLabel="Title"
+            value={f.title ?? ""}
+            maxLength={120}
+            onChange={(_e, v) => setF({ title: v })}
+          />
+          <LimitedTextArea
+            maxLength={280}
             label="Short description (shown on the badge card, up to 280 characters)"
             maxHeight="8rem"
             value={f.short_description ?? ""}
             onChange={(e) => setF({ short_description: e.target.value })}
           />
-          <LimitedTextArea maxLength={4000}
+          <LimitedTextArea
+            maxLength={4000}
             label="Full description (optional)"
             value={f.description ?? ""}
             onChange={(e) => setF({ description: e.target.value })}
@@ -662,8 +870,9 @@ export function CreateBadge() {
             onChange={(value) => setF({ category: value })}
           />
           <Text as="p" size="small">
-            Completion, participation and attendance badges record that something was done. Competency and skills
-            badges claim that something can be done, so they need assessed evidence.
+            Completion, participation and attendance badges record that
+            something was done. Competency and skills badges claim that
+            something can be done, so they need assessed evidence.
           </Text>
           <RadioInputGroup
             name="demonstration"
@@ -678,7 +887,9 @@ export function CreateBadge() {
           <SimpleSelect
             renderLabel="Badge type"
             value={f.achievement_type}
-            onChange={(_e, { value }) => setF({ achievement_type: String(value) })}
+            onChange={(_e, { value }) =>
+              setF({ achievement_type: String(value) })
+            }
           >
             {cat.achievement_types.map((t) => (
               <SimpleSelect.Option key={t} id={`type-${t}`} value={t}>
@@ -699,14 +910,24 @@ export function CreateBadge() {
                   renderLabel={`Learning outcome ${i + 1}`}
                   value={o}
                   onChange={(_e, v) =>
-                    setF({ learning_outcomes: f.learning_outcomes.map((x, j) => (j === i ? v : x)) })
+                    setF({
+                      learning_outcomes: f.learning_outcomes.map((x, j) =>
+                        j === i ? v : x,
+                      ),
+                    })
                   }
                 />
               </Flex.Item>
               {f.learning_outcomes.length > 1 && (
                 <Button
                   size="small"
-                  onClick={() => setF({ learning_outcomes: f.learning_outcomes.filter((_, j) => j !== i) })}
+                  onClick={() =>
+                    setF({
+                      learning_outcomes: f.learning_outcomes.filter(
+                        (_, j) => j !== i,
+                      ),
+                    })
+                  }
                 >
                   Remove outcome {i + 1}
                 </Button>
@@ -715,17 +936,23 @@ export function CreateBadge() {
           ))}
           <Button
             size="small"
-            interaction={f.learning_outcomes.length >= 12 ? "disabled" : "enabled"}
-            onClick={() => setF({ learning_outcomes: [...f.learning_outcomes, ""] })}
+            interaction={
+              f.learning_outcomes.length >= 12 ? "disabled" : "enabled"
+            }
+            onClick={() =>
+              setF({ learning_outcomes: [...f.learning_outcomes, ""] })
+            }
           >
             Add outcome
           </Button>
-          <LimitedTextArea maxLength={4000}
+          <LimitedTextArea
+            maxLength={4000}
             label="Criteria: what a student must do, in plain words"
             value={f.criteria_narrative ?? ""}
             onChange={(e) => setF({ criteria_narrative: e.target.value })}
           />
-          <LimitedTextArea maxLength={2000}
+          <LimitedTextArea
+            maxLength={2000}
             label="Evidence: what the badge records as evidence (optional)"
             value={f.evidence_description}
             onChange={(e) => setF({ evidence_description: e.target.value })}
@@ -735,24 +962,44 @@ export function CreateBadge() {
           </Heading>
           {f.skills.map((k, i) => (
             <Flex key={i} gap="small" alignItems="end" margin="0 0 x-small">
-              <TextInput maxLength={120}
+              <TextInput
+                maxLength={120}
                 renderLabel={`Skill ${i + 1}`}
                 value={k.name}
-                onChange={(_e, v) => setF({ skills: f.skills.map((x, j) => (j === i ? { ...x, name: v } : x)) })}
+                onChange={(_e, v) =>
+                  setF({
+                    skills: f.skills.map((x, j) =>
+                      j === i ? { ...x, name: v } : x,
+                    ),
+                  })
+                }
               />
-              <TextInput maxLength={120}
+              <TextInput
+                maxLength={120}
                 renderLabel="Framework (optional)"
                 value={k.framework ?? ""}
                 onChange={(_e, v) =>
-                  setF({ skills: f.skills.map((x, j) => (j === i ? { ...x, framework: v || null } : x)) })
+                  setF({
+                    skills: f.skills.map((x, j) =>
+                      j === i ? { ...x, framework: v || null } : x,
+                    ),
+                  })
                 }
               />
-              <Button size="small" onClick={() => setF({ skills: f.skills.filter((_, j) => j !== i) })}>
+              <Button
+                size="small"
+                onClick={() =>
+                  setF({ skills: f.skills.filter((_, j) => j !== i) })
+                }
+              >
                 Remove skill {i + 1}
               </Button>
             </Flex>
           ))}
-          <Button size="small" onClick={() => setF({ skills: [...f.skills, { name: "" }] })}>
+          <Button
+            size="small"
+            onClick={() => setF({ skills: [...f.skills, { name: "" }] })}
+          >
             Add skill
           </Button>
           <NumberInput
@@ -780,16 +1027,20 @@ export function CreateBadge() {
         <View as="div" display="block">
           {!st.course_id ? (
             <Alert variant="info" margin="0 0 small">
-              This badge is not tied to a course, so it can only be awarded by staff confirmation.
+              This badge is not tied to a course, so it can only be awarded by
+              staff confirmation.
             </Alert>
           ) : (
             <Text as="p">
-              Module, assignment and score requirements are checked against Canvas and count only once Canvas
-              confirms them: missing, excused or unreleased marks stay pending. A &ldquo;Staff confirm&rdquo;
+              Module, assignment and score requirements are checked against
+              Canvas and count only once Canvas confirms them: missing, excused
+              or unreleased marks stay pending. A &ldquo;Staff confirm&rdquo;
               requirement is met when a member of staff records it.
             </Text>
           )}
-          {(modules.isError || assignments.isError) && <ErrorAlert error={modules.error ?? assignments.error} />}
+          {(modules.isError || assignments.isError) && (
+            <ErrorAlert error={modules.error ?? assignments.error} />
+          )}
           <RuleBuilder
             value={s.rules}
             onChange={(rules) => setS((p) => ({ ...p, rules }))}
@@ -818,7 +1069,10 @@ export function CreateBadge() {
             }
           />
           <RadioInput value="automatic" label={POLICY_LABELS.automatic} />
-          <RadioInput value="lecturer_confirmed" label={POLICY_LABELS.lecturer_confirmed} />
+          <RadioInput
+            value="lecturer_confirmed"
+            label={POLICY_LABELS.lecturer_confirmed}
+          />
           <RadioInput value="manual" label={POLICY_LABELS.manual} />
         </RadioInputGroup>
       )}
@@ -828,18 +1082,28 @@ export function CreateBadge() {
           <List>
             <List.Item>Title: {f.title || "(not set)"}</List.Item>
             <List.Item>Category: {f.category || "(not set)"}</List.Item>
-            <List.Item>Learning outcomes: {f.learning_outcomes.filter((o) => o.trim()).length}</List.Item>
-            <List.Item>Artwork: {f.asset_id ? "added" : "not added yet"}</List.Item>
             <List.Item>
-              Requirements: {s.rules.rules.length} ({s.rules.mode === "ALL" ? "all required" : "any one"})
+              Learning outcomes:{" "}
+              {f.learning_outcomes.filter((o) => o.trim()).length}
             </List.Item>
             <List.Item>
-              Awarding: {f.award_policy ? POLICY_LABELS[f.award_policy] : "institution default"}
+              Artwork: {f.asset_id ? "added" : "not added yet"}
+            </List.Item>
+            <List.Item>
+              Requirements: {s.rules.rules.length} (
+              {s.rules.mode === "ALL" ? "all required" : "any one"})
+            </List.Item>
+            <List.Item>
+              Awarding:{" "}
+              {f.award_policy
+                ? POLICY_LABELS[f.award_policy]
+                : "institution default"}
             </List.Item>
           </List>
           <Text as="p">
-            Save draft keeps your last changes and opens the badge page. There you can preview it, then submit it for
-            review. Nothing is issued until it is approved and published.
+            Save draft keeps your last changes and opens the badge page. There
+            you can preview it, then submit it for review. Nothing is issued
+            until it is approved and published.
           </Text>
         </View>
       )}
@@ -850,16 +1114,30 @@ export function CreateBadge() {
           {sessionEnded && draftId
             ? " Everything up to the last step you finished is saved as a draft: you will find it under Badges."
             : ""}
+          {changedByOthers && (
+            <View as="div" margin="small 0 0">
+              <Button onClick={() => void loadLatest()}>
+                Load the latest version
+              </Button>
+            </View>
+          )}
         </Alert>
       )}
       <Flex gap="small" margin="medium 0 0">
         {step > 0 && (
-          <Button onClick={() => go(step - 1)} interaction={save.isPending ? "disabled" : "enabled"}>
+          <Button
+            onClick={() => go(step - 1)}
+            interaction={save.isPending ? "disabled" : "enabled"}
+          >
             Back
           </Button>
         )}
         {step < STEPS.length - 1 ? (
-          <Button color="primary" onClick={() => go(step + 1)} interaction={save.isPending ? "disabled" : "enabled"}>
+          <Button
+            color="primary"
+            onClick={() => go(step + 1)}
+            interaction={save.isPending ? "disabled" : "enabled"}
+          >
             Next
           </Button>
         ) : (
@@ -875,7 +1153,7 @@ export function CreateBadge() {
       <Text as="p" size="small" role="status" data-testid="draft-status">
         {save.isPending
           ? "Saving your draft…"
-          : savedAt
+          : savedAt && !save.isError
             ? `Draft saved at ${savedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. You can leave and come back to it from Badges.`
             : draftId
               ? "This draft is saved each time you choose Next or Back."
