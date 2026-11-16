@@ -140,6 +140,10 @@ class DraftFields(BaseModel):
     )
 
 
+#: Template wording the author has not replaced yet, such as "[Scheme name]".
+PLACEHOLDER = re.compile(r"\[[^\]]+\]")
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -540,6 +544,26 @@ def readiness(
         issues.append(
             _issue("category", "CATEGORY_INVALID", "Choose one of the listed categories.")
         )
+
+    # A badge started from a template: wording such as "[Scheme name]" is for the author to
+    # replace. The wizard says so on each step; this catches a draft saved another way.
+    if definition.template_id is not None:
+        texts = [
+            version.title,
+            version.short_description,
+            version.description,
+            version.criteria_narrative,
+            version.evidence_description,
+            *(version.learning_outcomes or []),
+        ]
+        if any(PLACEHOLDER.search(t or "") for t in texts):
+            issues.append(
+                _issue(
+                    "title",
+                    "TEMPLATE_PLACEHOLDER",
+                    "Replace the template text in [square brackets] with your own details.",
+                )
+            )
 
     # The printable certificate cannot set some text (right-to-left scripts, characters no
     # bundled font has): say so while the wording can still change. Not blocking: the badge,

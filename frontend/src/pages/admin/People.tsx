@@ -189,16 +189,22 @@ function CanvasSubAccounts() {
   });
   const link = useMutation({
     mutationFn: () =>
-      apiSend<{ linked: number; courses_placed: number }>("/api/v1/admin/canvas-accounts/link", token, "POST", {
+      apiSend<{ linked: number; courses_placed: number; courses_queued?: number }>("/api/v1/admin/canvas-accounts/link", token, "POST", {
         items: picked.map((id) => (target ? { id, org_unit_id: target } : { id, kind: kind || null })),
       }),
     onSuccess: (r) => {
       setPicked([]);
+      const queued = r.courses_queued ?? 0;
       setDone(
         `Linked ${r.linked} sub-account${r.linked === 1 ? "" : "s"}.` +
           (r.courses_placed
             ? ` ${r.courses_placed} course${r.courses_placed === 1 ? "" : "s"} not yet in an area joined ${r.linked === 1 ? "it" : "them"}.`
-            : " Its courses were already in an area, so none needed moving; new courses join it when first opened."),
+            : queued
+              ? ""
+              : " Its courses were already in an area, so none needed moving; new courses join it when first opened.") +
+          (queued
+            ? ` ${queued} more course${queued === 1 ? " is" : "s are"} being checked against Canvas in the background and will join within a few minutes.`
+            : ""),
       );
       refreshAll();
     },

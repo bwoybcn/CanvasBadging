@@ -730,6 +730,112 @@ describe("Create Micro-Credential wizard", () => {
     ).toBe(true);
   });
 
+  it("does not report an earlier Canvas failure as this refresh failing", async () => {
+    const base = definition();
+    const withArt = {
+      ...base,
+      working_version: {
+        ...base.working_version,
+        asset_id: "a-1" as string | null,
+      },
+    };
+    const recent = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    // The last run, some minutes ago, failed. It stays "the last run" until the new one starts.
+    const oldFailure = {
+      status: "failed",
+      kind: "scheduled",
+      started_at: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+      finished_at: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+      error_code: "LMS_TRANSIENT",
+      failed_learners: 0,
+    };
+    let asked = false;
+    let pollsAfter = 0;
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": withArt,
+      "PATCH /api/v1/achievements/d-1": withArt,
+      "GET /api/v1/courses/c-1/sync": () => {
+        if (!asked || pollsAfter++ === 0)
+          return { last_run: oldFailure, last_success_at: recent };
+        return {
+          last_run: { ...oldFailure, status: "ok", started_at: new Date().toISOString() },
+          last_success_at: new Date().toISOString(),
+        };
+      },
+      "POST /api/v1/courses/c-1/sync": () => {
+        asked = true;
+        return { queued: true };
+      },
+    });
+    renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit badge" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /5\. Requirements/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Refresh from Canvas" }),
+    );
+    expect(
+      await screen.findByText(
+        "The lists are up to date with Canvas.",
+        {},
+        { timeout: 9000 },
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Canvas could not be read just now/)).toBeNull();
+  }, 15000);
+
+  it("does report it when this refresh itself fails", async () => {
+    const base = definition();
+    const withArt = {
+      ...base,
+      working_version: {
+        ...base.working_version,
+        asset_id: "a-1" as string | null,
+      },
+    };
+    const recent = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    let asked = false;
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": withArt,
+      "PATCH /api/v1/achievements/d-1": withArt,
+      "GET /api/v1/courses/c-1/sync": () => ({
+        last_run: asked
+          ? {
+              status: "failed",
+              kind: "on_demand",
+              started_at: "2026-11-16T21:00:05Z",
+              finished_at: "2026-11-16T21:00:06Z",
+              error_code: "LMS_TRANSIENT",
+              failed_learners: 0,
+            }
+          : null,
+        last_success_at: recent,
+      }),
+      "POST /api/v1/courses/c-1/sync": () => {
+        asked = true;
+        return { queued: true };
+      },
+    });
+    renderAt("/badges/d-1/edit");
+    await screen.findByRole("heading", { name: "Edit badge" });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /5\. Requirements/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Refresh from Canvas" }),
+    );
+    expect(
+      await screen.findByText(
+        /Canvas could not be read just now/,
+        {},
+        { timeout: 8000 },
+      ),
+    ).toBeInTheDocument();
+  }, 15000);
+
   it("refreshes Canvas lists that are more than an hour old on its own", async () => {
     const base = definition();
     const withArt = {
@@ -1611,6 +1717,63 @@ describe("awards and progress", () => {
     expect(within(card).queryByText(/Awaiting confirmation/)).toBeNull();
   });
 
+  it("tells the student when a badge they earned has been withdrawn", async () => {
+    const badge = (n: number, status: string) => ({
+      definition_id: `d-${n}`,
+      version_id: `v-${n}`,
+      course: { id: "c-1", title: "Library Volunteers" },
+      title: `Badge ${n}`,
+      short_description: "Completed the library induction.",
+      category: "Completion",
+      issuer: "University Library",
+      image: { data_url: null, alt_text: null },
+      award_policy: "manual",
+      status,
+      outcome: "met",
+      credential_id: `cred-${n}`,
+      progress: { completed: 1, total: 1, mode: "ALL" },
+      requirements: [],
+    });
+    stubApi({
+      "GET /api/v1/learners/me": {
+        ...STAFF_ME,
+        memberships: [
+          {
+            role: "student",
+            scope_type: "course",
+            scope_id: "c-1",
+            scope_name: "S",
+          },
+        ],
+      },
+      "GET /api/v1/learners/me/achievements": [
+        badge(1, "revoked"),
+        badge(2, "suspended"),
+      ],
+    });
+    renderAt("/me/progress");
+    const revoked = await screen.findByRole("region", { name: "Badge 1" });
+    expect(
+      within(revoked).getByText("Withdrawn by the issuer"),
+    ).toBeInTheDocument();
+    expect(within(revoked).queryByText("Earned")).toBeNull();
+    expect(within(revoked).queryByText(/You have this badge/)).toBeNull();
+    expect(
+      within(revoked).getByText(/no longer counts as valid/),
+    ).toBeInTheDocument();
+    // The badge's own page says why, so the link to it stays.
+    expect(
+      within(revoked).getByRole("link", {
+        name: "See this badge and why it was withdrawn",
+      }),
+    ).toHaveAttribute("href", "/me/credentials/cred-1");
+    const suspended = screen.getByRole("region", { name: "Badge 2" });
+    expect(
+      within(suspended).getByText("Suspended by the issuer"),
+    ).toBeInTheDocument();
+    expect(within(suspended).queryByText(/You have this badge/)).toBeNull();
+  });
+
   it("says a badge is waiting for staff when that is all that is missing", async () => {
     stubApi({
       "GET /api/v1/learners/me": {
@@ -1742,6 +1905,7 @@ describe("course progress: history and revocation requests", () => {
                 decision_status: "issued",
                 decision_id: "dec-1",
                 credential_id: "cred-1",
+                credential_state: "active",
               },
             ],
           },
@@ -1803,6 +1967,68 @@ describe("course progress: history and revocation requests", () => {
     expect(
       await screen.findByText(/stays valid until they approve/),
     ).toBeTruthy();
+  });
+});
+
+describe("course progress: a badge that was revoked", () => {
+  it("says Revoked, not Issued, and does not offer to revoke it again", async () => {
+    const cell = (state: string) => ({
+      version_id: "v-1",
+      outcome: "met",
+      evaluated_at: null,
+      codes: [],
+      progress: null,
+      decision_status: "issued",
+      decision_id: "dec-1",
+      credential_id: `cred-${state}`,
+      credential_state: state,
+    });
+    stubApi({
+      "GET /api/v1/learners/me": STAFF_ME,
+      "GET /api/v1/courses/c-1/progress": {
+        course: { id: "c-1", title: "Study Skills 101" },
+        badges: [
+          {
+            definition_id: "d-1",
+            version_id: "v-1",
+            title: "Seminar Skills",
+            award_policy: "automatic",
+            rules: ["Complete module"],
+            source_flags: [],
+          },
+        ],
+        learners: [
+          { user_id: "u-s1", name: "Sam Student", cells: [cell("revoked")] },
+          { user_id: "u-s2", name: "Asha Student", cells: [cell("suspended")] },
+          { user_id: "u-s3", name: "Bo Student", cells: [cell("active")] },
+        ],
+      },
+      "GET /api/v1/courses/c-1/sync": { last_run: null, last_success_at: null },
+      "GET /api/v1/courses/c-1/credentials": [],
+    });
+    renderAt("/courses/c-1/progress");
+    const sam = (await screen.findByRole("rowheader", { name: "Sam Student" }))
+      .closest("tr")!;
+    expect(within(sam).getByText("Revoked")).toBeInTheDocument();
+    expect(within(sam).queryByText("Issued")).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: "Request revocation for Sam Student",
+      }),
+    ).toBeNull();
+    const asha = screen
+      .getByRole("rowheader", { name: "Asha Student" })
+      .closest("tr")!;
+    expect(within(asha).getByText("Suspended")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Request revocation for Asha Student",
+      }),
+    ).toBeNull();
+    // A badge that still stands can be put forward for revocation as before.
+    expect(
+      screen.getByRole("button", { name: "Request revocation for Bo Student" }),
+    ).toBeInTheDocument();
   });
 });
 

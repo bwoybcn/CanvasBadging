@@ -20,7 +20,12 @@ from joserfc import jwt
 
 from opencredential.db.models import CanvasIntegration
 from opencredential.integrations.base import LmsPermissionError, LmsTransientError
-from opencredential.integrations.canvas.http import host_header, next_link, rewrite_url
+from opencredential.integrations.canvas.http import (
+    host_header,
+    next_link,
+    rewrite_url,
+    url_origin,
+)
 from opencredential.lti.keys import tool_key
 from opencredential.settings import Settings
 
@@ -142,6 +147,9 @@ def nrps_members(
 ) -> Iterator[NrpsMember]:
     """All members of a context. Raises on any failed page (no partial rosters)."""
     token = service_token(settings, integration, [NRPS_SCOPE], transport=transport)
+    # The service token only ever goes to the site the class list lives on: a "next page"
+    # address that points anywhere else is refused rather than followed.
+    allowed = {url_origin(memberships_url), url_origin(rewrite_url(settings, memberships_url))}
     params: dict[str, Any] = {"limit": 100}
     if resource_link_id:
         params["rlid"] = resource_link_id
@@ -152,6 +160,10 @@ def nrps_members(
             pages += 1
             if pages > 500:
                 raise LmsTransientError("NRPS pagination did not terminate")
+            if url_origin(url) not in allowed:
+                raise LmsPermissionError(
+                    f"refusing to send the class-list token to {url_origin(url)}"
+                )
             try:
                 resp = client.get(
                     rewrite_url(settings, url),

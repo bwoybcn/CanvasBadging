@@ -61,9 +61,24 @@ describe("development sign-in", () => {
     expect(screen.getByText(/demonstration data/)).toBeInTheDocument();
   });
 
-  it("explains when development sign-in is unavailable", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json({ status: 404, code: "NOT_FOUND", title: "x" }, 404)));
+  it("tells a visitor with no session to open Badges from Canvas, with nothing about development", async () => {
+    // What a production server answers: the development sign-in routes do not exist there.
+    vi.stubGlobal("fetch", vi.fn(async () => json({ status: 404, code: "NOT_FOUND", title: "Not Found" }, 404)));
+    renderAt("/badges");
+    expect(await screen.findByRole("heading", { name: "Open Badges from Canvas" })).toBeInTheDocument();
+    expect(screen.getByText(/choose Badges in the course menu/)).toBeInTheDocument();
+    expect(screen.queryByText(/[Dd]evelopment/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/synthetic/)).not.toBeInTheDocument();
+  });
+
+  it("explains when development sign-in has no demo data yet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({ status: 404, code: "NOT_FOUND", title: "No demonstration institution with that slug" }, 404),
+      ),
+    );
     renderAt("/dev-login");
-    expect(await screen.findByText(/Development sign-in is not available/)).toBeInTheDocument();
+    expect(await screen.findByText(/Development sign-in is not available yet/)).toBeInTheDocument();
   });
 });

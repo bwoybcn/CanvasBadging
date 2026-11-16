@@ -85,3 +85,39 @@ def test_https_redirects_are_followed_a_few_times_only() -> None:
 
     with pytest.raises(Unavailable, match="too many"):
         _sources(loop)._get_json("https://issuer.example/start")
+
+
+def test_the_real_client_never_connects_to_a_local_server() -> None:
+    """The address check is fitted into httpx through a private attribute, so prove it on the
+    client the verifier really uses: a server on this machine must never see a connection."""
+    import socket
+    import threading
+
+    from opencredential.verification.sources import public_client
+
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(1)
+    server.settimeout(1.5)
+    port = server.getsockname()[1]
+    connections: list[object] = []
+
+    def accept() -> None:
+        try:
+            conn, _ = server.accept()
+        except OSError:
+            return
+        connections.append(conn)
+        conn.close()
+
+    listener = threading.Thread(target=accept)
+    listener.start()
+    try:
+        with public_client() as client, pytest.raises(httpx.ConnectError, match="non-public"):
+            client.get(f"http://127.0.0.1:{port}/status-list")
+        with pytest.raises(Unavailable):
+            DefaultSources(set())._get_json(f"https://127.0.0.1:{port}/status-list")
+    finally:
+        listener.join()
+        server.close()
+    assert connections == []

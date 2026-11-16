@@ -120,12 +120,39 @@ def _types(value: Any) -> list[str]:
     return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
 
 
-def _signing_method(doc: dict[str, Any]) -> str | None:
-    """The verification method that signed ``doc`` (its first proof), if any."""
+def _proofs(doc: dict[str, Any]) -> list[dict[str, Any]]:
+    """The credential's embedded proofs: one object, or a set of them (VC Data Integrity §2.1)."""
     proof = doc.get("proof")
-    if isinstance(proof, list):
-        proof = proof[0] if proof else None
-    method = proof.get("verificationMethod") if isinstance(proof, dict) else None
+    if isinstance(proof, dict):
+        return [proof]
+    return [p for p in proof if isinstance(p, dict)] if isinstance(proof, list) else []
+
+
+def _issuer_proof(doc: dict[str, Any]) -> dict[str, Any] | None:
+    """The proof made with one of the issuer's own keys.
+
+    A credential may carry several proofs (an endorser or a wallet can add its own). Only the
+    issuer's proof says the issuer made this credential, so that is the one that is checked;
+    among several, one in the supported cryptosuite is preferred.
+    """
+    issuer_id = _issuer_id(doc)
+    mine = [
+        p
+        for p in _proofs(doc)
+        if isinstance(p.get("verificationMethod"), str)
+        and "#" in p["verificationMethod"]
+        and p["verificationMethod"].split("#")[0] == issuer_id
+    ]
+    for p in mine:
+        if p.get("type") == "DataIntegrityProof" and p.get("cryptosuite") == "eddsa-rdfc-2022":
+            return p
+    return mine[0] if mine else None
+
+
+def _signing_method(doc: dict[str, Any]) -> str | None:
+    """The issuer's verification method that signed ``doc``, if any."""
+    proof = _issuer_proof(doc)
+    method = proof.get("verificationMethod") if proof else None
     return method if isinstance(method, str) else None
 
 
@@ -211,8 +238,8 @@ class Verifier:
 
         # issuer + verification method
         issuer_id = _issuer_id(doc)
-        proof = doc.get("proof")
-        vm = proof.get("verificationMethod") if isinstance(proof, dict) else None
+        proof = _issuer_proof(doc)
+        vm = proof.get("verificationMethod") if proof else None
         if not issuer_id or not issuer_id.startswith(("did:key:", "did:web:")):
             checks.append(
                 Check(
@@ -222,7 +249,7 @@ class Verifier:
                 )
             )
             return self._finish(Outcome.invalid, checks, doc, now)
-        if not isinstance(vm, str) or vm.split("#")[0] != issuer_id or "#" not in vm:
+        if proof is None or not isinstance(vm, str):
             checks.append(
                 Check(
                     "issuer",
@@ -249,8 +276,26 @@ class Verifier:
         )
 
         # signature (and assertionMethod authorisation)
+        others = len(_proofs(doc)) - 1
+        signed = doc
+        if not isinstance(doc.get("proof"), dict):
+            if proof.get("previousProof"):
+                # A proof chain signs the earlier proofs too; that is not supported here, and
+                # something this service cannot check is never reported as a forgery.
+                checks.append(
+                    Check(
+                        "signature",
+                        CheckStatus.unavailable,
+                        "This credential carries a chain of proofs, which this service "
+                        "cannot check.",
+                    )
+                )
+                return self._finish(Outcome.unable_to_verify, checks, doc, now)
+            # In a set of proofs each one signs the credential without the others, so the
+            # issuer's proof is checked on its own.
+            signed = {**doc, "proof": proof}
         try:
-            pc = self.signer.verify(doc, did_docs)
+            pc = self.signer.verify(signed, did_docs)
         except SignerError as exc:
             checks.append(
                 Check("signature", CheckStatus.unavailable, f"Signature service unavailable: {exc}")
@@ -271,9 +316,13 @@ class Verifier:
                 )
             )
             return self._finish(Outcome.invalid, checks, doc, now)
-        checks.append(
-            Check("signature", CheckStatus.passed, "eddsa-rdfc-2022 Data Integrity proof is valid.")
-        )
+        detail = "eddsa-rdfc-2022 Data Integrity proof is valid."
+        if others > 0:
+            detail += (
+                f" The credential carries {others} other proof{'s' if others != 1 else ''} "
+                "not made by the issuer; those were not checked."
+            )
+        checks.append(Check("signature", CheckStatus.passed, detail))
         checks.append(
             Check(
                 "achievement_integrity",

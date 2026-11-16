@@ -445,6 +445,8 @@ export interface CourseProgress {
       decision_status: string | null;
       decision_id: string | null;
       credential_id?: string | null;
+      /** Whether the issued badge still stands: active, revoked or suspended. */
+      credential_state?: string | null;
     }[];
   }[];
 }

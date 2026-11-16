@@ -481,3 +481,33 @@ def test_tool_jwks_and_canvas_config(world: dict[str, Any]) -> None:
     assert placement["text"] == "Badges" and placement["default"] == "disabled"
     assert cfg["custom_fields"]["canvas_course_id"] == "$Canvas.course.id"
     assert cfg["public_jwk"]["kid"] == jwks["keys"][0]["kid"]
+
+
+def test_sign_in_clean_up_follows_the_configured_time_limit(
+    world: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Whole-product review, 16 Nov 2026, finding 19: the clean-up job deleted sign-ins older
+    than ten minutes whatever ``OC_LTI_STATE_TTL_SECONDS`` said, so with a longer limit a
+    sign-in still in progress lost its record and failed."""
+    from opencredential.jobs.tasks import purge_lti_state
+    from opencredential.settings import get_settings
+
+    lg = _login(world)
+    with owner_session() as db:
+        row = db.scalar(select(m.LtiLaunchState).where(m.LtiLaunchState.state == lg.state))
+        assert row is not None
+        row.created_at = datetime.now(UTC) - timedelta(minutes=15)
+
+    def still_there() -> bool:
+        with owner_session() as db:
+            return (
+                db.scalar(select(m.LtiLaunchState.id).where(m.LtiLaunchState.state == lg.state))
+                is not None
+            )
+
+    monkeypatch.setattr(get_settings(), "lti_state_ttl_seconds", 1800)
+    purge_lti_state(0)
+    assert still_there()  # fifteen minutes old, half an hour allowed
+    monkeypatch.setattr(get_settings(), "lti_state_ttl_seconds", 600)
+    purge_lti_state(0)
+    assert not still_there()

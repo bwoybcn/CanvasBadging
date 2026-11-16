@@ -55,6 +55,10 @@ def acceptable(expr: str) -> bool:
 
 
 def check(pairs: list[tuple[str, str]]) -> int:
+    if not pairs:
+        # An empty list means the listing step failed, not that everything is allowed.
+        print("NOTHING CHECKED  no packages were listed, so the licence gate cannot pass")
+        return 1
     bad = [(n, lic) for n, lic in pairs if n not in REVIEWED and not acceptable(lic)]
     for name, lic in bad:
         print(f"DISALLOWED  {name}: {lic!r}")
@@ -68,10 +72,17 @@ def python(path: str) -> int:
 
 
 def npm(pkg_dir: str) -> int:
-    out = subprocess.run(
+    listing = subprocess.run(
         ["npm", "ls", "--omit=dev", "--all", "--parseable"],
         cwd=pkg_dir, capture_output=True, text=True, check=False,
-    ).stdout.splitlines()
+    )
+    out = listing.stdout.splitlines()
+    if len(out) < 2:
+        # npm prints the package itself first, then one line per dependency. Fewer lines
+        # means npm failed or node_modules is missing; passing here would hide that.
+        print(f"NOTHING CHECKED  npm ls listed no dependencies in {pkg_dir} "
+              f"(exit {listing.returncode}): {listing.stderr.strip()[:300]}")
+        return 1
     pairs = []
     for line in out[1:]:
         manifest = json.loads((Path(line) / "package.json").read_text())

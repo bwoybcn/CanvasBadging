@@ -924,3 +924,208 @@ def test_reconciliation_of_awards_not_issued(world: World, owner_conn: psycopg.C
     pending = world.get("admin", "/api/v1/admin/reports/summary").json()["pending_awards"]
     assert pending["awaiting_issuance"] == 1
     assert {"reconciliation.requeue", "reconciliation.cancel"} <= _actions(world)
+
+
+# ---- whole-product review, 16 Nov 2026, finding 19 -----------------------------------------
+
+
+def test_a_revoked_badge_is_not_shown_as_earned(world: World, signer_available: bool) -> None:
+    """The student's progress page said "Earned" for a badge the issuer had revoked, while the
+    public check of the same badge said "Revoked"."""
+    issuer_id = _authorised_issuer(world)
+    definition_id = _manual_badge(world, issuer_id)
+    cred_id = _issue_to(world, definition_id, "s1")
+
+    def mine() -> dict[str, Any]:
+        badges = world.get("s1", "/api/v1/learners/me/achievements").json()
+        return next(b for b in badges if b["definition_id"] == definition_id)
+
+    def cell() -> dict[str, Any]:
+        progress = world.get("lecturer", f"/api/v1/courses/{world.course_id}/progress").json()
+        row = next(r for r in progress["learners"] if r["user_id"] == str(world.users["s1"]))
+        return dict(row["cells"][0])
+
+    assert (mine()["status"], mine()["credential_id"]) == ("earned", cred_id)
+    # Staff see which issued badge it is, so "Request revocation" can be offered for it.
+    assert (cell()["credential_id"], cell()["credential_state"]) == (cred_id, "active")
+    other = world.get("lecturer", f"/api/v1/courses/{world.course_id}/progress").json()
+    s2 = next(r for r in other["learners"] if r["user_id"] == str(world.users["s2"]))
+    assert (s2["cells"][0]["credential_id"], s2["cells"][0]["credential_state"]) == (None, None)
+
+    r = world.post(
+        "admin",
+        f"/api/v1/credentials/{cred_id}/revoke",
+        {"reason_code": "issued_in_error", "reason_text": "Awarded to the wrong student"},
+    )
+    assert r.status_code == 200, r.text
+    assert (mine()["status"], mine()["credential_id"]) == ("revoked", cred_id)
+    assert (cell()["credential_id"], cell()["credential_state"]) == (cred_id, "revoked")
+
+
+def test_course_progress_reads_only_the_newest_evaluation(world: World) -> None:
+    """A course evaluated every half hour for a term has thousands of evaluation rows; the
+    progress screen shows the newest one for each student and must not load the rest."""
+    world.publish({"mode": "ALL", "rules": [{"type": "module_completed", "module_id": "m1"}]})
+    world.sync_and_evaluate()
+    world.lms.complete_module("course-101", "lms-s1", "m1")
+    world.sync_and_evaluate()
+    assert len(world.evaluations("s1")) >= 2  # history is kept
+    progress = world.get("lecturer", f"/api/v1/courses/{world.course_id}/progress").json()
+    row = next(r for r in progress["learners"] if r["user_id"] == str(world.users["s1"]))
+    assert row["cells"][0]["outcome"] == "met"  # the newest, not the first
+    other = next(r for r in progress["learners"] if r["user_id"] == str(world.users["s2"]))
+    assert other["cells"][0]["outcome"] == "not_met"
+
+
+def test_an_expired_role_can_be_granted_again(world: World) -> None:
+    """Granting a role that had run out answered with the old, expired grant, so the person
+    stayed without the role until someone removed the old row by hand."""
+    grant = {
+        "user_id": str(world.users["outsider"]),
+        "role": "inst_admin",
+        "scope_type": "institution",
+    }
+    first = world.post(
+        "admin",
+        "/api/v1/admin/memberships",
+        {**grant, "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat()},
+    )
+    assert first.status_code == 201, first.text
+    # Asking again while it still runs changes nothing.
+    again = world.post("admin", "/api/v1/admin/memberships", grant)
+    assert again.json()["id"] == first.json()["id"]
+
+    with world.db() as db:
+        row = db.get(m.Membership, uuid.UUID(first.json()["id"]))
+        assert row is not None
+        row.expires_at = datetime.now(UTC) - timedelta(minutes=1)
+    renewed = world.post("admin", "/api/v1/admin/memberships", grant)
+    assert renewed.status_code == 201, renewed.text
+    assert renewed.json()["id"] != first.json()["id"]
+    with world.db() as db:
+        old = db.get(m.Membership, uuid.UUID(first.json()["id"]))
+        new = db.get(m.Membership, uuid.UUID(renewed.json()["id"]))
+        assert old is not None and old.revoked_at == old.expires_at  # closed when it ran out
+        assert new is not None and new.revoked_at is None and new.expires_at is None
+
+
+def test_an_expired_administrator_does_not_count_as_one(world: World) -> None:
+    """Removing the last working administrator was allowed when another administrator's grant
+    existed but had already run out, leaving the institution with nobody who could administer."""
+    with world.db() as db:
+        db.add(
+            m.Membership(
+                institution_id=world.iid,
+                user_id=world.users["outsider"],
+                scope_type="institution",
+                scope_id=world.iid,
+                role="inst_admin",
+                source="grant",
+                expires_at=datetime.now(UTC) - timedelta(minutes=1),
+            )
+        )
+    with world.db() as db:
+        only = db.scalar(
+            select(m.Membership.id).where(
+                m.Membership.user_id == world.users["admin"], m.Membership.role == "inst_admin"
+            )
+        )
+    r = world.client.delete(f"/api/v1/admin/memberships/{only}", headers=world.h("admin"))
+    assert r.status_code == 409 and r.json()["code"] == "LAST_ADMIN"
+
+
+def test_a_field_the_author_cleared_stays_cleared(world: World) -> None:
+    """The template's wording came back into a field the author had deliberately emptied."""
+    defaults = {
+        "title": "Volunteering: [number] hours",
+        "criteria_narrative": "Complete [number] hours with [Scheme name].",
+        "evidence_description": "Hours signed off by the scheme coordinator.",
+        "validity_days": 365,
+    }
+    template = world.post(
+        "admin", "/api/v1/admin/templates", {"name": "Volunteering", "defaults": defaults}
+    )
+    assert template.status_code == 201, template.text
+    created = world.post(
+        "lecturer",
+        "/api/v1/achievements",
+        {
+            "issuer_id": str(world.issuer_id),
+            "course_id": str(world.course_id),
+            "template_id": template.json()["id"],
+            # What the wizard sends: every field, the emptied ones as null.
+            "fields": {
+                "title": "Volunteering: 10 hours",
+                "criteria_narrative": "Complete [number] hours with [Scheme name].",
+                "evidence_description": None,
+                "validity_days": None,
+            },
+        },
+    )
+    assert created.status_code == 201, created.text
+    v = created.json()["working_version"]
+    assert v["evidence_description"] is None and v["validity_days"] is None
+    assert v["title"] == "Volunteering: 10 hours"
+
+    # Template wording left in [square brackets] stops the badge being submitted.
+    codes = {i["code"]: i for i in created.json()["readiness"]}
+    assert codes["TEMPLATE_PLACEHOLDER"]["severity"] == "error"
+    did = created.json()["id"]
+    fixed = world.patch(
+        "lecturer",
+        f"/api/v1/achievements/{did}",
+        {"criteria_narrative": "Complete 10 hours with the Library volunteers scheme."},
+    )
+    assert fixed.status_code == 200, fixed.text
+    assert "TEMPLATE_PLACEHOLDER" not in {i["code"] for i in fixed.json()["readiness"]}
+
+
+def test_square_brackets_in_a_badge_not_made_from_a_template_are_left_alone(
+    world: World,
+) -> None:
+    d = world.draft(MANUAL_RULES, title="Chemistry [Year 2] practical skills")
+    detail = world.get("lecturer", f"/api/v1/achievements/{d['id']}").json()
+    assert "TEMPLATE_PLACEHOLDER" not in {i["code"] for i in detail["readiness"]}
+
+
+def test_a_canvas_failure_does_not_undo_a_good_class_list(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The class list and the progress data were saved together, so when Canvas failed while
+    progress was read, the class list that had just been read correctly was thrown away."""
+    from opencredential.integrations.base import LmsPermissionError
+    from opencredential.lti import roster
+
+    def joined(db: Any, settings: Any, integration: Any, course: Any, **_: Any) -> Any:
+        db.add(
+            m.Membership(
+                institution_id=world.iid,
+                user_id=world.users["outsider"],
+                scope_type="course",
+                scope_id=course.id,
+                role="student",
+                source="nrps",
+            )
+        )
+        db.flush()
+        return roster.RosterResult(1, 1, 0, 0, 0)
+
+    monkeypatch.setattr(roster, "sync_roster", joined)
+    with world.db() as db:
+        course = db.get(m.Course, world.course_id)
+        assert course is not None
+        course.lti_nrps_url = "https://canvas.example/api/lti/courses/101/names_and_roles"
+    world.publish({"mode": "ALL", "rules": [{"type": "module_completed", "module_id": "m1"}]})
+    world.lms.failures[("modules",)] = LmsPermissionError("Canvas refused")
+
+    assert world.sync()["status"] == "failed"
+    with world.db() as db:
+        kept = db.scalar(
+            select(m.Membership.id).where(
+                m.Membership.user_id == world.users["outsider"],
+                m.Membership.scope_id == world.course_id,
+                m.Membership.role == "student",
+                m.Membership.revoked_at.is_(None),
+            )
+        )
+    assert kept is not None
