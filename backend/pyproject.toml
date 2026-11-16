@@ -6,7 +6,7 @@ readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "fastapi==0.162.5",
+    "fastapi==0.162.7",
     "pydantic==2.14.3",
     "pydantic-settings>=2.6",
     "sqlalchemy==2.1.8",
