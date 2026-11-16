@@ -318,7 +318,7 @@ test("E10 unauthorised access: another learner's credential is not disclosed", a
   }
   expect((await api.raw("GET", "/api/v1/admin/credentials")).status()).toBe(403);
   // Institution B's records: covered against two real tenants by the backend suite
-  // (test_scenario_10_unauthorized_access, test_w8_security), as the dev stack seeds one.
+  // (test_scenario_10_unauthorized_access, test_security), as the dev stack seeds one.
 });
 
 test("E12 interrupted issuance: a signer outage, then recovery, gives exactly one credential", async ({ page }) => {

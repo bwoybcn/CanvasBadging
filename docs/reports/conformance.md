@@ -36,7 +36,7 @@ can re-check them, for example with 1EdTech's web validator.
 
 | Evidence | Where |
 |---|---|
-| A second `eddsa-rdfc-2022` implementation in Python (pyld URDNA2015 and `cryptography` Ed25519), sharing no code with the signer, verifies every credential in the issuance tests, including after `did:web` key rotation | `backend/tests/independent/verifier.py`, `test_w4_issuance.py` |
+| A second `eddsa-rdfc-2022` implementation in Python (pyld URDNA2015 and `cryptography` Ed25519), sharing no code with the signer, verifies every credential in the issuance tests, including after `did:web` key rotation | `backend/tests/independent/verifier.py`, `test_issuance_and_verification.py` |
 | Each credential is validated against the official AchievementCredential JSON Schema before signing (pinned by SHA-256) | `backend/opencredential/issuance/schemas/`, `unit/test_ob3.py::test_mandatory_fields` |
 | JSON-LD safe mode: undefined terms are refused at signing | signer test "refuses undefined terms (JSON-LD safe mode)" |
 | The bundled OB 3.0.3 context is byte-for-byte the official one | signer test "bundles the official Open Badges 3.0.3 context byte-for-byte" |

@@ -29,7 +29,7 @@ from opencredential.status import service as status_service
 from opencredential.status.compromise import respond_to_compromise
 from opencredential.verification.service import Outcome, Verifier
 from opencredential.verification.sources import DefaultSources, own_origins
-from tests.integration.w4_factory import Tenant, build_tenant
+from tests.integration.issuance_factory import Tenant, build_tenant
 
 pytestmark = pytest.mark.db
 

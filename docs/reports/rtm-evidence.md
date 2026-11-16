@@ -36,16 +36,16 @@ Backend test files are under `backend/tests/`. Short names used below:
 
 | Short name | File |
 |---|---|
-| W3-LTI | `integration/test_w3_lti_launch.py` |
-| W3-CAN | `integration/test_w3_canvas_access.py` |
-| W4 | `integration/test_w4_issuance.py` |
-| W5 | `integration/test_w5_scenarios.py` |
-| W5-JOBS | `integration/test_w5_jobs_and_seed.py` |
-| W6 | `integration/test_w6_sharing.py` |
-| W7 | `integration/test_w7_governance.py` |
-| W8-SEC | `integration/test_w8_security.py` |
-| W8-ACT | `integration/test_w8_course_activation.py` |
-| W8-WRK | `integration/test_w8_worker.py` |
+| W3-LTI | `integration/test_lti_launch.py` |
+| W3-CAN | `integration/test_canvas_oauth_and_class_list.py` |
+| W4 | `integration/test_issuance_and_verification.py` |
+| W5 | `integration/test_authoring_and_award_scenarios.py` |
+| W5-JOBS | `integration/test_worker_sync_and_demo_outcomes.py` |
+| W6 | `integration/test_sharing_and_export.py` |
+| W7 | `integration/test_governance.py` |
+| W8-SEC | `integration/test_security.py` |
+| W8-ACT | `integration/test_course_activation.py` |
+| W8-WRK | `integration/test_worker_issuance.py` |
 | TEN | `integration/test_tenant_isolation.py` |
 | IMM | `integration/test_immutability.py` |
 | MIG | `integration/test_migrations.py` |

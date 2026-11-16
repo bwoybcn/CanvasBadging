@@ -40,7 +40,7 @@ cover `iss`, `aud`/`azp`, `deployment_id`, `exp`/`iat` with bounded clock skew, 
 and the version. `alg` is restricted to RS256/384/512 (`none` and HS* are refused). State is single use
 and burned even on a failed launch. Disabled registrations cannot log in.
 
-**Tests.** `integration/test_w3_lti_launch.py`: `test_bad_signature_rejected`,
+**Tests.** `integration/test_lti_launch.py`: `test_bad_signature_rejected`,
 `test_disallowed_algorithms`, `test_invalid_claims_rejected`, `test_unknown_kid_refetches_once_then_rejects`,
 `test_malformed_token`, `test_replayed_launch_is_rejected`, `test_same_token_with_fresh_state_is_rejected`,
 `test_nonce_reuse_is_rejected`, `test_rejected_launch_still_burns_state`, `test_unknown_state`,
@@ -68,7 +68,7 @@ the granter's own scope (`can_grant`). Expired memberships stop counting.
 `unit/test_sessions.py` (`test_rejects_other_key`, `test_rejects_expired`,
 `test_rejects_garbage_and_alg_none`); `test_delegated_role_management`,
 `test_expired_roles_stop_working`, `test_department_admin_scope_for_issuers` (W7).
-`integration/test_w8_security.py` runs the full matrix: `test_every_api_route_refuses_anonymous_callers`
+`integration/test_security.py` runs the full matrix: `test_every_api_route_refuses_anonymous_callers`
 (every route in the OpenAPI document), `test_forged_or_malformed_tokens_are_refused`,
 `test_tampered_session_token_is_refused`, `test_student_cannot_change_anything_that_is_not_theirs`
 (every mutating route as a student) and `test_student_reads_only_their_own_records`.

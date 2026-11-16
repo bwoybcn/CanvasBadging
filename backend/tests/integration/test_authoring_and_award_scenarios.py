@@ -23,7 +23,7 @@ from opencredential.db import models as m
 from opencredential.integrations import registry
 from opencredential.integrations.base import LmsTransientError
 from opencredential.settings import get_settings
-from tests.integration.w5_world import CHECKLIST, COURSE_REF, World, build_world
+from tests.integration.world import CHECKLIST, COURSE_REF, World, build_world
 
 pytestmark = pytest.mark.db
 

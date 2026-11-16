@@ -23,8 +23,8 @@ from opencredential.jobs import tasks
 from opencredential.lti import provision
 from opencredential.lti.claims import LaunchData
 from opencredential.settings import get_settings
-from tests.integration.test_w7_governance import _authorised_issuer, _manual_badge
-from tests.integration.w5_world import World, build_world
+from tests.integration.test_governance import _authorised_issuer, _manual_badge
+from tests.integration.world import World, build_world
 
 pytestmark = pytest.mark.db
 
@@ -210,7 +210,7 @@ def test_activation_policy_is_set_by_an_institution_administrator(client: TestCl
 
 def test_course_staff_see_and_export_their_course_award_history(client: TestClient) -> None:
     """Spec §2.2: lecturers review award history and export course-level issuance records."""
-    from tests.integration.test_w7_governance import _issue_to
+    from tests.integration.test_governance import _issue_to
 
     w = build_world(client)
     definition_id = _manual_badge(w, _authorised_issuer(w))

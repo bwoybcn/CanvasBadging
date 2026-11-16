@@ -22,8 +22,8 @@ from fastapi.testclient import TestClient
 from opencredential.api.app import create_app
 from opencredential.integrations import registry
 from opencredential.settings import get_settings
-from tests.integration.test_w7_governance import _authorised_issuer, _issue_to, _manual_badge
-from tests.integration.w5_world import World, build_world
+from tests.integration.test_governance import _authorised_issuer, _issue_to, _manual_badge
+from tests.integration.world import World, build_world
 
 pytestmark = pytest.mark.db
 
@@ -41,7 +41,7 @@ PUBLIC_API = {
 STUDENT_OWN_COURSE = {("POST", "/api/v1/courses/{course_id}/sync")}
 
 # Anyone signed in may swap their own valid session token for a fresh one. It changes nothing
-# but their own session (limits are covered in test_w8_session_renewal.py).
+# but their own session (limits are covered in test_session_renewal.py).
 OWN_SESSION = {("POST", "/api/v1/session/renew")}
 
 # Mutating routes a student may legitimately call. With another learner's ids they must still

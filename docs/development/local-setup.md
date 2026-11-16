@@ -69,6 +69,11 @@ cd backend
 uv run pytest                       # unit tests always; DB tests need Postgres
 ```
 
+[backend/tests/README.md](../../backend/tests/README.md) says which file tests which feature.
+The tests run in a shuffled order each time, so that none depends on another having run first.
+A failed run prints its `--randomly-seed`; pass it back to repeat that order, or use
+`-p no:randomly` for plain file order.
+
 Integration tests (`-m db`) create a fresh `opencredential_test` database using the superuser
 URL in `OC_TEST_ADMIN_URL` (default `postgresql://postgres:postgres@localhost:5432/postgres`).
 The seed and API tests also need the signer pointed at that database:

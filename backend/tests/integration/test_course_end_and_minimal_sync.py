@@ -27,7 +27,7 @@ from opencredential.integrations import registry
 from opencredential.integrations.base import CourseStateRecord, LmsPermissionError
 from opencredential.jobs import tasks
 from opencredential.settings import get_settings
-from tests.integration.w5_world import COURSE_REF, World, build_world
+from tests.integration.world import COURSE_REF, World, build_world
 
 pytestmark = pytest.mark.db
 
@@ -79,8 +79,13 @@ def _course(w: World) -> m.Course:
         return course
 
 
-def _reason(w: World, user: str) -> str:
-    return str(w.evaluations(user)[-1].detail["rules"][0]["explanation_code"])
+def _reason(w: World, user: str, badge: dict[str, Any] | None = None) -> str:
+    """Why the student's latest evaluation came out as it did. Name the ``badge`` when more
+    than one is live: one run evaluates them at the same moment, so "latest" alone is a tie."""
+    rows = w.evaluations(user)
+    if badge is not None:
+        rows = [e for e in rows if str(e.version_id) == badge["live_version_id"]]
+    return str(rows[-1].detail["rules"][0]["explanation_code"])
 
 
 def _audit(w: World) -> list[str]:
@@ -188,15 +193,15 @@ def test_a_newly_used_assignment_is_unknown_until_read_and_a_refresh_is_queued(
     assert w.jobs("oc:sync_course") == []  # a module rule needs nothing new from Canvas
 
     w.lms.set_submission(w.ref, "lms-s1", "a1", workflow_state="submitted")
-    w.publish(SUBMIT_A1)
+    essay = w.publish(SUBMIT_A1)
     # Nobody's submission for the essay is held yet. Saying "not submitted" would be a guess.
     w.evaluate()
-    assert {_reason(w, s) for s in ("s1", "s2")} == {"DATA_NOT_SYNCED"}
+    assert {_reason(w, s, essay) for s in ("s1", "s2")} == {"DATA_NOT_SYNCED"}
     # Publishing queued a refresh from Canvas, so students do not wait for the next scheduled one.
     assert [j["args"]["kind"] for j in w.jobs("oc:sync_course")] == ["hint"]
 
     w.sync_and_evaluate()
-    assert _reason(w, "s1") == "SUBMITTED" and _reason(w, "s2") == "NOT_SUBMITTED"
+    assert _reason(w, "s1", essay) == "SUBMITTED" and _reason(w, "s2", essay) == "NOT_SUBMITTED"
 
 
 # ---- a course that has ended -------------------------------------------------------------------

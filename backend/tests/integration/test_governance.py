@@ -33,7 +33,7 @@ from opencredential.settings import get_settings
 from opencredential.signer_client import SignerClient
 from opencredential.verification.service import Outcome, Verifier
 from opencredential.verification.sources import DefaultSources, own_origins
-from tests.integration.w5_world import World, build_world
+from tests.integration.world import World, build_world
 
 pytestmark = pytest.mark.db
 

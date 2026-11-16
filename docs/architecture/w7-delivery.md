@@ -40,7 +40,7 @@ revocation) and W5 (authoring, rules, awards), both now on `main`.
 
 ## Evidence (RTM)
 
-| RTM | Test (`backend/tests/integration/test_w7_governance.py` unless noted) |
+| RTM | Test (`backend/tests/integration/test_governance.py` unless noted) |
 | --- | --- |
 | R-10.1 | `test_institution_configuration`, `test_did_web_issuer_on_configured_host` |
 | R-10.2 | `test_issuer_needs_explicit_authority_before_it_can_be_used`, `test_department_admin_scope_for_issuers` |

@@ -19,9 +19,8 @@ pytestmark = pytest.mark.db
 
 @pytest.fixture(scope="module")
 def seeded(database: None, signer_available: bool) -> seed.SeedResult:
-    result = seed.run()
-    assert result.created or result.counts == {}
-    return result
+    # Another test file may have loaded the demo data already; then this returns that data.
+    return seed.run()
 
 
 @pytest.fixture
@@ -31,7 +30,24 @@ def client(seeded: seed.SeedResult):  # type: ignore[no-untyped-def]
 
 
 def test_seed_counts(seeded: seed.SeedResult) -> None:
-    assert seeded.counts == {"badges": 9, "students": 12, "staff": 3, "evaluations": 108}
+    """Counted in the database, so it holds whichever test file loaded the demo data first."""
+    if seeded.created:
+        assert seeded.counts == {"badges": 9, "students": 12, "staff": 3, "evaluations": 108}
+    with tenant_session(seeded.institution_id) as db:
+        badges = db.scalar(select(func.count()).select_from(m.AchievementVersion))
+        roles = dict(
+            db.execute(  # type: ignore[arg-type]
+                select(m.Membership.role, func.count(func.distinct(m.Membership.user_id)))
+                .where(m.Membership.revoked_at.is_(None))
+                .group_by(m.Membership.role)
+            ).all()
+        )
+        people = db.scalar(select(func.count()).select_from(m.User))
+        # One evaluation for each student and badge (a later re-evaluation may add history).
+        evaluated = db.execute(
+            select(m.EligibilityEvaluation.user_id, m.EligibilityEvaluation.version_id).distinct()
+        ).all()
+    assert (badges, roles["student"], people, len(evaluated)) == (9, 12, 15, 108)
 
 
 def test_seed_is_idempotent(seeded: seed.SeedResult) -> None:
@@ -203,7 +219,16 @@ def test_seed_refuses_production() -> None:
 
 
 def test_signer_holds_encrypted_key_only(seeded: seed.SeedResult) -> None:
+    # The demo issuer's key only: other tests create keys of their own in the same database.
+    with tenant_session(seeded.institution_id) as db:
+        key_id = db.scalars(select(m.IssuerKey.id)).one()
     with owner_session() as db:
-        row = db.execute(text("SELECT ciphertext, kek_ref, is_dev FROM keys.private_keys")).one()
+        row = db.execute(
+            text(
+                "SELECT ciphertext, kek_ref, is_dev FROM keys.private_keys"
+                " WHERE issuer_key_id = :key"
+            ),
+            {"key": key_id},
+        ).one()
     assert row.is_dev and row.kek_ref == "dev:committed"
     assert b"z" not in bytes(row.ciphertext)[:1] or len(bytes(row.ciphertext)) > 28

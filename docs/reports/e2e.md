@@ -39,7 +39,7 @@ the final commit of the pull request is the record of evidence.
 
 | Defect | Effect | Fix | Regression test |
 |---|---|---|---|
-| Inside `oc worker`, every issuance job failed after signing, while queueing the status-list publication (procrastinate refused a second `open()`) | Credentials were signed but the job was marked failed. New status lists were not published until the hourly job ran, so new credentials showed "Unable to verify". | `jobs/defer.py` reuses the worker's open app | `test_w8_worker.py` |
+| Inside `oc worker`, every issuance job failed after signing, while queueing the status-list publication (procrastinate refused a second `open()`) | Credentials were signed but the job was marked failed. New status lists were not published until the hourly job ran, so new credentials showed "Unable to verify". | `jobs/defer.py` reuses the worker's open app | `test_worker_issuance.py` |
 | A credential in a brand-new status list showed "Unable to verify" for about 10 seconds after issue, because the first publication waited for the delayed job (found by E6 in CI) | A student who downloaded and checked a credential at once was told it could not be verified | The issuing job publishes a new list itself; the queued job is only a fallback | `test_worker_issues_and_publishes_a_new_status_list_at_once`, `test_worker_queues_publication_when_the_first_one_fails` |
 
 ## 2. Real Canvas, over HTTPS
@@ -66,7 +66,7 @@ is expected.
 
 | # | Finding | Status |
 |---|---|---|
-| a | There was no way to switch a course on: no endpoint and no button, although the home page told lecturers to "activate the course". Scheduled reconciliation only reads active courses, so a real course would never refresh on its own. | **Fixed in W8.** `POST /api/v1/courses/{id}/activate` and `/deactivate`, a button on the launch page, an initial sync on activation, and the institution policy `course_activation_required` honoured on first launch. Tests: `test_w8_course_activation.py`, frontend "lets a lecturer switch micro-credentials on from the launch page". |
+| a | There was no way to switch a course on: no endpoint and no button, although the home page told lecturers to "activate the course". Scheduled reconciliation only reads active courses, so a real course would never refresh on its own. | **Fixed in W8.** `POST /api/v1/courses/{id}/activate` and `/deactivate`, a button on the launch page, an initial sync on activation, and the institution policy `course_activation_required` honoured on first launch. Tests: `test_course_activation.py`, frontend "lets a lecturer switch micro-credentials on from the launch page". |
 | b | When a refresh was refused as too soon, the message did not say that nothing new had been read from Canvas | **Fixed in W8.** Course progress shows the last successful read and the last attempt. A refused refresh now says the figures come from the earlier read. |
 | c | Moving the tool to a new URL (here, to HTTPS at :8443) needed a separate API call to update the deployed tool, because Canvas keeps the old launch URL on the installed tool with no sign of it in the UI | **Documented** in [Canvas install guide, "Changing the tool's address"](../integrations/canvas.md#changing-the-tools-address) |
 | d | NRPS returns 500 on Canvas installs whose domain includes a port | Canvas defect, outside OpenCredential. The local roster path copes with it. Production Canvas (Instructure-hosted, no port) is not affected. |
