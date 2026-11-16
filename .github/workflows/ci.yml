@@ -120,7 +120,16 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Cache the inspector's Maven dependencies
+        # The inspector's dependencies come from 1EdTech's own repository server. When that
+        # server stalled (16 November 2026), this job failed once and then hung for a quarter
+        # of an hour without a word. The cache keeps a good copy, keyed on the pinned commit.
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: dcpv-m2-4c6631fb5ea206ee60c2e7128749b44d70801098
       - name: 1EdTech OB 3.0 inspector (digital-credentials-public-validator)
+        timeout-minutes: 12
         run: |
           git clone --filter=blob:none https://github.com/1EdTech/digital-credentials-public-validator.git "$RUNNER_TEMP/dcpv"
           cd "$RUNNER_TEMP/dcpv"
