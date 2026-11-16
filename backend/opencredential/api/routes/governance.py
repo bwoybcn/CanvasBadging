@@ -18,6 +18,8 @@ from pydantic import BaseModel, Field
 
 from opencredential.api.deps import ActorDep, RequestIdDep, SettingsDep, SignerDep, TenantDb
 from opencredential.authz import policy as authz
+from opencredential.authz.roles import GrantableRole, ScopeType
+from opencredential.credentials.state import CredentialState
 from opencredential.db.models.issuers import ISSUER_LEVELS
 from opencredential.governance import (
     audit_log,
@@ -250,12 +252,22 @@ def list_memberships(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
     return people.list_staff_memberships(db, actor)
 
 
+class GrantableRoleOut(BaseModel):
+    role: GrantableRole
+    #: The kind of thing the role is granted over; ``institution`` needs no ``scope_id``.
+    scope_type: ScopeType
+
+
+@router.get("/admin/grantable-roles", response_model=list[GrantableRoleOut])
+def grantable_roles(db: TenantDb, actor: ActorDep) -> list[dict[str, str]]:
+    """The roles the caller may grant, so the screen does not keep its own list."""
+    return people.grantable_roles(db, actor)
+
+
 class GrantIn(BaseModel):
     user_id: uuid.UUID
-    role: Literal[
-        "lecturer", "course_admin", "issuer_manager", "reviewer", "dept_admin", "inst_admin"
-    ]
-    scope_type: Literal["institution", "org_unit", "issuer", "course"]
+    role: GrantableRole
+    scope_type: ScopeType
     scope_id: uuid.UUID | None = None
     expires_at: datetime | None = None
 
@@ -485,7 +497,7 @@ def list_credentials(
     actor: ActorDep,
     course_id: uuid.UUID | None = None,
     definition_id: uuid.UUID | None = None,
-    status: Literal["active", "expired", "revoked"] | None = None,
+    status: CredentialState | None = None,
     issued_from: date | None = None,
     issued_to: date | None = None,
     learner: str | None = Query(None, max_length=100),
@@ -516,7 +528,7 @@ def issuance_csv(
     actor: ActorDep,
     course_id: uuid.UUID | None = None,
     definition_id: uuid.UUID | None = None,
-    status: Literal["active", "expired", "revoked"] | None = None,
+    status: CredentialState | None = None,
     issued_from: date | None = None,
     issued_to: date | None = None,
 ) -> Response:

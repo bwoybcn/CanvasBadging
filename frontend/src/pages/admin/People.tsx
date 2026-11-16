@@ -14,9 +14,10 @@ import {
   type AdminIssuer,
   type AreaReviewPolicy,
   type CanvasAccount,
+  type GrantableRole,
   type OrgUnit,
   type Person,
-  ROLE_LABELS,
+  roleLabel,
   type StaffRole,
   type UnreviewedBadge,
 } from "../../api";
@@ -577,19 +578,15 @@ function Courses() {
   );
 }
 
-const SCOPE_FOR: Record<string, string> = {
-  inst_admin: "institution",
-  dept_admin: "org_unit",
-  reviewer: "org_unit",
-  issuer_manager: "issuer",
-  lecturer: "course",
-  course_admin: "course",
-};
-
 function Roles() {
   const { token } = useAuth();
   const qc = useQueryClient();
-  const f = roleFlags(useMe().data);
+  // Which roles this administrator may grant, and what each is granted over, comes from the
+  // server: it knows the institution's policy, and the screen keeps no list of its own.
+  const grantable = useQuery({
+    queryKey: ["grantable-roles"],
+    queryFn: () => apiFetch<GrantableRole[]>("/api/v1/admin/grantable-roles", token),
+  });
   const roles = useQuery({ queryKey: ["memberships"], queryFn: () => apiFetch<StaffRole[]>("/api/v1/admin/memberships", token) });
   const units = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
   const courses = useQuery({ queryKey: ["admin-courses"], queryFn: () => apiFetch<AdminCourse[]>("/api/v1/admin/courses", token) });
@@ -600,28 +597,31 @@ function Roles() {
     queryFn: () => apiFetch<Person[]>(`/api/v1/admin/people?q=${encodeURIComponent(search)}`, token),
     enabled: search.trim().length >= 2,
   });
-  const [g, setG] = useState({ user_id: "", role: "lecturer", scope_id: "" });
+  const [g, setG] = useState({ user_id: "", role: "", scope_id: "" });
+  const options = grantable.data ?? [];
+  // Until a role is chosen, the first one offered is the one that will be granted.
+  const role = options.find((o) => o.role === g.role) ?? options[0];
+  const scopeType = role?.scope_type;
   const refresh = () => qc.invalidateQueries({ queryKey: ["memberships"] });
   const grant = useMutation({
     mutationFn: () =>
       apiSend<StaffRole>("/api/v1/admin/memberships", token, "POST", {
         user_id: g.user_id,
-        role: g.role,
-        scope_type: SCOPE_FOR[g.role],
-        scope_id: SCOPE_FOR[g.role] === "institution" ? null : g.scope_id,
+        role: role?.role,
+        scope_type: scopeType,
+        scope_id: scopeType === "institution" ? null : g.scope_id,
       }),
     onSuccess: refresh,
   });
   const revoke = useMutation({ mutationFn: (id: string) => apiDelete(`/api/v1/admin/memberships/${id}`, token), onSuccess: refresh });
   const scopeOptions =
-    SCOPE_FOR[g.role] === "org_unit"
+    scopeType === "org_unit"
       ? (units.data ?? []).filter((u) => u.manageable).map((u) => ({ id: u.id, label: u.name }))
-      : SCOPE_FOR[g.role] === "course"
+      : scopeType === "course"
         ? (courses.data ?? []).map((c) => ({ id: c.id, label: c.title }))
-        : SCOPE_FOR[g.role] === "issuer"
+        : scopeType === "issuer"
           ? (issuers.data ?? []).map((i) => ({ id: i.id, label: i.name }))
           : [];
-  const grantable = f.isInstAdmin ? Object.keys(SCOPE_FOR) : Object.keys(SCOPE_FOR).filter((r) => r !== "inst_admin");
   return (
     <View as="section" display="block">
       <Heading level="h2" margin="0 0 small">
@@ -643,7 +643,7 @@ function Roles() {
           {(roles.data ?? []).map((r) => (
             <Table.Row key={r.id}>
               <Table.RowHeader>{r.user_name ?? "(no name)"}</Table.RowHeader>
-              <Table.Cell>{ROLE_LABELS[r.role] ?? r.role}</Table.Cell>
+              <Table.Cell>{roleLabel(r.role)}</Table.Cell>
               <Table.Cell>{r.scope_name}</Table.Cell>
               <Table.Cell>
                 {r.source === "lti" ? "Canvas" : "Granted here"}
@@ -652,8 +652,8 @@ function Roles() {
               <Table.Cell>
                 <ConfirmButton
                   size="small"
-                  label={`Remove ${ROLE_LABELS[r.role] ?? r.role} from ${r.user_name ?? "this person"}`}
-                  consequence={`Remove the ${ROLE_LABELS[r.role] ?? r.role} role from ${r.user_name ?? "this person"}${r.scope_name ? ` for ${r.scope_name}` : ""}? They lose what the role lets them do straight away.${r.source === "lti" ? " Canvas gives the role back the next time they open the tool from a course where they still hold it." : " You can grant it again below."}`}
+                  label={`Remove ${roleLabel(r.role)} from ${r.user_name ?? "this person"}`}
+                  consequence={`Remove the ${roleLabel(r.role)} role from ${r.user_name ?? "this person"}${r.scope_name ? ` for ${r.scope_name}` : ""}? They lose what the role lets them do straight away.${r.source === "lti" ? " Canvas gives the role back the next time they open the tool from a course where they still hold it." : " You can grant it again below."}`}
                   confirmLabel="Remove the role"
                   cancelLabel="Keep the role"
                   busy={revoke.isPending}
@@ -669,6 +669,11 @@ function Roles() {
       <Heading level="h3" margin="medium 0 small">
         Grant a role
       </Heading>
+      {grantable.isError && <ErrorAlert error={grantable.error} />}
+      {grantable.isSuccess && options.length === 0 && (
+        <Text as="p">At this institution only institution administrators can grant roles.</Text>
+      )}
+      {options.length > 0 && (
       <Flex gap="small" alignItems="end" wrap="wrap">
         <TextInput renderLabel="Find a person by name" value={search} onChange={(_e, v) => setSearch(v)} width="16rem" />
         <SimpleSelect renderLabel="Person" value={g.user_id} onChange={(_e, { value }) => setG({ ...g, user_id: String(value) })} width="16rem">
@@ -681,14 +686,14 @@ function Roles() {
             </SimpleSelect.Option>
           ))}
         </SimpleSelect>
-        <SimpleSelect renderLabel="Role" value={g.role} onChange={(_e, { value }) => setG({ ...g, role: String(value), scope_id: "" })} width="16rem">
-          {grantable.map((r) => (
-            <SimpleSelect.Option key={r} id={`role-${r}`} value={r}>
-              {ROLE_LABELS[r]}
+        <SimpleSelect renderLabel="Role" value={role?.role ?? ""} onChange={(_e, { value }) => setG({ ...g, role: String(value), scope_id: "" })} width="16rem">
+          {options.map((o) => (
+            <SimpleSelect.Option key={o.role} id={`role-${o.role}`} value={o.role}>
+              {roleLabel(o.role)}
             </SimpleSelect.Option>
           ))}
         </SimpleSelect>
-        {SCOPE_FOR[g.role] !== "institution" && (
+        {scopeType !== "institution" && (
           <SimpleSelect renderLabel="Where" value={g.scope_id} onChange={(_e, { value }) => setG({ ...g, scope_id: String(value) })} width="16rem">
             <SimpleSelect.Option id="s-none" value="">
               Choose
@@ -702,12 +707,13 @@ function Roles() {
         )}
         <Button
           color="primary"
-          interaction={g.user_id && (SCOPE_FOR[g.role] === "institution" || g.scope_id) ? "enabled" : "disabled"}
+          interaction={g.user_id && (scopeType === "institution" || g.scope_id) ? "enabled" : "disabled"}
           onClick={() => grant.mutate()}
         >
           Grant role
         </Button>
       </Flex>
+      )}
       {grant.isError && <ErrorAlert error={grant.error} />}
     </View>
   );

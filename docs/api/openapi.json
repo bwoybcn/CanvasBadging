@@ -933,6 +933,11 @@
             "title": "Roles",
             "type": "array"
           },
+          "staff": {
+            "default": false,
+            "title": "Staff",
+            "type": "boolean"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -1800,6 +1805,15 @@
           },
           "roles": {
             "items": {
+              "enum": [
+                "student",
+                "lecturer",
+                "course_admin",
+                "issuer_manager",
+                "reviewer",
+                "dept_admin",
+                "inst_admin"
+              ],
               "type": "string"
             },
             "title": "Roles",
@@ -2178,6 +2192,38 @@
           "scope_type"
         ],
         "title": "GrantIn",
+        "type": "object"
+      },
+      "GrantableRoleOut": {
+        "properties": {
+          "role": {
+            "enum": [
+              "lecturer",
+              "course_admin",
+              "issuer_manager",
+              "reviewer",
+              "dept_admin",
+              "inst_admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "scope_type": {
+            "enum": [
+              "institution",
+              "org_unit",
+              "issuer",
+              "course"
+            ],
+            "title": "Scope Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "scope_type"
+        ],
+        "title": "GrantableRoleOut",
         "type": "object"
       },
       "Group": {
@@ -2906,6 +2952,10 @@
             "type": "string"
           },
           "view": {
+            "enum": [
+              "lecturer",
+              "student"
+            ],
             "title": "View",
             "type": "string"
           }
@@ -3043,6 +3093,26 @@
             "title": "Institution Admins",
             "type": "array"
           },
+          "is_admin": {
+            "default": false,
+            "title": "Is Admin",
+            "type": "boolean"
+          },
+          "is_inst_admin": {
+            "default": false,
+            "title": "Is Inst Admin",
+            "type": "boolean"
+          },
+          "is_staff": {
+            "default": false,
+            "title": "Is Staff",
+            "type": "boolean"
+          },
+          "is_student": {
+            "default": false,
+            "title": "Is Student",
+            "type": "boolean"
+          },
           "launch_course": {
             "anyOf": [
               {
@@ -3083,6 +3153,15 @@
       "MembershipOut": {
         "properties": {
           "role": {
+            "enum": [
+              "student",
+              "lecturer",
+              "course_admin",
+              "issuer_manager",
+              "reviewer",
+              "dept_admin",
+              "inst_admin"
+            ],
             "title": "Role",
             "type": "string"
           },
@@ -3103,6 +3182,12 @@
             "title": "Scope Name"
           },
           "scope_type": {
+            "enum": [
+              "institution",
+              "org_unit",
+              "issuer",
+              "course"
+            ],
             "title": "Scope Type",
             "type": "string"
           }
@@ -6542,8 +6627,9 @@
                 {
                   "enum": [
                     "active",
-                    "expired",
-                    "revoked"
+                    "revoked",
+                    "suspended",
+                    "expired"
                   ],
                   "type": "string"
                 },
@@ -6686,6 +6772,32 @@
         "summary": "Data Freshness",
         "tags": [
           "administration"
+        ]
+      }
+    },
+    "/api/v1/admin/grantable-roles": {
+      "get": {
+        "description": "The roles the caller may grant, so the screen does not keep its own list.",
+        "operationId": "grantable_roles_api_v1_admin_grantable_roles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GrantableRoleOut"
+                  },
+                  "title": "Response Grantable Roles Api V1 Admin Grantable Roles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Grantable Roles",
+        "tags": [
+          "institutional administration"
         ]
       }
     },
@@ -7663,8 +7775,9 @@
                 {
                   "enum": [
                     "active",
-                    "expired",
-                    "revoked"
+                    "revoked",
+                    "suspended",
+                    "expired"
                   ],
                   "type": "string"
                 },
@@ -9209,8 +9322,9 @@
                 {
                   "enum": [
                     "active",
-                    "expired",
-                    "revoked"
+                    "revoked",
+                    "suspended",
+                    "expired"
                   ],
                   "type": "string"
                 },
@@ -9279,8 +9393,9 @@
                 {
                   "enum": [
                     "active",
-                    "expired",
-                    "revoked"
+                    "revoked",
+                    "suspended",
+                    "expired"
                   ],
                   "type": "string"
                 },

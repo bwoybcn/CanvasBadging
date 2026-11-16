@@ -30,6 +30,27 @@ export const STAFF_ME = {
     },
   ],
   session_method: "dev",
+  // The server works these out from the roles (authz/roles.py); the screens only read them.
+  is_student: false,
+  is_staff: true,
+  is_admin: false,
+  is_inst_admin: false,
+  may_review: false,
+};
+
+/** The same person as a student in one course and nothing else. */
+export const STUDENT_ME = {
+  ...STAFF_ME,
+  is_student: true,
+  is_staff: false,
+  memberships: [
+    {
+      role: "student",
+      scope_type: "course",
+      scope_id: "c-1",
+      scope_name: "S",
+    },
+  ],
 };
 
 export interface Call {

@@ -32,6 +32,7 @@ from starlette.concurrency import run_in_threadpool
 
 from opencredential.api.deps import SettingsDep, SignerDep
 from opencredential.credentials import sharing as svc
+from opencredential.credentials.state import state_of
 from opencredential.db.models import (
     BadgeAsset,
     Credential,
@@ -165,7 +166,7 @@ def _load(share_id: str, settings: Settings) -> tuple[dict[str, Any], dict[str, 
         status = db.scalar(
             select(CredentialStatus).where(CredentialStatus.credential_id == cred.id)
         )
-        view["holder_state"] = svc.credential_state(cred, status)
+        view["holder_state"] = state_of(cred, status)
         return view, dict(cred.signed_json), svc.share_url(institution, settings, share_id)
 
 

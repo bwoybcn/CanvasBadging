@@ -61,3 +61,14 @@ def test_openapi_snapshot_is_current() -> None:
     assert json.loads(snapshot.read_text()) == json.loads(json.dumps(current)), (
         "OpenAPI changed: run `uv run oc openapi --out ../docs/api/openapi.json` and review"
     )
+
+
+def test_generated_typescript_types_are_current() -> None:
+    """frontend/src/api.gen.ts must match the code. Regenerate: ``oc api-types --out ...``."""
+    from opencredential.api.typescript import render
+
+    generated = REPO_DIR / "frontend" / "src" / "api.gen.ts"
+    current = create_app(Settings(env="development")).openapi()
+    assert generated.read_text() == render(current), (
+        "The API changed: run `uv run oc api-types --out ../frontend/src/api.gen.ts` and review"
+    )

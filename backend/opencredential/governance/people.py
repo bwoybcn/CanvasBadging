@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from opencredential import audit
 from opencredential.authz import policy as authz
+from opencredential.authz.roles import DEPT_GRANTABLE, GRANTABLE, ROLE_SCOPE
 from opencredential.db.models import Course, Issuer, Membership, OrgUnit, User
 from opencredential.errors import Conflict, Forbidden, Invalid, NotFound
 
@@ -267,14 +268,17 @@ def _scope_org_unit(db: Session, scope_type: str, scope_id: uuid.UUID) -> uuid.U
     raise Invalid("SCOPE_INVALID", "Unknown scope.")
 
 
-VALID_SCOPES = {
-    "inst_admin": ("institution",),
-    "dept_admin": ("org_unit",),
-    "issuer_manager": ("issuer",),
-    "reviewer": ("org_unit",),
-    "lecturer": ("course",),
-    "course_admin": ("course",),
-}
+def grantable_roles(db: Session, actor: authz.Actor) -> list[dict[str, str]]:
+    """The roles this administrator may grant, each with the kind of scope it is held at, in
+    the order the screen offers them. The screen keeps no list of its own."""
+    authz.require_admin(actor)
+    if actor.is_inst_admin:
+        allowed: tuple[str, ...] = GRANTABLE
+    elif authz.institution_policy(db, actor.institution_id).get("dept_admins_may_delegate", True):
+        allowed = DEPT_GRANTABLE
+    else:
+        allowed = ()
+    return [{"role": role, "scope_type": ROLE_SCOPE[role]} for role in allowed]
 
 
 def _scope_name(db: Session, scope_type: str, scope_id: uuid.UUID) -> str | None:
@@ -347,10 +351,10 @@ def grant(
     request_id: str | None = None,
 ) -> Membership:
     authz.require_admin(actor)
-    if role not in VALID_SCOPES:
+    if role not in GRANTABLE:
         raise Invalid("ROLE_INVALID", "That role cannot be granted here.")
-    if scope_type not in VALID_SCOPES[role]:
-        raise Invalid("SCOPE_INVALID", f"{role} is granted at {VALID_SCOPES[role][0]} level.")
+    if scope_type != ROLE_SCOPE[role]:
+        raise Invalid("SCOPE_INVALID", f"{role} is granted at {ROLE_SCOPE[role]} level.")
     if scope_type == "institution":
         scope_id = actor.institution_id
     if scope_id is None:

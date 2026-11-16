@@ -9,15 +9,14 @@ from opencredential import audit
 from opencredential.authoring import templates
 from opencredential.authoring.artwork import ArtworkError, CleanImage, check_alt_text, clean_image
 from opencredential.authz import policy as authz
+from opencredential.authz import roles
 from opencredential.db.models import BadgeAsset
 from opencredential.errors import Forbidden, Invalid
 from opencredential.storage import get_store
 
-STAFF_ROLES = {"lecturer", "course_admin", "dept_admin", "inst_admin", "issuer_manager"}
-
 
 def _require_staff(actor: authz.Actor) -> None:
-    if not any(r in STAFF_ROLES for r, _, _ in actor.memberships):
+    if not roles.is_staff({r for r, _, _ in actor.memberships}):
         raise Forbidden("FORBIDDEN", "Only staff can add badge artwork.")
 
 

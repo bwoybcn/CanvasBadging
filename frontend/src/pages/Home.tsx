@@ -16,6 +16,7 @@ import {
   apiSend,
   formatDate,
   problemText,
+  roleLabel,
   type Course,
   type Me,
 } from "../api";
@@ -23,15 +24,6 @@ import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
 import { ConfirmButton } from "../components/ConfirmButton";
 import { Nav, roleFlags, useMe } from "../components/Page";
-
-const ROLE_LABELS: Record<string, string> = {
-  student: "Student",
-  lecturer: "Course staff",
-  course_admin: "Course admin",
-  issuer_manager: "Issuer manager",
-  dept_admin: "Department admin",
-  inst_admin: "Institution admin",
-};
 
 export function Home() {
   const { token, setToken } = useAuth();
@@ -103,7 +95,7 @@ export function Home() {
         <List>
           {user.memberships.map((m) => (
             <List.Item key={`${m.role}-${m.scope_id}`}>
-              {ROLE_LABELS[m.role] ?? m.role}
+              {roleLabel(m.role)}
               {m.scope_name ? ` in ${m.scope_name}` : ""}
             </List.Item>
           ))}
@@ -173,7 +165,7 @@ function CourseContext({
   course: NonNullable<Me["launch_course"]>;
 }) {
   const roles = course.roles.length
-    ? course.roles.map((r) => ROLE_LABELS[r] ?? r).join(", ")
+    ? course.roles.map(roleLabel).join(", ")
     : "No course role";
   return (
     <View

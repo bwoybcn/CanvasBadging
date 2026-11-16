@@ -13,6 +13,9 @@ const ADMIN_ME = {
   id: "u-adm",
   display_name: "Ada Admin",
   memberships: [{ role: "inst_admin", scope_type: "institution", scope_id: "i-1", scope_name: null }],
+  is_admin: true,
+  is_inst_admin: true,
+  may_review: true,
 };
 
 const DRAFT_ISSUER = {
@@ -51,6 +54,14 @@ const RECORD = {
   revocation_reason: null,
 };
 
+// What the server says an institution administrator may grant, and over what.
+const GRANTABLE = [
+  { role: "lecturer", scope_type: "course" },
+  { role: "reviewer", scope_type: "org_unit" },
+  { role: "dept_admin", scope_type: "org_unit" },
+  { role: "inst_admin", scope_type: "institution" },
+];
+
 function admin(routes: Record<string, unknown>) {
   return stubApi({
     "GET /api/v1/learners/me": ADMIN_ME,
@@ -73,6 +84,7 @@ function admin(routes: Record<string, unknown>) {
         },
       },
     ],
+    "GET /api/v1/admin/grantable-roles": GRANTABLE,
     "GET /api/v1/admin/courses": [],
     ...routes,
   });
@@ -181,7 +193,7 @@ describe("administration", () => {
 
   it("does not ask a department administrator to set the institution up", async () => {
     const calls = stubApi({
-      "GET /api/v1/learners/me": { ...ADMIN_ME, memberships: [{ role: "dept_admin", scope_type: "org_unit", scope_id: "ou-1", scope_name: "Library" }] },
+      "GET /api/v1/learners/me": { ...ADMIN_ME, is_inst_admin: false, memberships: [{ role: "dept_admin", scope_type: "org_unit", scope_id: "ou-1", scope_name: "Library" }] },
       "GET /api/v1/admin/reports/summary": SUMMARY,
     });
     renderAt("/admin");
@@ -358,6 +370,57 @@ describe("administration", () => {
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE" && c.url.endsWith("/memberships/m-1"))).toBe(true));
   });
 
+  it("offers only the roles the server says this administrator may grant, and asks where each applies", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/memberships": [],
+      "GET /api/v1/admin/issuers": [],
+      "GET /api/v1/admin/people?q=Rae": [{ id: "u-rev", display_name: "Rae Reviewer" }],
+      "POST /api/v1/admin/memberships": (body: unknown) => ({ id: "m-2", ...(body as object) }),
+    });
+    renderAt("/admin/roles");
+    const role = await screen.findByLabelText("Role");
+    await userEvent.click(role);
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Course staff",
+      "Badge reviewer",
+      "Department administrator",
+      "Institution administrator",
+    ]);
+    // A role over the whole institution has no "Where" to choose.
+    await userEvent.click(screen.getByRole("option", { name: "Institution administrator" }));
+    expect(screen.queryByLabelText("Where")).toBeNull();
+    await userEvent.click(screen.getByLabelText("Role"));
+    await userEvent.click(screen.getByRole("option", { name: "Badge reviewer" }));
+    await userEvent.type(screen.getByLabelText("Find a person by name"), "Rae");
+    await userEvent.click(screen.getByLabelText("Person"));
+    await userEvent.click(await screen.findByRole("option", { name: "Rae Reviewer" }));
+    await userEvent.click(screen.getByLabelText("Where"));
+    await userEvent.click(screen.getByRole("option", { name: "Library" }));
+    await userEvent.click(screen.getByRole("button", { name: "Grant role" }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "POST" && c.url === "/api/v1/admin/memberships")?.body).toEqual({
+        user_id: "u-rev",
+        role: "reviewer",
+        scope_type: "org_unit",
+        scope_id: "ou-1",
+      }),
+    );
+  });
+
+  it("tells an administrator who may grant nothing why there is no form", async () => {
+    admin({
+      "GET /api/v1/learners/me": { ...ADMIN_ME, is_inst_admin: false },
+      "GET /api/v1/admin/grantable-roles": [],
+      "GET /api/v1/admin/memberships": [],
+      "GET /api/v1/admin/issuers": [],
+    });
+    renderAt("/admin/roles");
+    expect(
+      await screen.findByText("At this institution only institution administrators can grant roles."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Grant role" })).toBeNull();
+  });
+
   it("saves brand colours chosen from a swatch and limits the fields to what the server accepts", async () => {
     const config = {
       id: "i-1",
@@ -421,6 +484,26 @@ describe("administration", () => {
       reason_code: "issued_in_error",
       reason_text: "Awarded to the wrong student",
     });
+  });
+
+  it("names each badge's state in the records in the words every other list uses", async () => {
+    admin({
+      "GET /api/v1/admin/revocation-requests": [],
+      "GET /api/v1/admin/credentials": [
+        RECORD,
+        { ...RECORD, credential_id: "cr-2", learner_name: "Asha Student", status: "suspended" },
+        { ...RECORD, credential_id: "cr-3", learner_name: "Bo Student", status: "expired" },
+        { ...RECORD, credential_id: "cr-4", learner_name: "Cy Student", status: "revoked", revocation_reason: "issued_in_error" },
+      ],
+    });
+    renderAt("/admin/credentials");
+    const row = async (name: string) => (await screen.findByRole("rowheader", { name })).closest("tr")!;
+    expect(within(await row("Sam Student")).getByText("Valid")).toBeInTheDocument();
+    expect(within(await row("Asha Student")).getByText("Suspended")).toBeInTheDocument();
+    expect(within(await row("Bo Student")).getByText("Expired")).toBeInTheDocument();
+    expect(within(await row("Cy Student")).getByText(/^Revoked: /)).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("Status"));
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["All", "Valid", "Expired", "Revoked"]);
   });
 
   it("requires typing ERASE and says erasure does not revoke or unshare", async () => {

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import cast
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ from opencredential import audit
 from opencredential.api.deps import SettingsDep
 from opencredential.api.errors import ApiError
 from opencredential.authz import sessions
+from opencredential.authz.roles import Role
 from opencredential.db.models import Institution, Membership, User
 from opencredential.db.session import tenant_session
 
@@ -27,7 +29,7 @@ router = APIRouter(prefix="/dev", tags=["development only"])
 class DevUser(BaseModel):
     id: uuid.UUID
     display_name: str | None
-    roles: list[str]
+    roles: list[Role]
 
 
 class DevLoginRequest(BaseModel):
@@ -63,7 +65,9 @@ def list_dev_users(slug: str) -> list[DevUser]:
                 .where(Membership.user_id == u.id, Membership.revoked_at.is_(None))
                 .distinct()
             ).all()
-            result.append(DevUser(id=u.id, display_name=u.display_name, roles=sorted(roles)))
+            result.append(
+                DevUser(id=u.id, display_name=u.display_name, roles=cast(list[Role], sorted(roles)))
+            )
     return result
 
 

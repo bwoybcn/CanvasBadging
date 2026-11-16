@@ -199,6 +199,23 @@ def openapi(out: Path = typer.Option(None, help="Write to file instead of stdout
         typer.echo(doc, nl=False)
 
 
+@app.command("api-types")
+def api_types(out: Path = typer.Option(None, help="Write to file instead of stdout")) -> None:
+    """Print the screens' TypeScript types (committed as frontend/src/api.gen.ts).
+
+    Always describes the development API (which includes the development sign-in), whatever
+    ``OC_ENV`` is, so the file does not depend on where it was written."""
+    from opencredential.api.app import create_app
+    from opencredential.api.typescript import render
+    from opencredential.settings import Environment, Settings
+
+    text = render(create_app(Settings(env=Environment.development)).openapi())
+    if out:
+        out.write_text(text)
+    else:
+        typer.echo(text, nl=False)
+
+
 def _register_subcommands() -> None:
     from opencredential.cli_canvas import admin_app, canvas_app, lti_app
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ from sqlalchemy import select
 from opencredential import audit
 from opencredential.api.deps import ActorDep, RequestIdDep, SettingsDep, TenantDb
 from opencredential.authz import policy as authz
+from opencredential.credentials.state import CredentialState
 from opencredential.db.models import Course, LmsAssignment, LmsModule, SyncRun
 from opencredential.eligibility import progress
 from opencredential.errors import Conflict, Forbidden, NotFound, RateLimited
@@ -29,6 +30,9 @@ class CourseOut(BaseModel):
     course_code: str | None
     status: str
     roles: list[str]
+    #: Whether the caller works on this course's badges: its own staff, or an administrator over
+    #: it. Decided here so the screens keep no role list of their own.
+    staff: bool = False
     badge_teams: bool = False
 
 
@@ -52,14 +56,15 @@ def _course(
 
 @router.get("", response_model=list[CourseOut])
 def my_courses(db: TenantDb, actor: ActorDep) -> list[CourseOut]:
-    ids = actor.course_ids({"student", "lecturer", "course_admin"})
+    ids = actor.course_ids({"student", *authz.COURSE_STAFF})
     q = select(Course)
     if not actor.is_inst_admin and not actor.has("dept_admin"):
         q = q.where(Course.id.in_(ids))
     out = []
     for c in db.scalars(q.order_by(Course.title)):
         roles = sorted(actor.course_roles(c.id))
-        if not roles and authz.is_course_staff(db, actor, c):
+        staff = authz.is_course_staff(db, actor, c)
+        if not roles and staff:
             roles = ["admin"]
         if roles:
             out.append(
@@ -69,6 +74,7 @@ def my_courses(db: TenantDb, actor: ActorDep) -> list[CourseOut]:
                     course_code=c.course_code,
                     status=c.status,
                     roles=roles,
+                    staff=staff,
                     badge_teams=c.badge_teams,
                 )
             )
@@ -209,7 +215,7 @@ class CourseActivationOut(BaseModel):
 def _activation_course(db: TenantDb, actor: authz.Actor, course_id: uuid.UUID) -> Course:
     course = _course(db, actor, course_id)  # course staff or an administrator over it; else 404
     if not (
-        actor.course_roles(course.id) & {"lecturer", "course_admin"}
+        actor.course_roles(course.id) & authz.COURSE_STAFF
         or actor.is_inst_admin
         or authz.is_dept_admin_over(db, actor, course.org_unit_id)
     ):
@@ -305,7 +311,7 @@ def course_credentials(
     course_id: uuid.UUID,
     db: TenantDb,
     actor: ActorDep,
-    status: Literal["active", "expired", "revoked"] | None = None,
+    status: CredentialState | None = None,
 ) -> list[dict[str, Any]]:
     """Award history for course staff (spec §2.2): every credential issued in this course."""
     return _course_records(db, actor, course_id, status)
@@ -321,7 +327,7 @@ def course_credentials_csv(
     db: TenantDb,
     actor: ActorDep,
     rid: RequestIdDep,
-    status: Literal["active", "expired", "revoked"] | None = None,
+    status: CredentialState | None = None,
 ) -> Response:
     """Course-level issuance records as CSV for course staff (spec §2.2). No email addresses."""
     from opencredential.governance import records
@@ -374,5 +380,6 @@ def set_badge_teams(
         course_code=course.course_code,
         status=course.status,
         roles=roles,
+        staff=True,  # only this course's staff, or an administrator over it, gets this far
         badge_teams=course.badge_teams,
     )

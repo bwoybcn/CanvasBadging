@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from opencredential import audit
+from opencredential.authz.roles import COURSE_STAFF
 from opencredential.db.models import CanvasIntegration, Course, Membership
 from opencredential.integrations.base import LmsPermissionError
 from opencredential.logging import get_logger
@@ -104,7 +105,7 @@ def sync_roster(
         revoked += gone
         seen.add(user_id)
         learners += "student" in roles
-        staff += bool(roles & {"lecturer", "course_admin"})
+        staff += bool(roles & COURSE_STAFF)
         no_canvas_id += m.canvas_user_id is None and "student" in roles
 
     # Members who left the course entirely.

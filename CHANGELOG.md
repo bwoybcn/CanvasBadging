@@ -34,6 +34,16 @@ All notable changes to this project are documented here. The format follows
   tests signed in only through the development sign-in page. In CI the tests that need a
   command from the stack (these, and the signer outage journey) now fail if the command is
   missing, instead of being skipped.
+- **The screens' data types are written from the API description** (whole-product review,
+  finding 18). `oc api-types` writes `frontend/src/api.gen.ts` from `docs/api/openapi.json`,
+  and a test fails when it is out of date, so a screen can no longer quietly disagree with the
+  API about a field. It covers every request and answer that has a named schema (96 types);
+  routes that still return a plain dictionary keep their hand-written types in
+  `frontend/src/api.ts`.
+- `GET /api/v1/admin/grantable-roles` lists the roles the caller may grant and what each is
+  granted over. `GET /api/v1/learners/me` says what the person is (`is_student`, `is_staff`,
+  `is_admin`, `is_inst_admin`), and each course says whether the caller is staff in it
+  (`staff`).
 - **A production kit** (finding 6): `docker/compose.production.yaml` runs the whole stack on
   one host in production mode behind an nginx proxy with TLS and rate limits, with every secret
   required and nothing but the proxy published. `docker/production.env.example` lists the
@@ -56,6 +66,17 @@ All notable changes to this project are documented here. The format follows
 - The wizard takes an optional link to each skill's official description.
 
 ### Changed
+- **One definition of a badge's state and one list of roles** (whole-product review, finding
+  18). Whether an issued badge is valid, expired, revoked or suspended is now decided in one
+  place (`credentials/state.py`) for every list, filter, total, export and public page, where
+  several places each decided it for themselves. Which roles exist, which count as staff and
+  which can be granted is one list (`authz/roles.py`), and the screens ask the API instead of
+  keeping their own copies. What changes on screen: a suspended badge is now "Suspended" in the
+  administrator's records, its filter, its totals and the export, where it was counted as
+  active; an expired badge says "Expired" in a course's progress table, where it said "Issued";
+  the records filter says "Valid" where it said "Active", the word every other list uses; and a
+  department administrator at an institution that has switched delegation off is told so,
+  instead of being shown a form that would be refused.
 - **Tests are named by feature and stand alone** (whole-product review, finding 20). The backend
   test files that were named after build stages (`test_w3_…` to `test_w8_…`) are renamed for
   what they test, and `backend/tests/README.md` lists where each feature is tested. The suite

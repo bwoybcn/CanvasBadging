@@ -19,6 +19,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from opencredential.authz import policy as authz
+from opencredential.credentials.state import ACTIVE, REVOKED, credential_state, state_sql
 from opencredential.db.models import (
     AchievementDefinition,
     AchievementVersion,
@@ -96,22 +97,6 @@ def _base(db: Session, actor: authz.Actor, course_staff_of: uuid.UUID | None = N
     return q if cond is None else q.where(cond)
 
 
-def _is_revoked() -> Any:
-    return func.coalesce(CredentialStatus.state == "revoked", False)
-
-
-def _is_expired(now: datetime) -> Any:
-    return func.coalesce(Credential.valid_until < now, False)
-
-
-def _status(row: Any, now: datetime) -> str:
-    if row.status_state == "revoked":
-        return "revoked"
-    if row.valid_until is not None and row.valid_until < now:
-        return "expired"
-    return "active"
-
-
 def _day_start(d: date | None) -> datetime | None:
     return datetime.combine(d, time.min, tzinfo=UTC) if d else None
 
@@ -140,18 +125,15 @@ def _filtered(
         q = q.where(Credential.issued_at < _day_start(issued_to) + timedelta(days=1))  # type: ignore[operator]
     if learner:
         q = q.where(User.display_name.ilike(f"%{learner.strip()}%"))
-    # Every status filter is in SQL, so LIMIT/OFFSET pages are always full and consistent.
-    if status == "revoked":
-        q = q.where(_is_revoked())
-    elif status == "expired":
-        q = q.where(~_is_revoked(), _is_expired(now))
-    elif status == "active":
-        q = q.where(~_is_revoked(), ~_is_expired(now))
+    # The status filter is in SQL, so LIMIT/OFFSET pages are always full and consistent, and it
+    # is the same rule each row's "status" is worked out with (credentials.state).
+    if status:
+        q = q.where(state_sql(now) == status)
     return q
 
 
 def _row(r: Any, now: datetime) -> dict[str, Any]:
-    row_status = _status(r, now)
+    row_status = credential_state(r.status_state, r.valid_until, now)
     return {
         "credential_id": str(r.credential_id),
         "definition_id": str(r.definition_id),
@@ -165,9 +147,9 @@ def _row(r: Any, now: datetime) -> dict[str, Any]:
         "learner_name": r.display_name if r.user_status == "active" else None,
         "award_kind": r.award_kind,
         "status": row_status,
-        "revoked_at": r.status_changed_at if r.status_state == "revoked" else None,
+        "revoked_at": r.status_changed_at if row_status == REVOKED else None,
         "revocation_reason": r.status_reason,
-        "can_revoke": row_status != "revoked",
+        "can_revoke": row_status != REVOKED,
     }
 
 
@@ -238,12 +220,11 @@ def summary(
     pending awards and failed issuance. Every count is worked out in PostgreSQL."""
     now = datetime.now(UTC)
     base = _filtered(db, actor, now, issued_from=issued_from, issued_to=issued_to).subquery()
-    revoked = func.count().filter(base.c.status_state == "revoked")
-    expired = func.count().filter(
-        func.coalesce(base.c.status_state != "revoked", True), base.c.valid_until < now
-    )
-    total, n_revoked, n_expired = db.execute(
-        select(func.count(), revoked, expired).select_from(base)
+    state = state_sql(now, status_state=base.c.status_state, valid_until=base.c.valid_until)
+    revoked = func.count().filter(state == REVOKED)
+    active = func.count().filter(state == ACTIVE)
+    total, n_revoked, n_active = db.execute(
+        select(func.count(), revoked, active).select_from(base)
     ).one()
 
     by_course = [
@@ -291,7 +272,7 @@ def summary(
     return {
         "issued": int(total),
         "revoked": int(n_revoked),
-        "active": int(total) - int(n_revoked) - int(n_expired),
+        "active": int(n_active),
         "pending_awards": pending_awards(db, actor),
         "failed_issuance": failed_issuance(db, actor),
         "by_course": sorted(by_course, key=lambda x: (-x["issued"], x["course_title"])),

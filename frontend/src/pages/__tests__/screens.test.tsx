@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { renderAt, STAFF_ME, stubApi } from "../../test/util";
+import { renderAt, STAFF_ME, STUDENT_ME, stubApi } from "../../test/util";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -86,6 +86,7 @@ const COURSE_ROUTES = {
       course_code: null,
       status: "active",
       roles: ["lecturer"],
+      staff: true,
     },
   ],
   "GET /api/v1/courses/c-1/issuers": [
@@ -1583,17 +1584,7 @@ describe("awards and progress", () => {
 
   it("shows a student what is confirmed and what is pending", async () => {
     stubApi({
-      "GET /api/v1/learners/me": {
-        ...STAFF_ME,
-        memberships: [
-          {
-            role: "student",
-            scope_type: "course",
-            scope_id: "c-1",
-            scope_name: "S",
-          },
-        ],
-      },
+      "GET /api/v1/learners/me": STUDENT_ME,
       "GET /api/v1/learners/me/achievements": [
         {
           definition_id: "d-1",
@@ -1659,17 +1650,7 @@ describe("awards and progress", () => {
 
   it("does not call a badge the student holds pending when staff awarded it by hand", async () => {
     stubApi({
-      "GET /api/v1/learners/me": {
-        ...STAFF_ME,
-        memberships: [
-          {
-            role: "student",
-            scope_type: "course",
-            scope_id: "c-1",
-            scope_name: "S",
-          },
-        ],
-      },
+      "GET /api/v1/learners/me": STUDENT_ME,
       "GET /api/v1/learners/me/achievements": [
         {
           definition_id: "d-2",
@@ -1735,17 +1716,7 @@ describe("awards and progress", () => {
       requirements: [],
     });
     stubApi({
-      "GET /api/v1/learners/me": {
-        ...STAFF_ME,
-        memberships: [
-          {
-            role: "student",
-            scope_type: "course",
-            scope_id: "c-1",
-            scope_name: "S",
-          },
-        ],
-      },
+      "GET /api/v1/learners/me": STUDENT_ME,
       "GET /api/v1/learners/me/achievements": [
         badge(1, "revoked"),
         badge(2, "suspended"),
@@ -1776,17 +1747,7 @@ describe("awards and progress", () => {
 
   it("says a badge is waiting for staff when that is all that is missing", async () => {
     stubApi({
-      "GET /api/v1/learners/me": {
-        ...STAFF_ME,
-        memberships: [
-          {
-            role: "student",
-            scope_type: "course",
-            scope_id: "c-1",
-            scope_name: "S",
-          },
-        ],
-      },
+      "GET /api/v1/learners/me": STUDENT_ME,
       "GET /api/v1/learners/me/achievements": [
         {
           definition_id: "d-3",
@@ -2001,6 +1962,7 @@ describe("course progress: a badge that was revoked", () => {
           { user_id: "u-s1", name: "Sam Student", cells: [cell("revoked")] },
           { user_id: "u-s2", name: "Asha Student", cells: [cell("suspended")] },
           { user_id: "u-s3", name: "Bo Student", cells: [cell("active")] },
+          { user_id: "u-s4", name: "Cy Student", cells: [cell("expired")] },
         ],
       },
       "GET /api/v1/courses/c-1/sync": { last_run: null, last_success_at: null },
@@ -2029,6 +1991,16 @@ describe("course progress: a badge that was revoked", () => {
     expect(
       screen.getByRole("button", { name: "Request revocation for Bo Student" }),
     ).toBeInTheDocument();
+    // One that has run out says so, in the same word every other list uses, and can still be
+    // put forward for revocation.
+    const cy = screen
+      .getByRole("rowheader", { name: "Cy Student" })
+      .closest("tr")!;
+    expect(within(cy).getByText("Expired")).toBeInTheDocument();
+    expect(within(cy).queryByText("Issued")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Request revocation for Cy Student" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -2038,6 +2010,7 @@ describe("a Canvas administrator with no role here", () => {
       "GET /api/v1/learners/me": {
         ...STAFF_ME,
         memberships: [],
+        is_staff: false,
         canvas_admin_without_access: true,
         institution_admins: ["Ada Admin", "Tess Teacher"],
       },
@@ -2055,6 +2028,7 @@ describe("a Canvas administrator with no role here", () => {
       "GET /api/v1/learners/me": {
         ...STAFF_ME,
         memberships: [],
+        is_staff: false,
         canvas_admin_without_access: true,
         institution_admins: [],
       },
@@ -2083,17 +2057,7 @@ describe("staff pages reached by a student", () => {
     "%s says it is for course staff and draws no forms",
     async (path) => {
       stubApi({
-        "GET /api/v1/learners/me": {
-          ...STAFF_ME,
-          memberships: [
-            {
-              role: "student",
-              scope_type: "course",
-              scope_id: "c-1",
-              scope_name: "S",
-            },
-          ],
-        },
+        "GET /api/v1/learners/me": STUDENT_ME,
       });
       renderAt(path);
       expect(
@@ -2113,6 +2077,7 @@ describe("staff pages reached by a student", () => {
 describe("people who review badges but hold no staff role", () => {
   const REVIEWER_ME = {
     ...STAFF_ME,
+    is_staff: false,
     may_review: true,
     memberships: [
       {
@@ -2202,12 +2167,7 @@ describe("the Help page", () => {
 
   it("says what to do when no contact is set, and speaks to students", async () => {
     stubApi({
-      "GET /api/v1/learners/me": {
-        ...STAFF_ME,
-        memberships: [
-          { role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" },
-        ],
-      },
+      "GET /api/v1/learners/me": STUDENT_ME,
     });
     renderAt("/help");
     expect(
@@ -2226,17 +2186,7 @@ describe("the Help page", () => {
 describe("the home page speaks to the reader", () => {
   it("gives students student instructions, with a skip link and a page title", async () => {
     stubApi({
-      "GET /api/v1/learners/me": {
-        ...STAFF_ME,
-        memberships: [
-          {
-            role: "student",
-            scope_type: "course",
-            scope_id: "c-1",
-            scope_name: "S",
-          },
-        ],
-      },
+      "GET /api/v1/learners/me": STUDENT_ME,
     });
     renderAt("/");
     expect(
@@ -2396,5 +2346,25 @@ describe("round 3: awarding a badge the student already has", () => {
       "Led two seminars, observed by the tutor.",
     );
     expect(screen.getByRole("button", { name: "Award badge" })).toBeDisabled();
+  });
+});
+
+describe("what a person may see", () => {
+  it("follows the server's answers, not the names of their roles", async () => {
+    // The role list still says lecturer; the server says this person is a student and not
+    // staff (for example because the role has ended). The menu follows the server.
+    stubApi({
+      "GET /api/v1/learners/me": {
+        ...STAFF_ME,
+        is_staff: false,
+        is_student: true,
+      },
+    });
+    renderAt("/help");
+    const nav = await screen.findByRole("navigation", { name: "OpenCredential" });
+    expect(await within(nav).findByText("My badges")).toBeInTheDocument();
+    expect(within(nav).queryByText("Award badges")).toBeNull();
+    expect(within(nav).queryByText("Administration")).toBeNull();
+    expect(within(nav).queryByText("Review queue")).toBeNull();
   });
 });
