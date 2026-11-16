@@ -28,7 +28,6 @@ from opencredential import audit
 from opencredential.db.models import (
     AchievementVersion,
     Credential,
-    CredentialStatus,
     Institution,
     Issuer,
     ShareGrant,
@@ -149,16 +148,6 @@ def _evidence(vc: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
     return out
-
-
-def credential_state(cred: Credential, status: CredentialStatus | None) -> str:
-    if status is not None and status.state == "revoked":
-        return "revoked"
-    if status is not None and status.state == "suspended":
-        return "suspended"
-    if cred.valid_until is not None and cred.valid_until < datetime.now(UTC):
-        return "expired"
-    return "active"
 
 
 def public_view(

@@ -27,8 +27,16 @@ your contribution is licensed the same way.
    review the generated file. Row-level security policies, triggers and grants are hand-written.
    The schema-drift test fails if models and migrations disagree.
 5. API changes: regenerate `docs/api/openapi.json` with
-   `uv run oc openapi --out ../docs/api/openapi.json` and review the diff. A test fails if the
-   snapshot is stale.
+   `uv run oc openapi --out ../docs/api/openapi.json`, then the screens' types with
+   `uv run oc api-types --out ../frontend/src/api.gen.ts`, and review both diffs. A test fails if
+   either is stale. `frontend/src/api.gen.ts` is never edited by hand. Give a new route a
+   response model so that its type is written too: a route that returns a plain dictionary has
+   no type, and the screens then need a hand-written one in `frontend/src/api.ts`.
+   Two things have one definition each, and nothing else may restate them: whether an issued
+   badge is valid, expired, revoked or suspended (`backend/opencredential/credentials/state.py`)
+   and which roles exist and which count as staff (`backend/opencredential/authz/roles.py`). The
+   screens ask the API (`is_staff` and the like on `/api/v1/learners/me`, `staff` on a course,
+   `/api/v1/admin/grantable-roles`) and keep no role list of their own.
 6. New dependencies must be on the licence allowlist in ADR-0018 (`scripts/check_licences.py`).
 
 ## Code conventions

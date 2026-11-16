@@ -801,6 +801,54 @@ def test_records_paging_and_summary_count_expired_credentials_correctly(
     assert exports  # still audited, with the row count
 
 
+def test_a_suspended_badge_is_suspended_in_every_list_filter_and_count(
+    world: World, signer_available: bool, owner_conn: psycopg.Connection
+) -> None:
+    """Whole-product review finding 18 (16 Nov 2026): whether a badge still stands was worked
+    out in three places. The reports knew only "revoked" and "expired", so a suspended badge
+    was listed and counted as active there while the student was told it was suspended."""
+    definition_id = _manual_badge(world, _authorised_issuer(world))
+    active = _issue_to(world, definition_id, "s3")
+    suspended = _issue_to(world, definition_id, "s1")
+    with owner_conn.transaction():
+        # Nothing in the product suspends a badge yet; the status row is where it would.
+        done = owner_conn.execute(
+            "UPDATE app.credential_status SET state = 'suspended', changed_at = now() "
+            "WHERE credential_id = %s",
+            [uuid.UUID(suspended)],
+        )
+        assert done.rowcount == 1
+    # Suspended and past its date: withdrawal by the issuer wins, as it does for a verifier.
+    _expire(owner_conn, suspended)
+
+    def ids(path: str) -> list[str]:
+        r = world.get("admin", path)
+        assert r.status_code == 200, r.text
+        return [row["credential_id"] for row in r.json()]
+
+    rows = {
+        r["credential_id"]: r["status"]
+        for r in world.get("admin", "/api/v1/admin/credentials").json()
+    }
+    assert rows == {active: "active", suspended: "suspended"}
+    assert ids("/api/v1/admin/credentials?status=suspended") == [suspended]
+    assert ids("/api/v1/admin/credentials?status=active") == [active]
+    assert ids("/api/v1/admin/credentials?status=expired") == []
+    summary = world.get("admin", "/api/v1/admin/reports/summary").json()
+    assert (summary["issued"], summary["revoked"], summary["active"]) == (2, 0, 1)
+
+    # The student, the course staff and the report all say the same thing.
+    mine = world.get("s1", f"/api/v1/credentials/{suspended}").json()
+    assert (mine["status"], mine["withdrawal"]["state"]) == ("suspended", "suspended")
+    progress = world.get("lecturer", f"/api/v1/courses/{world.course_id}/progress").json()
+    cells = {
+        row["user_id"]: row["cells"][0]["credential_state"]
+        for row in progress["learners"]
+        if row["cells"][0]["credential_id"]
+    }
+    assert cells == {str(world.users["s1"]): "suspended", str(world.users["s3"]): "active"}
+
+
 def test_session_stops_working_once_the_account_is_erased(
     world: World, signer_available: bool
 ) -> None:
@@ -1129,3 +1177,52 @@ def test_a_canvas_failure_does_not_undo_a_good_class_list(
             )
         )
     assert kept is not None
+
+
+def test_the_api_says_what_each_person_is_and_what_they_may_grant(world: World) -> None:
+    """The screens keep no role list of their own (whole-product review, finding 18): they
+    read these answers, so the answers have to be right for every kind of person."""
+
+    def flags(who: str) -> dict[str, bool]:
+        me = world.get(who, "/api/v1/learners/me").json()
+        return {k: me[k] for k in ("is_student", "is_staff", "is_admin", "is_inst_admin")}
+
+    nobody = {"is_student": False, "is_staff": False, "is_admin": False, "is_inst_admin": False}
+    assert flags("outsider") == nobody
+    assert flags("s1") == {**nobody, "is_student": True}
+    assert flags("lecturer") == {**nobody, "is_staff": True}
+    assert flags("reviewer") == {**nobody, "is_staff": True, "is_admin": True}
+    assert flags("admin") == {**nobody, "is_staff": True, "is_admin": True, "is_inst_admin": True}
+
+    # A course says whether the person asking is staff in it.
+    def staff_in_course(who: str) -> list[bool]:
+        return [
+            c["staff"]
+            for c in world.get(who, "/api/v1/courses").json()
+            if c["id"] == str(world.course_id)
+        ]
+
+    assert staff_in_course("lecturer") == [True]
+    assert staff_in_course("s1") == [False]
+
+    # Which roles a person may grant, each with what it is granted over.
+    def grantable(who: str) -> dict[str, str]:
+        r = world.get(who, "/api/v1/admin/grantable-roles")
+        assert r.status_code == 200, r.text
+        return {row["role"]: row["scope_type"] for row in r.json()}
+
+    assert world.get("lecturer", "/api/v1/admin/grantable-roles").status_code == 403
+    dept = {
+        "lecturer": "course",
+        "course_admin": "course",
+        "issuer_manager": "issuer",
+        "reviewer": "org_unit",
+        "dept_admin": "org_unit",
+    }
+    assert grantable("reviewer") == dept
+    assert grantable("admin") == {**dept, "inst_admin": "institution"}
+    # With delegation switched off a department administrator is offered nothing, which is
+    # also what granting would answer.
+    world.patch("admin", "/api/v1/institutions/current/policy", {"dept_admins_may_delegate": False})
+    assert grantable("reviewer") == {}
+    assert grantable("admin") == {**dept, "inst_admin": "institution"}

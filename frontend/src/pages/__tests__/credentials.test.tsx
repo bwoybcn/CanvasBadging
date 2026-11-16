@@ -4,11 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ShareState } from "../../api";
-import { renderAt, STAFF_ME, stubApi } from "../../test/util";
+import { renderAt, STUDENT_ME, stubApi } from "../../test/util";
 
 afterEach(() => vi.unstubAllGlobals());
 
-const STUDENT_ME = { ...STAFF_ME, memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" }] };
 const PRIVATE: ShareState = { shared: false, url: null, show_name: false, show_evidence: false, shared_since: null };
 const SHARED: ShareState = { shared: true, url: "https://verify.example/verify/AbCdEfGhIjKlMnOpQrStUv", show_name: false, show_evidence: false, shared_since: "2026-11-13T10:00:00Z" };
 

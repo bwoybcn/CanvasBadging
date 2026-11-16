@@ -41,12 +41,13 @@ files marked "signer" use the real signer too.
 | What students do with a badge: download, share, LinkedIn (signer) | `integration/test_sharing_and_export.py` |
 | Certificate PDF and badge image | `integration/test_certificate_download.py`, `unit/test_certificate.py`, `unit/test_artwork.py`, `unit/test_filenames.py` |
 | Administration: issuers, roles, policies, templates, reports, audit, retention, erasure | `integration/test_governance.py`, `integration/test_setup_checklist.py` |
+| Whether a badge is valid, expired, revoked or suspended (one definition, in Python and in SQL); the list of roles | `integration/test_credential_state.py`, `unit/test_roles.py` |
 | Security: every route against anonymous callers, students and other institutions; hostile input | `integration/test_security.py`, `integration/test_tenant_isolation.py`, `unit/test_ratelimit.py`, `unit/test_secretbox.py` |
 | Records that must never change | `integration/test_immutability.py` |
 | Background jobs and the worker | `integration/test_jobs.py`, `integration/test_worker_issuance.py`, `integration/test_worker_sync_and_demo_outcomes.py`, `integration/test_job_health.py`, `unit/test_job_retries.py` |
 | Demo data and development sign-in | `integration/test_seed_and_api.py` |
 | Database migrations | `integration/test_migrations.py` |
-| Settings, startup checks, command line and scripts | `unit/test_settings.py`, `unit/test_app.py`, `unit/test_scripts_and_cli.py`, `unit/test_ids.py` |
+| Settings, startup checks, command line and scripts; the API description and the screens' types written from it are up to date | `unit/test_settings.py`, `unit/test_app.py`, `unit/test_typescript_types.py`, `unit/test_scripts_and_cli.py`, `unit/test_ids.py` |
 | Regressions from the code review of 13 November 2026 | `integration/test_code_review_regressions.py` |
 
 ## Shared helpers

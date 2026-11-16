@@ -8,9 +8,11 @@ import { useParams } from "react-router";
 import {
   apiFetch,
   apiSend,
+  CREDENTIAL_STATE,
   problemText,
   type CourseProgress as Progress,
   type CredentialRecord,
+  type CredentialState,
   type Rule,
   type SyncState,
 } from "../api";
@@ -36,11 +38,10 @@ export function cellText(
   outcome: string | null,
   decision: string | null,
   codes: string[],
-  credentialState?: string | null,
+  credentialState?: CredentialState | null,
 ): string {
-  // A badge that was issued and then taken back is not "Issued" any more.
-  if (credentialState === "revoked") return "Revoked";
-  if (credentialState === "suspended") return "Suspended";
+  // A badge that was issued and then taken back, or has run out, is not "Issued" any more.
+  if (credentialState && credentialState !== "active") return CREDENTIAL_STATE[credentialState].label;
   if (decision && DECISION_LABELS[decision]) return DECISION_LABELS[decision];
   if (!outcome) return "Not evaluated yet";
   if (outcome === "unknown") {
@@ -220,7 +221,8 @@ function IssuedInCourse({ courseId, title }: { courseId: string; title: string }
                   <Table.Cell>{KIND_LABELS[r.award_kind] ?? r.award_kind}</Table.Cell>
                   <Table.Cell>{r.issued_at ? new Date(r.issued_at).toLocaleDateString() : ""}</Table.Cell>
                   <Table.Cell>
-                    {r.status === "revoked" ? `Revoked (${r.revocation_reason ?? "no reason code"})` : r.status === "expired" ? "Expired" : "Valid"}
+                    {CREDENTIAL_STATE[r.status].label}
+                    {r.status === "revoked" ? ` (${r.revocation_reason ?? "no reason code"})` : ""}
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -345,7 +347,9 @@ export function CourseProgress() {
                           Confirm requirement for {l.name ?? "this student"}
                         </Button>
                       )}
-                      {c.credential_id && c.credential_state === "active" && (
+                      {/* A badge that has only run out can still be put forward for revocation, as an
+                          administrator can still revoke it; one already taken back cannot. */}
+                      {c.credential_id && (c.credential_state === "active" || c.credential_state === "expired") && (
                         <Button
                           size="small"
                           margin="xx-small 0 0"

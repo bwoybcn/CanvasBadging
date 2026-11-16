@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, cast
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -13,7 +13,8 @@ from sqlalchemy import func, or_, select
 
 from opencredential.api.deps import ClaimsDep, TenantDb
 from opencredential.api.errors import ApiError
-from opencredential.authz import policy
+from opencredential.authz import policy, roles
+from opencredential.authz.roles import Role, ScopeType
 from opencredential.db.models import Course, Institution, Membership, User
 from opencredential.eligibility import progress
 from opencredential.sync import lifecycle
@@ -22,8 +23,8 @@ router = APIRouter(prefix="/api/v1/learners", tags=["learners"])
 
 
 class MembershipOut(BaseModel):
-    role: str
-    scope_type: str
+    role: Role
+    scope_type: ScopeType
     scope_id: uuid.UUID
     scope_name: str | None
 
@@ -45,7 +46,7 @@ class LaunchCourseOut(BaseModel):
     status: str
     roles: list[str]
     #: ``lecturer`` view for course staff, ``student`` view otherwise (spec §4.1).
-    view: str
+    view: Literal["lecturer", "student"]
     #: When the course ended in Canvas, if it has, and when it stops (or stopped) being read.
     ended_at: datetime | None = None
     read_until: datetime | None = None
@@ -72,8 +73,16 @@ class MeOut(BaseModel):
     canvas_admin_without_access: bool = False
     #: Who to ask for that access (institution administrators' names), only in that case.
     institution_admins: list[str] = []
+    #: What this person is, worked out here from their roles (authz.roles) so the screens keep
+    #: no role list of their own. A person can be several at once.
+    is_student: bool = False
+    #: Works on badges (course staff, issuer managers, administrators): sees the staff screens.
+    is_staff: bool = False
+    #: Administrator of the institution or of a department: sees Administration.
+    is_admin: bool = False
+    is_inst_admin: bool = False
     #: Whether to offer the Review queue: this person can be the approver of some badge under
-    #: the institution's policy. Decided here so the screens keep no role list of their own.
+    #: the institution's policy.
     may_review: bool = False
     help: HelpOut = HelpOut()
 
@@ -99,8 +108,9 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
     }
     memberships = [
         MembershipOut(
-            role=m.role,
-            scope_type=m.scope_type,
+            # The database allows only these values in the two columns.
+            role=cast(Role, m.role),
+            scope_type=cast(ScopeType, m.scope_type),
             scope_id=m.scope_id,
             scope_name=(
                 course_names.get(m.scope_id)
@@ -116,7 +126,7 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
     if claims.course_id is not None:
         course = db.get(Course, claims.course_id)
         if course is not None:
-            roles = sorted(
+            course_roles = sorted(
                 m.role for m in rows if m.scope_type == "course" and m.scope_id == course.id
             )
             launch_course = LaunchCourseOut(
@@ -125,8 +135,8 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
                 course_code=course.course_code,
                 canvas_course_id=course.canvas_course_id,
                 status=course.status,
-                roles=roles,
-                view="lecturer" if set(roles) & policy.COURSE_STAFF else "student",
+                roles=course_roles,
+                view="lecturer" if set(course_roles) & roles.COURSE_STAFF else "student",
                 ended_at=course.ended_at,
                 read_until=lifecycle.read_until(db, course),
             )
@@ -149,8 +159,13 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
             )
             if name
         )
+    held = {m.role for m in rows}
     return MeOut(
         id=user.id,
+        is_student="student" in held,
+        is_staff=roles.is_staff(held),
+        is_admin=policy.is_admin(actor),
+        is_inst_admin=actor.is_inst_admin,
         canvas_admin_without_access=canvas_admin_without_access,
         institution_admins=institution_admins,
         display_name=user.display_name,

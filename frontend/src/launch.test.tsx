@@ -17,6 +17,11 @@ const BASE_ME = {
   institution: { id: "i-1", slug: "uol-dev", name: "University of Liverpool (Development)", is_demo: false },
   memberships: [{ role: "lecturer", scope_type: "course", scope_id: "c-4", scope_name: "OpenCredential W3 Test Course" }],
   session_method: "lti",
+  is_student: false,
+  is_staff: true,
+  is_admin: false,
+  is_inst_admin: false,
+  may_review: false,
   launch_course: {
     id: "c-4",
     title: "OpenCredential W3 Test Course",

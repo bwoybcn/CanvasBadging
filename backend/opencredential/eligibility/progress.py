@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
 from opencredential.authoring.preview import asset_data_url, source_names
+from opencredential.credentials.state import WITHDRAWN_STATES, credential_state
 from opencredential.db.models import (
     AwardDecision,
     BadgeAsset,
@@ -91,10 +92,6 @@ def _requirements(
             ]
         out.append(item)
     return out
-
-
-#: Credential states in which the student no longer holds a valid badge.
-WITHDRAWN_STATES = ("revoked", "suspended")
 
 
 def _award_state(
@@ -225,7 +222,13 @@ def course_progress(db: Session, course: Course) -> dict[str, Any]:
         ):
             decisions[(d.version_id, d.user_id)] = d
         for c in db.execute(
-            select(Credential.version_id, Credential.user_id, Credential.id, CredentialStatus.state)
+            select(
+                Credential.version_id,
+                Credential.user_id,
+                Credential.id,
+                Credential.valid_until,
+                CredentialStatus.state,
+            )
             .outerjoin(CredentialStatus, CredentialStatus.credential_id == Credential.id)
             .where(
                 Credential.version_id.in_(version_ids),
@@ -233,7 +236,10 @@ def course_progress(db: Session, course: Course) -> dict[str, Any]:
                 Credential.superseded_by_id.is_(None),
             )
         ):
-            credentials[(c.version_id, c.user_id)] = (c.id, c.state or "active")
+            credentials[(c.version_id, c.user_id)] = (
+                c.id,
+                credential_state(c.state, c.valid_until),
+            )
     badges = [
         {
             "definition_id": str(t.definition.id),
@@ -266,7 +272,7 @@ def course_progress(db: Session, course: Course) -> dict[str, Any]:
                     "decision_status": dec.status if dec else None,
                     "decision_id": str(dec.id) if dec else None,
                     # The issued badge, so staff can ask for it to be revoked, and whether
-                    # it has been (active, revoked or suspended).
+                    # it still stands (active, expired, revoked or suspended).
                     "credential_id": str(cred[0]) if cred else None,
                     "credential_state": cred[1] if cred else None,
                 }

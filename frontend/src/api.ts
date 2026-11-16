@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Minimal API client. The session token lives in memory only (ADR-0015, no cookies). */
 
+// Types with a model in the API come from api.gen.ts, which is written from the API description
+// (`oc api-types`), so they cannot drift from the server. The types still written by hand below
+// are for routes that return a plain dictionary and so have no model to write from yet.
+import type * as Api from "./api.gen";
 import { fieldProblems, type FieldError } from "./fieldErrors";
 import { currentToken } from "./session";
 
@@ -47,49 +51,20 @@ export async function apiFetch<T>(
   return res.json() as Promise<T>;
 }
 
-export interface DevUser {
-  id: string;
-  display_name: string | null;
-  roles: string[];
-}
+export type DevUser = Api.DevUser;
 
-export interface Me {
-  id: string;
-  display_name: string | null;
-  institution: { id: string; slug: string; name: string; is_demo: boolean };
-  memberships: {
-    role: string;
-    scope_type: string;
-    scope_id: string;
-    scope_name: string | null;
-  }[];
-  session_method: string;
-  email?: string | null;
-  /** Present when the session came from a Canvas launch: the course it was opened in. */
-  launch_course?: LaunchCourse | null;
-  /** A Canvas account administrator with no administrator role here yet. Grants nothing. */
-  canvas_admin_without_access?: boolean;
-  /** Institution administrators to ask, given only when `canvas_admin_without_access`. */
-  institution_admins?: string[];
-  /** Whether to offer the Review queue. Decided by the server from the institution's policy. */
-  may_review?: boolean;
-  /** Who to ask for help with badges here, set by an institution administrator. */
-  help?: { contact_name: string | null; email: string | null; url: string | null };
-}
+/** The signed-in person. The `is_…` and `may_…` answers are worked out by the server from the
+ * person's roles and the institution's policy, so the screens keep no role list of their own. */
+export type Me = Api.MeOut;
 
-export interface LaunchCourse {
-  id: string;
-  title: string;
-  course_code: string | null;
-  canvas_course_id: string;
-  status: string;
-  roles: string[];
-  view: "lecturer" | "student";
-  /** When the course ended in Canvas, if it has. */
-  ended_at?: string | null;
-  /** When an ended course stops (or stopped) being read from Canvas. */
-  read_until?: string | null;
-}
+/** Every role a person can hold, and the kinds of thing a role is held over. */
+export type Role = Api.MembershipOut["role"];
+export type ScopeType = Api.MembershipOut["scope_type"];
+/** A role an administrator may grant, with the kind of thing it is granted over. */
+export type GrantableRole = Api.GrantableRoleOut;
+
+/** The course a Canvas launch opened Badges in. */
+export type LaunchCourse = Api.LaunchCourseOut;
 
 /* ---- W5: authoring, rules and awards ------------------------------------------------------ */
 
@@ -112,14 +87,9 @@ export function apiSend<T>(
 
 export type AwardPolicy = "automatic" | "lecturer_confirmed" | "manual";
 
-export interface Course {
-  id: string;
-  title: string;
-  course_code: string | null;
-  status: string;
-  roles: string[];
-  badge_teams?: boolean;
-}
+/** A course the person can see. `staff` says whether they work on its badges (its own staff,
+ * or an administrator over it), as the server decides it. */
+export type Course = Api.CourseOut;
 
 /** A badge's team where the course has badge teams switched on. */
 export interface BadgeTeam {
@@ -149,12 +119,7 @@ export interface Catalogue {
   review_checklist: string[];
 }
 
-export interface Skill {
-  name: string;
-  framework?: string | null;
-  code?: string | null;
-  url?: string | null;
-}
+export type Skill = Api.Skill;
 
 export interface DraftFields {
   title?: string | null;
@@ -239,16 +204,9 @@ export interface Review {
   without_review?: boolean;
 }
 
-export type ReviewMode = "required" | "author_decides" | "not_required";
-
 /** How the working version would be reviewed if submitted now (set per area and per badge). */
-export interface ReviewRequirement {
-  mode: ReviewMode;
-  area_mode: ReviewMode;
-  forced_by: "assessed" | "credit" | null;
-  set_by_org_unit_id: string | null;
-  self_approval_allowed: boolean;
-}
+export type ReviewRequirement = Api.ReviewRequirement;
+export type ReviewMode = ReviewRequirement["mode"];
 
 export interface Definition {
   id: string;
@@ -285,17 +243,7 @@ export interface DefinitionSummary {
   can_award?: boolean;
 }
 
-export interface Asset {
-  id: string;
-  kind: string;
-  media_type: string;
-  width: number | null;
-  height: number | null;
-  alt_text: string;
-  licence: string | null;
-  data_url: string | null;
-  warnings: string[];
-}
+export type Asset = Api.AssetOut;
 
 export interface ArtworkTemplate {
   key: string;
@@ -373,18 +321,7 @@ export interface Decision {
 }
 
 /** What "award all" did: how many went through, and why each of the rest was left waiting. */
-export interface ConfirmAllResult {
-  confirmed: number;
-  left: number;
-  rows: {
-    id: string;
-    learner_name: string | null;
-    badge_title: string;
-    confirmed: boolean;
-    code: string | null;
-    message: string | null;
-  }[];
-}
+export type ConfirmAllResult = Api.ConfirmAllOut;
 
 export interface Requirement {
   rule_id: string;
@@ -445,8 +382,8 @@ export interface CourseProgress {
       decision_status: string | null;
       decision_id: string | null;
       credential_id?: string | null;
-      /** Whether the issued badge still stands: active, revoked or suspended. */
-      credential_state?: string | null;
+      /** Whether the issued badge still stands. */
+      credential_state?: CredentialState | null;
     }[];
   }[];
 }
@@ -489,28 +426,13 @@ export function problemText(error: unknown): string {
 
 /* ---- W6: collection, sharing and LinkedIn ------------------------------------------------- */
 
-export type CredentialState = "active" | "revoked" | "suspended" | "expired";
+/** Whether an issued badge still stands. The server works it out in one place
+ * (credentials/state.py) for every list, filter, count and page; the screens only show it. */
+export type CredentialState = Api.CredentialSummary["status"];
 
-export interface ShareState {
-  shared: boolean;
-  url: string | null;
-  show_name: boolean;
-  show_evidence: boolean;
-  shared_since: string | null;
-}
+export type ShareState = Api.ShareState;
 
-export interface CredentialSummary {
-  id: string;
-  credential_id: string;
-  name: string;
-  issuer_name: string;
-  issued_at: string | null;
-  valid_until: string | null;
-  status: CredentialState;
-  course: { id: string; title: string } | null;
-  image: { data_url: string | null; alt_text: string };
-  share: ShareState;
-}
+export type CredentialSummary = Api.CredentialSummary;
 
 export interface VerificationCheck {
   name: string;
@@ -772,7 +694,7 @@ export interface CredentialRecord {
   issuer_name: string;
   learner_name: string | null;
   award_kind: string;
-  status: "active" | "revoked" | "expired";
+  status: CredentialState;
   revoked_at: string | null;
   revocation_reason: string | null;
 }
@@ -880,7 +802,9 @@ export const REVOCATION_REASONS: Record<string, string> = {
   other: "Other",
 };
 
-export const ROLE_LABELS: Record<string, string> = {
+/** What each role is called on the screen: the one list. Typed by the server's list of roles,
+ * so a role the server adds cannot be left without a name here. */
+export const ROLE_LABELS: Record<Role, string> = {
   inst_admin: "Institution administrator",
   dept_admin: "Department administrator",
   issuer_manager: "Issuer manager",
@@ -889,6 +813,13 @@ export const ROLE_LABELS: Record<string, string> = {
   course_admin: "Course administrator",
   student: "Student",
 };
+
+/** The name of a role, including "admin", which the course list uses for an administrator who
+ * has no role of their own in a course. */
+export function roleLabel(role: string): string {
+  if (role === "admin") return "Administrator";
+  return (ROLE_LABELS as Record<string, string>)[role] ?? role;
+}
 
 /** DELETE that expects 204 No Content. */
 export async function apiDelete(

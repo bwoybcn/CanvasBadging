@@ -81,8 +81,6 @@ export const STEPS = [
   "Check and save",
 ] as const;
 
-const STAFF_COURSE_ROLES = new Set(["lecturer", "course_admin", "admin"]);
-
 interface FormState {
   course_id: string;
   issuer_id: string;
@@ -500,9 +498,8 @@ export function CreateBadge() {
   });
   const staffCourses = useMemo(
     () =>
-      (courses.data ?? []).filter((c) =>
-        c.roles.some((r) => STAFF_COURSE_ROLES.has(r)),
-      ),
+      // The server says which courses this person works on the badges of.
+      (courses.data ?? []).filter((c) => c.staff),
     [courses.data],
   );
   // With exactly one choice, preselect it (derived, so nothing is stored until the user changes it).

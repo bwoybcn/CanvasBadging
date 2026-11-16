@@ -16,6 +16,11 @@ const ME = {
   institution: { id: "i-1", slug: "demo-university", name: "Demo University (development)", is_demo: true },
   memberships: [{ role: "student", scope_type: "course", scope_id: "c-1", scope_name: "Academic Skills Passport (demo)" }],
   session_method: "dev",
+  is_student: true,
+  is_staff: false,
+  is_admin: false,
+  is_inst_admin: false,
+  may_review: false,
 };
 
 function json(body: unknown, status = 200) {

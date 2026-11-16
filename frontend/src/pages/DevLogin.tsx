@@ -8,20 +8,11 @@ import { Alert, Button, Heading, Spinner, Table, Text, View } from "@instructure
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 
-import { ApiError, apiFetch, type DevUser } from "../api";
+import { ApiError, apiFetch, type DevUser, roleLabel } from "../api";
 import { useAuth } from "../auth";
 import { TableScroll } from "../components/TableScroll";
 
 export const DEMO_INSTITUTION = "demo-university";
-
-const ROLE_LABELS: Record<string, string> = {
-  student: "Student",
-  lecturer: "Course staff",
-  course_admin: "Course admin",
-  issuer_manager: "Issuer manager",
-  dept_admin: "Department admin",
-  inst_admin: "Institution admin",
-};
 
 export function DevLogin() {
   const { setToken } = useAuth();
@@ -99,7 +90,7 @@ export function DevLogin() {
               <Table.Row key={u.id}>
                 <Table.Cell>{u.display_name ?? "Unnamed user"}</Table.Cell>
                 <Table.Cell>
-                  <Text>{u.roles.map((r) => ROLE_LABELS[r] ?? r).join(", ")}</Text>
+                  <Text>{u.roles.map(roleLabel).join(", ")}</Text>
                 </Table.Cell>
                 <Table.Cell>
                   <Button

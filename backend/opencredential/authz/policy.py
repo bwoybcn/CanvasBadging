@@ -15,12 +15,14 @@ working immediately. Scopes:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Set
 from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import ColumnElement, and_, false, or_, select
 from sqlalchemy.orm import Session
 
+from opencredential.authz.roles import COURSE_STAFF, DEPT_GRANTABLE, GRANTABLE
 from opencredential.db.models import (
     AchievementDefinition,
     AchievementTeamMember,
@@ -34,7 +36,7 @@ from opencredential.db.models import (
 from opencredential.db.models.tenancy import DEFAULT_POLICY
 from opencredential.errors import Forbidden
 
-COURSE_STAFF = {"lecturer", "course_admin"}
+__all__ = ["COURSE_STAFF", "DEPT_GRANTABLE", "GRANTABLE"]  # the lists live in authz.roles
 
 
 @dataclass
@@ -60,7 +62,7 @@ class Actor:
     def course_roles(self, course_id: uuid.UUID) -> set[str]:
         return {r for r, st, sid in self.memberships if st == "course" and sid == course_id}
 
-    def course_ids(self, roles: set[str]) -> set[uuid.UUID]:
+    def course_ids(self, roles: Set[str]) -> set[uuid.UUID]:
         return {sid for r, st, sid in self.memberships if st == "course" and r in roles}
 
 
@@ -294,10 +296,6 @@ def require_inst_admin(actor: Actor) -> None:
 #: Roles a policy may name as definition approvers or credential revokers.
 APPROVER_ROLES = ("lecturer", "dept_admin", "inst_admin")
 REVOKER_ROLES = ("lecturer", "issuer_manager", "dept_admin", "inst_admin")
-#: Roles a department administrator may delegate inside their own org units (spec §2.3).
-DEPT_GRANTABLE = ("lecturer", "course_admin", "issuer_manager", "reviewer", "dept_admin")
-#: Roles granted in OpenCredential itself. Students come from Canvas enrolments only.
-GRANTABLE = (*DEPT_GRANTABLE, "inst_admin")
 
 
 def is_admin(actor: Actor) -> bool:

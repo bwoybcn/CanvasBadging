@@ -7,26 +7,22 @@ import { ApiError, apiFetch, problemLines, SESSION_ENDED, type Me } from "../api
 import { useAuth } from "../auth";
 import { AppLink } from "./AppLink";
 
-const STAFF = new Set(["lecturer", "course_admin", "dept_admin", "inst_admin", "issuer_manager"]);
-// Used only until the profile has loaded from a server too old to send `may_review`.
-const REVIEWERS = new Set(["reviewer", "dept_admin", "inst_admin"]);
-
 /** The signed-in user's profile, shared by every page through the query cache. */
 export function useMe() {
   const { token } = useAuth();
   return useQuery({ queryKey: ["me", token], queryFn: () => apiFetch<Me>("/api/v1/learners/me", token) });
 }
 
+/** What the signed-in person may see. The server works each answer out from the person's
+ * roles and the institution's policy (authz/roles.py); the screens keep no role list of their
+ * own, and until the profile has loaded they show nothing that needs a role. */
 export function roleFlags(me: Me | undefined) {
-  const roles = new Set(me?.memberships.map((m) => m.role) ?? []);
   return {
-    isStudent: roles.has("student"),
-    isStaff: [...roles].some((r) => STAFF.has(r)),
-    // The server decides who can review (it knows the institution's policy, for example
-    // whether course staff may approve); the screens only ask.
-    isReviewer: me?.may_review ?? [...roles].some((r) => REVIEWERS.has(r)),
-    isInstAdmin: roles.has("inst_admin"),
-    isAdmin: roles.has("inst_admin") || roles.has("dept_admin"),
+    isStudent: me?.is_student ?? false,
+    isStaff: me?.is_staff ?? false,
+    isReviewer: me?.may_review ?? false,
+    isInstAdmin: me?.is_inst_admin ?? false,
+    isAdmin: me?.is_admin ?? false,
   };
 }
 

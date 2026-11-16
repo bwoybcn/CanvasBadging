@@ -5,13 +5,14 @@ import { Alert, Button, Flex, Heading, SimpleSelect, Table, Text, TextInput, Vie
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiFetch, apiSend, type CredentialRecord, REVOCATION_REASONS, type RevocationRequestRow } from "../../api";
+import { apiFetch, apiSend, CREDENTIAL_STATE, type CredentialRecord, type CredentialState, REVOCATION_REASONS, type RevocationRequestRow } from "../../api";
 import { useAuth } from "../../auth";
 import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage, DownloadButton, fmtDate } from "./AdminPage";
 import { TableScroll } from "../../components/TableScroll";
 
-const STATUS_LABEL = { active: "Active", revoked: "Revoked", expired: "Expired" } as const;
+// The states offered as a filter. Nothing suspends a badge yet, so "Suspended" is not offered.
+const FILTER_STATES: CredentialState[] = ["active", "expired", "revoked"];
 
 export function Credentials() {
   const { token } = useAuth();
@@ -36,15 +37,11 @@ export function Credentials() {
           <SimpleSelect.Option id="st-all" value="">
             All
           </SimpleSelect.Option>
-          <SimpleSelect.Option id="st-active" value="active">
-            Active
-          </SimpleSelect.Option>
-          <SimpleSelect.Option id="st-expired" value="expired">
-            Expired
-          </SimpleSelect.Option>
-          <SimpleSelect.Option id="st-revoked" value="revoked">
-            Revoked
-          </SimpleSelect.Option>
+          {FILTER_STATES.map((state) => (
+            <SimpleSelect.Option key={state} id={`st-${state}`} value={state}>
+              {CREDENTIAL_STATE[state].label}
+            </SimpleSelect.Option>
+          ))}
         </SimpleSelect>
         <TextInput renderLabel="Student name contains" value={learner} onChange={(_e, v) => setLearner(v)} width="16rem" />
         <DownloadButton path={`/api/v1/admin/reports/issuance.csv${status ? `?status=${status}` : ""}`} filename="issuance-records.csv">
@@ -103,7 +100,7 @@ function RecordRow({ r }: { r: CredentialRecord }) {
       <Table.Cell>{r.course_title ?? ""}</Table.Cell>
       <Table.Cell>{fmtDate(r.issued_at)}</Table.Cell>
       <Table.Cell>
-        {STATUS_LABEL[r.status]}
+        {CREDENTIAL_STATE[r.status].label}
         {r.status === "revoked" && r.revocation_reason ? `: ${REVOCATION_REASONS[r.revocation_reason] ?? r.revocation_reason}` : ""}
       </Table.Cell>
       <Table.Cell>

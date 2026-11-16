@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
@@ -23,6 +23,12 @@ from opencredential.authoring.preview import asset_data_url
 from opencredential.credentials import certificate as certificates
 from opencredential.credentials import linkedin
 from opencredential.credentials import sharing as svc
+from opencredential.credentials.state import (
+    CredentialState,
+    WithdrawnState,
+    is_withdrawn,
+    state_of,
+)
 from opencredential.db.models import (
     AchievementDefinition,
     AchievementVersion,
@@ -42,8 +48,6 @@ from opencredential.verification.service import Verifier
 from opencredential.verification.sources import DefaultSources, own_origins
 
 router = APIRouter(prefix="/api/v1", tags=["student collection"])
-
-CredentialState = Literal["active", "revoked", "suspended", "expired"]
 
 
 class ImageOut(BaseModel):
@@ -118,7 +122,7 @@ def _summary(db: Session, cred: Credential, settings: Settings) -> CredentialSum
         issuer_name=issuer.name,
         issued_at=cred.issued_at,
         valid_until=cred.valid_until,
-        status=svc.credential_state(cred, status),  # type: ignore[arg-type]
+        status=state_of(cred, status),
         course=_course(db, version),
         image=_image(db, version),
         share=_share_state(db, cred, settings),
@@ -160,7 +164,7 @@ class Withdrawal(BaseModel):
     The reason category only: the explanation staff write stays in the record (spec §8.5).
     """
 
-    state: Literal["revoked", "suspended"]
+    state: WithdrawnState
     on: datetime | None
     reason_code: str | None
     issuer_name: str
@@ -199,7 +203,7 @@ def detail(
     view = svc.public_view(db, cred, svc.ShareOptions(show_evidence=True), settings)
     status = db.scalar(select(CredentialStatus).where(CredentialStatus.credential_id == cred.id))
     withdrawal = None
-    if status is not None and status.state in ("revoked", "suspended"):
+    if status is not None and is_withdrawn(status.state):
         withdrawal = Withdrawal(
             state=status.state,  # type: ignore[arg-type]
             on=status.changed_at,
@@ -305,8 +309,8 @@ def certificate(
     """
     cred = _owned(db, credential_id, claims.user_id)
     status = db.scalar(select(CredentialStatus).where(CredentialStatus.credential_id == cred.id))
-    state = svc.credential_state(cred, status)
-    if state in ("revoked", "suspended"):
+    state = state_of(cred, status)
+    if is_withdrawn(state):
         raise ApiError(
             409,
             "CERTIFICATE_NOT_AVAILABLE",
