@@ -47,6 +47,7 @@ import {
   ApiError,
 } from "../api";
 import { useAuth } from "../auth";
+import { CanvasRefresh } from "../components/CanvasRefresh";
 import { ChoiceSelect } from "../components/ChoiceSelect";
 import { ColourField, LimitedTextArea } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
@@ -676,6 +677,14 @@ export function CreateBadge() {
       </Page>
     );
 
+  // A saved draft can jump to any step whose earlier steps are complete, so an author editing
+  // requirements does not have to page through every step (round 3, finding M4).
+  const canJump = (to: number) =>
+    to < step ||
+    (!!draftId &&
+      Array.from({ length: to }, (_, j) => j).every(
+        (j) => !stepProblems(j, st, catalogue.data).length,
+      ));
   const f = s.fields;
   const locked = !!draftId;
   const sessionEnded =
@@ -705,9 +714,12 @@ export function CreateBadge() {
         <List isUnstyled delimiter="none" margin="0 0 medium">
           {STEPS.map((name, i) => (
             <List.Item key={name}>
-              {i < step ? (
+              {i !== step && canJump(i) ? (
                 <Link as="button" onClick={() => void go(i)}>
-                  {i + 1}. {name} (done)
+                  {i + 1}. {name}
+                  {i < step || !stepProblems(i, st, catalogue.data).length
+                    ? " (done)"
+                    : ""}
                 </Link>
               ) : (
                 <Text
@@ -1037,6 +1049,9 @@ export function CreateBadge() {
               or unreleased marks stay pending. A &ldquo;Staff confirm&rdquo;
               requirement is met when a member of staff records it.
             </Text>
+          )}
+          {st.course_id && (
+            <CanvasRefresh courseId={st.course_id} token={token} />
           )}
           {(modules.isError || assignments.isError) && (
             <ErrorAlert error={modules.error ?? assignments.error} />

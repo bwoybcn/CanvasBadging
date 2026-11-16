@@ -482,7 +482,8 @@ def _rule_source_issues(db: Session, course: Course | None, rules: RuleSet) -> l
                     _issue(
                         "rules",
                         "MODULE_UNPUBLISHED",
-                        f"Module “{m.name}” is not published in Canvas.",
+                        f"Module “{m.name}” is not published in Canvas. Students cannot see "
+                        "it, so nobody can earn this badge until it is published.",
                         "warning",
                     )
                 )
@@ -509,7 +510,8 @@ def _rule_source_issues(db: Session, course: Course | None, rules: RuleSet) -> l
                     _issue(
                         "rules",
                         "ASSIGNMENT_UNPUBLISHED",
-                        f"“{a.name}” is not published in Canvas.",
+                        f"“{a.name}” is not published in Canvas. Students cannot see it, so "
+                        "nobody can earn this badge until it is published.",
                         "warning",
                     )
                 )
