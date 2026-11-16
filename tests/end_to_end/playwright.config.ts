@@ -21,6 +21,8 @@ export default defineConfig({
   // accessibility pass then looks at, so a freshly seeded database works.
   projects: [
     { name: "scenarios", use: { ...devices["Desktop Chrome"] }, testMatch: /scenarios\.spec\.ts/ },
+    // Opening Badges the way Canvas does (LTI sign-in), against a stand-in Canvas.
+    { name: "canvas", use: { ...devices["Desktop Chrome"] }, testMatch: /canvas-sign-in\.spec\.ts/ },
     {
       name: "desktop",
       use: { ...devices["Desktop Chrome"] },

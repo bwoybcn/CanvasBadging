@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "playwright test --trace off",
-    "test:a11y": "playwright test --trace off a11y"
+    "test:a11y": "playwright test --trace off a11y",
+    "test:canvas": "playwright test --trace off --project canvas"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

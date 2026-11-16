@@ -26,6 +26,14 @@ All notable changes to this project are documented here. The format follows
   visitor counts as the proxy and shares one allowance.
 
 ### Added
+- **A browser test of the sign-in from Canvas** (whole-product review, finding 20). Five new
+  end-to-end tests open Badges the way Canvas does (LTI 1.3), in a real browser, against a
+  stand-in Canvas the test starts: inside Canvas's frame with the cookie withheld (so Canvas's
+  storage frame is used), in a tab of its own with the cookie, a lecturer switching a course on
+  and the class list arriving, and two launches that must be refused. Until now the browser
+  tests signed in only through the development sign-in page. In CI the tests that need a
+  command from the stack (these, and the signer outage journey) now fail if the command is
+  missing, instead of being skipped.
 - **A production kit** (finding 6): `docker/compose.production.yaml` runs the whole stack on
   one host in production mode behind an nginx proxy with TLS and rate limits, with every secret
   required and nothing but the proxy published. `docker/production.env.example` lists the

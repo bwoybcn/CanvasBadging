@@ -215,12 +215,14 @@ jobs:
           (cd backend && nohup uv run oc api > "$RUNNER_TEMP/api.log" 2>&1 &)
           (cd backend && nohup uv run oc worker > "$RUNNER_TEMP/worker.log" 2>&1 &)
           for i in $(seq 1 30); do curl -fsS localhost:8000/readyz && break; sleep 1; done
-      - name: Playwright (E1–E12, WCAG 2.2 AA checks on desktop and phone)
+      - name: Playwright (E1–E12, sign-in from a stand-in Canvas, WCAG 2.2 AA checks on desktop and phone)
         working-directory: tests/end_to_end
         env:
           OC_E2E_SIGNER_STOP: fuser -k 8790/tcp; sleep 1
           OC_E2E_SIGNER_START: >-
             cd "$GITHUB_WORKSPACE/signer" && (OC_ENV=development nohup node dist/server.js >> "$RUNNER_TEMP/signer.log" 2>&1 &) && sleep 2
+          # The Canvas sign-in tests register their stand-in Canvas with this command.
+          OC_E2E_OC: cd "$GITHUB_WORKSPACE/backend" && uv run oc
         run: |
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium
