@@ -24,7 +24,7 @@ files marked "signer" use the real signer too.
 
 | Feature | Files |
 |---|---|
-| Opening Badges from Canvas (LTI 1.3 launch, every refusal) | `integration/test_lti_launch.py`, `unit/test_platform_keys.py`, `unit/test_sis_claims.py` |
+| Opening Badges from Canvas (LTI 1.3 launch, every refusal) | `integration/test_lti_launch.py`, `unit/test_platform_keys.py`, `unit/test_sis_claims.py`; in a real browser, `tests/end_to_end/specs/canvas-sign-in.spec.ts` |
 | Sessions | `unit/test_sessions.py`, `integration/test_session_renewal.py` |
 | Canvas API sign-in, tokens and the class list | `integration/test_canvas_oauth_and_class_list.py`, `unit/test_canvas_adapter.py` |
 | Canvas sub-accounts linked to areas | `integration/test_canvas_accounts.py` |

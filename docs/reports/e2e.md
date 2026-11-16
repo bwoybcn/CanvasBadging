@@ -2,8 +2,8 @@
 
 This report covers two runs:
 
-1. **Automated:** the twelve §19.3 scenarios (E1–E12) run with Playwright against the whole
-   stack on every pull request.
+1. **Automated:** the twelve §19.3 scenarios (E1–E12), and the sign-in from a stand-in Canvas,
+   run with Playwright against the whole stack on every pull request.
 2. **Real Canvas:** a manual end-to-end run, scripted with Playwright, against a real Canvas
    install over HTTPS.
 
@@ -41,6 +41,28 @@ the final commit of the pull request is the record of evidence.
 |---|---|---|---|
 | Inside `oc worker`, every issuance job failed after signing, while queueing the status-list publication (procrastinate refused a second `open()`) | Credentials were signed but the job was marked failed. New status lists were not published until the hourly job ran, so new credentials showed "Unable to verify". | `jobs/defer.py` reuses the worker's open app | `test_worker_issuance.py` |
 | A credential in a brand-new status list showed "Unable to verify" for about 10 seconds after issue, because the first publication waited for the delayed job (found by E6 in CI) | A student who downloaded and checked a credential at once was told it could not be verified | The issuing job publishes a new list itself; the queued job is only a fallback | `test_worker_issues_and_publishes_a_new_status_list_at_once`, `test_worker_queues_publication_when_the_first_one_fails` |
+
+## 1a. Signing in from Canvas, in a browser
+
+**Where:** `tests/end_to_end/specs/canvas-sign-in.spec.ts`, in the same CI job. Added on
+16 Nov 2026 (whole-product review, finding 20).
+
+E1 to E12 sign in through the development sign-in page. These five tests go through the real
+LTI 1.3 sign-in instead, against a stand-in Canvas that the test starts
+(`tests/end_to_end/specs/canvas-standin.ts`): it shows a course page with Badges in a frame,
+answers the authorize request with a signed launch, publishes its signing key, keeps a value
+for the tool in its storage frame, and serves the class list.
+
+| Test | What it shows | Result |
+|---|---|---|
+| A lecturer opens Badges inside Canvas's frame | Canvas is another site, so the browser withholds the cookie and Badges recognises the browser through Canvas's storage frame. The lecturer lands in the right course, switches it on, and the class list arrives from Canvas | Pass |
+| A student opens Badges in a course not switched on | The student sees the notice and is not offered the staff's switch | Pass |
+| Badges in a tab of its own | With Canvas on the same site, the cookie alone signs the person in, and the session is removed from the address | Pass |
+| A launch signed with the wrong key | Refused with `SIGNATURE_INVALID` | Pass |
+| A launch from an installation no administrator approved | Refused with `DEPLOYMENT_UNKNOWN` | Pass |
+
+The stand-in is not Canvas. It proves the browser side (frames, cookies, the storage frame,
+redirects); what a real Canvas sends is covered by section 2.
 
 ## 2. Real Canvas, over HTTPS
 

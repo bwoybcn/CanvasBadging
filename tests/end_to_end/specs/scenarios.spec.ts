@@ -324,7 +324,9 @@ test("E10 unauthorised access: another learner's credential is not disclosed", a
 test("E12 interrupted issuance: a signer outage, then recovery, gives exactly one credential", async ({ page }) => {
   const stop = process.env.OC_E2E_SIGNER_STOP;
   const start = process.env.OC_E2E_SIGNER_START;
-  test.skip(!stop || !start, "set OC_E2E_SIGNER_STOP and OC_E2E_SIGNER_START to commands that stop/start the signer");
+  // Skipped on a developer's machine without the commands; in CI a missing one fails instead.
+  test.skip((!stop || !start) && !process.env.CI, "set OC_E2E_SIGNER_STOP and OC_E2E_SIGNER_START to commands that stop/start the signer");
+  if (!stop || !start) throw new Error("OC_E2E_SIGNER_STOP and OC_E2E_SIGNER_START are not set, so the signer outage journey cannot run");
   const students = await learners(page);
   let target = "";
   for (const s of students) {
@@ -338,7 +340,7 @@ test("E12 interrupted issuance: a signer outage, then recovery, gives exactly on
   const defs = (await lec.get<{ items: Achievement[] }>("/api/v1/achievements")).items;
   const def = defs.find((d) => d.title === "Seminar Participation")!;
   const user = students.find((s) => s.display_name === target)!;
-  execSync(stop!, { stdio: "inherit" });
+  execSync(stop, { stdio: "inherit" });
   try {
     await lec.post("/api/v1/awards/manual", {
       definition_id: def.id,
@@ -349,7 +351,7 @@ test("E12 interrupted issuance: a signer outage, then recovery, gives exactly on
     const mine = (await achievementsOf(page, target)).find((x) => x.title === "Seminar Participation")!;
     expect(mine.credential_id).toBeNull();
   } finally {
-    execSync(start!, { stdio: "inherit" });
+    execSync(start, { stdio: "inherit" });
   }
   // Recovery: the job retries (or an administrator retries it from "Failed issuance").
   const admin = await Api.as(page.request, STAFF.admin);
