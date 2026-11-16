@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Publishes a release: checks the version, builds the two images, pushes them to the GitHub
+# container registry and creates the GitHub release with its notes from CHANGELOG.md.
+#
+# Start it from the Actions tab (Release, "Run workflow", on main, with the version number), or
+# by pushing a tag such as v1.0.0. docs/development/releasing.md has the steps before that.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, without the v (for example 1.0.0)"
+        required: true
+        type: string
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write # create the tag and the release
+  packages: write # push the images
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build images and publish the release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REQUESTED: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            [ "$GITHUB_REF" = refs/heads/main ] || { echo "::error::Run this from the main branch."; exit 1; }
+            version="${REQUESTED#v}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::\"$version\" is not a version like 1.0.0."; exit 1; }
+          backend=$(sed -n 's/^version = "\(.*\)"$/\1/p' backend/pyproject.toml | head -1)
+          package=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' backend/opencredential/__init__.py)
+          signer=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' signer/package.json | head -1)
+          for found in "$backend" "$package" "$signer"; do
+            [ "$found" = "$version" ] || {
+              echo "::error::Releasing $version, but the code says backend $backend, package $package, signer $signer. Update them first (docs/development/releasing.md)."
+              exit 1
+            }
+          done
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] \
+            || { echo "::error::CHANGELOG.md has no section headed \"## [$version]\"."; exit 1; }
+          owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          {
+            echo "VERSION=$version"
+            echo "TAG=v$version"
+            echo "API_IMAGE=ghcr.io/$owner/canvasbadging-api"
+            echo "SIGNER_IMAGE=ghcr.io/$owner/canvasbadging-signer"
+          } >> "$GITHUB_ENV"
+      - name: Refuse to release the same version twice
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Release $TAG already exists. Published versions are never replaced."
+            exit 1
+          fi
+      - name: Build the images
+        run: |
+          labels=(
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY"
+            --label "org.opencontainers.image.version=$VERSION"
+            --label "org.opencontainers.image.revision=$GITHUB_SHA"
+            --label "org.opencontainers.image.licenses=AGPL-3.0-or-later"
+          )
+          docker build "${labels[@]}" -f docker/api.Dockerfile -t "$API_IMAGE:$VERSION" .
+          docker build "${labels[@]}" -f docker/signer.Dockerfile -t "$SIGNER_IMAGE:$VERSION" .
+      - name: Push the images
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$API_IMAGE:$VERSION"
+          docker push "$SIGNER_IMAGE:$VERSION"
+      - name: Create the release
+        run: |
+          {
+            cat "$RUNNER_TEMP/notes.md"
+            echo
+            echo "## Images"
+            echo
+            echo "- \`$API_IMAGE:$VERSION\` (api and worker)"
+            echo "- \`$SIGNER_IMAGE:$VERSION\` (signer)"
+            echo
+            echo "Install or upgrade with \`docker/compose.production.yaml\` and \`OC_VERSION=$VERSION\`:"
+            echo "see docs/deployment/production.md."
+          } > "$RUNNER_TEMP/release.md"
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "OpenCredential $VERSION" \
+            --notes-file "$RUNNER_TEMP/release.md"

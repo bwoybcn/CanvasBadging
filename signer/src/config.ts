@@ -4,6 +4,8 @@
 /** Publicly known development KEK (32 bytes, base64). Never valid in production. */
 export const DEV_KEK_B64 = Buffer.from("dev-only-kek-never-use-in-prod!!").toString("base64");
 export const DEV_SHARED_SECRET = "dev-only-insecure-signer-secret";
+/** `kek_ref` recorded on a key wrapped with the committed development KEK. */
+export const DEV_KEK_REF = "dev:committed";
 
 export interface SignerConfig {
   env: "development" | "test" | "production";
@@ -15,8 +17,19 @@ export interface SignerConfig {
   sharedSecret: string;
 }
 
+const MODES = ["development", "test", "production"] as const;
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): SignerConfig {
-  const mode = (env.OC_ENV ?? "development") as SignerConfig["env"];
+  // The mode is never guessed. An unset or mistyped OC_ENV ("prod", "Production") used to be
+  // taken as development, which silently accepted the committed secrets below: signing keys
+  // of a real deployment would then be wrapped with a key anyone can read in the repository.
+  const mode = env.OC_ENV as SignerConfig["env"] | undefined;
+  if (mode === undefined || !MODES.includes(mode)) {
+    throw new Error(
+      `OC_ENV must be set to one of ${MODES.join(", ")} (got ${mode === undefined ? "nothing" : JSON.stringify(mode)}). ` +
+        "The signer does not guess its mode, because development mode accepts publicly known secrets.",
+    );
+  }
   const kekB64 = env.SIGNER_KEK ?? DEV_KEK_B64;
   const kek = Buffer.from(kekB64, "base64");
   if (kek.length !== 32) {
@@ -29,7 +42,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): SignerConfig {
     databaseUrl:
       env.SIGNER_DATABASE_URL ?? "postgresql://oc_signer:oc_signer_dev@localhost:5432/opencredential",
     kek,
-    kekRef: kekB64 === DEV_KEK_B64 ? "dev:committed" : "env:SIGNER_KEK",
+    kekRef: kekB64 === DEV_KEK_B64 ? DEV_KEK_REF : "env:SIGNER_KEK",
     sharedSecret: env.OC_SIGNER_SHARED_SECRET ?? DEV_SHARED_SECRET,
   };
   if (mode === "production") {

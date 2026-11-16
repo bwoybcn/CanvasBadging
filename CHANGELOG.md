@@ -6,7 +6,41 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+- **`OC_ENV` is now required** by the api, the worker and the signer, and must be exactly
+  `development`, `test` or `production` (whole-product review, finding 4). An unset or
+  misspelt value used to mean development mode, which accepts the secrets committed to this
+  repository. **Upgrading:** set `OC_ENV` wherever you start a service without Docker Compose
+  or a `backend/.env` file. `compose.yaml` is the development stack and fixes the mode itself.
+- In production the api and the worker refuse to start, and the signer refuses to sign, while
+  an active signing key was wrapped with the committed development key-encryption key, not
+  only while one is flagged as a development key (migration 0015). The worker now makes the
+  same startup checks as the api.
+- A basic **request limit inside the app** for the routes anyone can reach without signing in
+  (finding 5): 60 a minute for each client address on the public badge checks
+  (`POST /api/v1/verify`, share pages) and 600 a minute on the LTI login and launch steps. A
+  refused request gets 429 with `Retry-After`. The proxy limit stays the first line.
+  `OC_RATE_LIMIT_VERIFY_PER_MINUTE` and `OC_RATE_LIMIT_SIGNIN_PER_MINUTE` change them.
+- `OC_FORWARDED_ALLOW_IPS` says which proxy's `X-Forwarded-For` the api believes. **Upgrading
+  behind a proxy on another host or container:** set it to the proxy's address, or every
+  visitor counts as the proxy and shares one allowance.
+
 ### Added
+- **A production kit** (finding 6): `docker/compose.production.yaml` runs the whole stack on
+  one host in production mode behind an nginx proxy with TLS and rate limits, with every secret
+  required and nothing but the proxy published. `docker/production.env.example` lists the
+  settings. CI builds, starts and checks it on every change (`scripts/smoke-production.sh`).
+  The deployment guide opens with a quick start for it.
+- **A release build**: the Release workflow checks the version, builds the api and signer
+  images, pushes them to the GitHub container registry and publishes the release with its
+  notes from this file (`docs/development/releasing.md`).
+- **Someone is told when background work fails.** `GET /healthz/jobs` is for a monitoring tool:
+  200 while a worker is running and no job has failed in the last day, otherwise 503 with the
+  reason. With `OC_ALERT_WEBHOOK_URL` set, the worker posts to that chat channel within ten
+  minutes of a job failing, and once a day while failed jobs are still waiting
+  (`OC_ALERT_WEBHOOK_FORMAT`: `text` or `teams`). Both carry task names and counts only.
+- `oc api --workers N` (or `OC_API_WORKERS`) starts several API processes, so one burst of slow
+  requests no longer holds up everyone else.
 - A **Help** link in the menu of every screen. The Help page names who to ask at the
   institution, links to the guides and answers the most common questions. Institution
   administrators set the contact (a name, an email address and a help page of their own) in

@@ -36,7 +36,7 @@ it on every change.
 
 | Item | Risk | Owner | Before |
 |---|---|---|---|
-| General rate limiting is at the reverse proxy, not in the app | Brute force, or scraping of the public `/verify` endpoints | Operator ([security guide](../security/security-guide.md#network)) | Public go-live |
+| General rate limiting is at the reverse proxy. Since 16 November 2026 the production kit's proxy sets it, and the app has a basic limit of its own on the public badge checks and sign-in steps | Brute force, or scraping of the public `/verify` endpoints | Operator ([security guide](../security/security-guide.md#network)): confirm it on the installed proxy | Public go-live |
 | `SIGNER_KEK` is an environment variable, not an HSM or KMS | Key theft by someone with root on the signer host | Operator; optional KMS integration later | Go-live, by accepting the risk or adding a KMS |
 | Verification domain not chosen; credentials use a development `did:key` | Cannot issue real credentials until decided | Gary / the university | Pilot |
 | Independent penetration test | Spec §19.6 asks for a pre-production review; an external test is recommended for a university deployment | The university | Go-live |

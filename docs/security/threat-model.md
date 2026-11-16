@@ -306,7 +306,10 @@ Playwright `E12` (signer stopped during issuance, then restarted).
 
 ## Known gaps
 
-* **General API rate limiting.** Only Canvas sync has a per-course limit. The API has no general
-  limit per user or IP. The production guide puts this at the reverse proxy. It is listed in the
-  [security report](../reports/security.md) as a release condition for public deployment.
+* **General API rate limiting.** The app limits only the routes anyone can reach without
+  signing in (the public badge checks and the LTI sign-in steps), per client address and per
+  process, and Canvas sync per course. There is no limit per signed-in user. The general limit
+  is the reverse proxy's: the production kit's proxy sets one, and an installation with its own
+  proxy must too. It is listed in the [security report](../reports/security.md) as a release
+  condition for public deployment.
 * **The signer KEK is an environment variable**, not an HSM or a cloud KMS (threat 6, residual risk).

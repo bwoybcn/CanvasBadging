@@ -367,3 +367,31 @@ def test_no_canvas_token_or_secret_in_any_api_response(two_worlds: dict[str, Any
             "application/json"
         ):
             assert not bad.search(r.text), path
+
+
+def test_public_verification_and_sign_in_are_rate_limited(database: None) -> None:
+    """Whole-product review, finding 5: a basic limit inside the app, per client address, for
+    the routes anyone can reach. The proxy limit stays the first line."""
+    settings = get_settings().model_copy(
+        update={"rate_limit_verify_per_minute": 3, "rate_limit_signin_per_minute": 2}
+    )
+    with TestClient(create_app(settings)) as c:
+        codes = [c.post("/api/v1/verify", content=b"{}").status_code for _ in range(3)]
+        assert 429 not in codes
+        refused = c.post("/api/v1/verify", content=b"{}")
+        assert refused.status_code == 429
+        assert refused.json()["code"] == "RATE_LIMITED"
+        assert int(refused.headers["retry-after"]) >= 1
+        assert refused.headers["x-request-id"]  # still wrapped by the request-id middleware
+        # share pages draw on the same allowance, cheap public reads do not
+        assert c.get("/verify/not-a-share").status_code == 429
+        assert c.get("/verify").status_code == 200
+        assert c.get("/verify/not-a-share/credential.json").status_code == 404
+        # sign-in has its own allowance, and a person gets a page, not JSON
+        assert [c.post("/lti/login").status_code for _ in range(2)].count(429) == 0
+        page = c.post("/lti/login")
+        assert page.status_code == 429
+        assert "text/html" in page.headers["content-type"]
+        assert "Too many requests" in page.text
+        # signed-in routes are not limited here
+        assert {c.get("/api/v1/learners/me").status_code for _ in range(10)} == {401}

@@ -24,3 +24,8 @@ backend/var/
 
 # Local Claude Code session logs
 .claude/logs/
+
+# Production kit: real secrets and certificates never go into Git
+docker/production.env
+docker/certs/
+.smoke-production/

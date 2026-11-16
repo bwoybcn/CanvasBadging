@@ -119,7 +119,7 @@ export function buildApp(config: SignerConfig, store: KeyStore): FastifyInstance
     if (key.destroyedAt || key.retiredAt) {
       return reply.code(409).send({ code: "KEY_NOT_ACTIVE", title: "This key is retired and can no longer sign" });
     }
-    if (key.isDev && config.env === "production") {
+    if ((key.isDev || key.kekRef.startsWith("dev:")) && config.env === "production") {
       return reply.code(403).send({ code: "DEV_KEY_FORBIDDEN", title: "Development keys cannot sign in production" });
     }
     // JS strings cannot be wiped; the secret lives only in this request's scope.

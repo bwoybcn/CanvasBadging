@@ -10,11 +10,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
 
 from opencredential import __version__
 from opencredential.api import errors, health
 from opencredential.api.middleware import RequestIdMiddleware
+from opencredential.api.ratelimit import Limiter, RateLimitMiddleware
 from opencredential.api.routes import (
     achievements,
     admin,
@@ -30,28 +30,13 @@ from opencredential.api.routes import (
     lti,
     session,
 )
-from opencredential.db.session import app_engine
 from opencredential.logging import configure_logging, get_logger
 from opencredential.public import routes as public_routes
 from opencredential.public import share as share_routes
 from opencredential.settings import Settings, get_settings
+from opencredential.startup import check_production_safety
 
 log = get_logger("app")
-
-
-class StartupRefused(RuntimeError):
-    pass
-
-
-def check_production_safety(settings: Settings) -> None:
-    """ADR-0005: refuse to serve production traffic while a development key is active."""
-    if not settings.is_production:
-        return
-    with app_engine().connect() as conn:
-        if conn.execute(text("select app.dev_keys_active()")).scalar():
-            raise StartupRefused(
-                "A development signing key is active. Retire it before running in production."
-            )
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -69,6 +54,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         license_info={"name": "AGPL-3.0-or-later", "identifier": "AGPL-3.0-or-later"},
         lifespan=lifespan,
+    )
+    # Added first so the request-id middleware wraps it: a refused request still gets an id,
+    # the security headers and a log line.
+    app.add_middleware(
+        RateLimitMiddleware,
+        limiter=Limiter(
+            {
+                "verify": settings.rate_limit_verify_per_minute,
+                "signin": settings.rate_limit_signin_per_minute,
+            }
+        ),
     )
     app.add_middleware(RequestIdMiddleware)
     errors.install(app)

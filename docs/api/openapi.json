@@ -10738,6 +10738,29 @@
         ]
       }
     },
+    "/healthz/jobs": {
+      "get": {
+        "description": "For a monitoring tool to poll. Not for a load balancer: an API that cannot issue badges\nin the background can still serve pages, so ``/readyz`` does not look at this.\n\nCounts only, across the whole installation: no institution, course or person.",
+        "operationId": "jobs_health_healthz_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "No worker is running, or a job failed in the last 24 hours"
+          }
+        },
+        "summary": "Background work: is a worker running, and has a job failed in the last day",
+        "tags": [
+          "health"
+        ]
+      }
+    },
     "/issuers/{slug}/did.json": {
       "get": {
         "operationId": "did_json_issuers__slug__did_json_get",

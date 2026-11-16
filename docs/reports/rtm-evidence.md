@@ -305,7 +305,7 @@ None of these is a code defect. Each needs a decision or a person outside the co
 
 | # | Condition | Rows | Owner |
 |---|---|---|---|
-| 1 | Rate limiting at the reverse proxy, as in the [security guide](../security/security-guide.md#network) | R-13.1 | Operator, before public go-live |
+| 1 | Rate limiting at the reverse proxy, as in the [security guide](../security/security-guide.md#network). The production kit's proxy now sets it and CI checks it (`scripts/smoke-production.sh`); an installation with its own proxy still has to | R-13.1 | Operator, before public go-live |
 | 2 | Manual screen-reader pass (NVDA or VoiceOver) on the student and lecturer journeys | R-14.2, R-14.2-02, R-19.5 | The university's accessibility team, before go-live |
 | 3 | Choose the verification domain. That unlocks real `did:web` issuance and wallet import | R-9.1, R-2.4-12 | Gary / the university, before the pilot |
 | 4 | Confirm NRPS against a hosted Canvas (the local Canvas has a port bug) | R-4.1-01, R-4.3-06 | Pilot setup |

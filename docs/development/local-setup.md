@@ -33,7 +33,7 @@ cp ../.env.example .env              # development values
 uv run oc migrate                    # as oc_owner
 
 # 3. Signer (separate terminal)
-cd signer && npm ci && npm run dev   # listens on :8790
+cd signer && npm ci && npm run dev   # listens on :8790; reads OC_ENV from backend/.env
 
 # 4. Seed, api and worker
 uv run oc seed                       # demo institution, dev issuer key, badges, learners
@@ -45,6 +45,11 @@ cd frontend && npm ci && npm run dev # http://localhost:5173/app/
 ```
 
 `uv run oc seed --reset` drops and rebuilds the whole database (development only).
+
+The api, the worker and the signer all need `OC_ENV` (`development` here). The backend reads it
+from `backend/.env`, and `npm run dev` passes the same file to the signer. If you start the
+signer another way, set it yourself: `OC_ENV=development node dist/server.js`. A service
+started without it stops with "OC_ENV is not set".
 
 ## Database roles
 

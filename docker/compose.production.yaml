@@ -1,0 +1,144 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Production stack for one host: reverse proxy (TLS and rate limits), api, worker, signer and
+# PostgreSQL. Step-by-step instructions: docs/deployment/production.md, "Quick start".
+#
+#   cp docker/production.env.example docker/production.env     # then fill in every value
+#   docker compose -f docker/compose.production.yaml --env-file docker/production.env up -d
+#
+# Nothing here has a default secret. A missing value stops Compose with the name of the
+# variable. Only the proxy publishes ports; the api, signer and database are reachable from
+# inside the Compose network only.
+#
+# To use a managed PostgreSQL instead, delete the "postgres" service and its depends_on
+# entries, create the three roles yourself (production.md, section 4) and point the three
+# database addresses below at it.
+
+name: opencredential
+
+x-images:
+  api: &api-image ${OC_IMAGE_API:-ghcr.io/bwoybcn/canvasbadging-api}:${OC_VERSION:?set OC_VERSION in production.env}
+  signer: &signer-image ${OC_IMAGE_SIGNER:-ghcr.io/bwoybcn/canvasbadging-signer}:${OC_VERSION:?set OC_VERSION in production.env}
+
+x-backend-env: &backend-env
+  OC_ENV: production
+  OC_DATABASE_URL: postgresql+psycopg://oc_app:${OC_APP_PASSWORD:?set OC_APP_PASSWORD in production.env}@postgres:5432/opencredential
+  OC_SIGNER_URL: http://signer:8790
+  OC_SECRET_KEY: ${OC_SECRET_KEY:?set OC_SECRET_KEY in production.env}
+  OC_SIGNER_SHARED_SECRET: ${OC_SIGNER_SHARED_SECRET:?set OC_SIGNER_SHARED_SECRET in production.env}
+  OC_TOKEN_ENCRYPTION_KEY: ${OC_TOKEN_ENCRYPTION_KEY:?set OC_TOKEN_ENCRYPTION_KEY in production.env}
+  OC_PUBLIC_BASE_URL: https://${OC_HOSTNAME:?set OC_HOSTNAME in production.env}
+  OC_STORAGE_DIR: /var/lib/opencredential/assets
+  OC_LTI_PRIVATE_KEY_FILE: /var/lib/opencredential/lti/tool_key.pem
+  OC_LOG_JSON: "true"
+  # Only the proxy can reach the api, so its X-Forwarded-For is believed. Without this every
+  # visitor would share the proxy's address, and its one rate-limit allowance.
+  OC_FORWARDED_ALLOW_IPS: "*"
+  OC_API_WORKERS: ${OC_API_WORKERS:-4}
+  OC_ALERT_WEBHOOK_URL: ${OC_ALERT_WEBHOOK_URL:-}
+  OC_ALERT_WEBHOOK_FORMAT: ${OC_ALERT_WEBHOOK_FORMAT:-text}
+
+x-restart: &restart
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  postgres:
+    <<: *restart
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in production.env}
+      # read by docker/postgres/init/01-roles.sh the first time the data volume is created
+      OC_OWNER_PASSWORD: ${OC_OWNER_PASSWORD:?set OC_OWNER_PASSWORD in production.env}
+      OC_APP_PASSWORD: ${OC_APP_PASSWORD:?set OC_APP_PASSWORD in production.env}
+      OC_SIGNER_PASSWORD: ${OC_SIGNER_PASSWORD:?set OC_SIGNER_PASSWORD in production.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d opencredential"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # One-off: applies database changes, then exits. The only service given the owner password.
+  migrate:
+    image: *api-image
+    build: { context: .., dockerfile: docker/api.Dockerfile }
+    environment:
+      <<: *backend-env
+      OC_DATABASE_OWNER_URL: postgresql+psycopg://oc_owner:${OC_OWNER_PASSWORD}@postgres:5432/opencredential
+    command: ["oc", "migrate"]
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  # One-off: creates the key that signs the tool's messages to Canvas, unless it already exists.
+  lti-key:
+    image: *api-image
+    environment: *backend-env
+    command: ["sh", "-c", "test -f \"$$OC_LTI_PRIVATE_KEY_FILE\" || oc lti keygen"]
+    restart: "no"
+    volumes:
+      - lti:/var/lib/opencredential/lti
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  signer:
+    <<: *restart
+    image: *signer-image
+    build: { context: .., dockerfile: docker/signer.Dockerfile }
+    environment:
+      OC_ENV: production
+      SIGNER_DATABASE_URL: postgresql://oc_signer:${OC_SIGNER_PASSWORD}@postgres:5432/opencredential
+      SIGNER_KEK: ${SIGNER_KEK:?set SIGNER_KEK in production.env}
+      OC_SIGNER_SHARED_SECRET: ${OC_SIGNER_SHARED_SECRET}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  api:
+    <<: *restart
+    image: *api-image
+    environment: *backend-env
+    volumes:
+      - assets:/var/lib/opencredential/assets
+      - lti:/var/lib/opencredential/lti
+    depends_on:
+      lti-key: { condition: service_completed_successfully }
+      signer: { condition: service_healthy }
+
+  worker:
+    <<: *restart
+    image: *api-image
+    environment: *backend-env
+    command: ["oc", "worker"]
+    volumes:
+      - assets:/var/lib/opencredential/assets
+      - lti:/var/lib/opencredential/lti
+    healthcheck:
+      disable: true # the image's check probes the api port; watch GET /healthz/jobs instead
+    depends_on:
+      lti-key: { condition: service_completed_successfully }
+      signer: { condition: service_healthy }
+
+  proxy:
+    <<: *restart
+    image: nginx:1.27-alpine
+    environment:
+      OC_HOSTNAME: ${OC_HOSTNAME}
+      OC_PROXY_RATE: ${OC_PROXY_RATE:-50r/s}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/production.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # fullchain.pem and privkey.pem for OC_HOSTNAME (production.md, "Quick start", step 3)
+      - ${OC_TLS_DIR:-./certs}:/etc/nginx/certs:ro
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  assets:
+  lti:

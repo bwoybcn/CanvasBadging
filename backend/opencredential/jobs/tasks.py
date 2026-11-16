@@ -33,11 +33,12 @@ from opencredential.db.models import (
     LtiLaunchState,
     LtiNonceUsed,
 )
-from opencredential.db.session import tenant_session
+from opencredential.db.session import app_engine, tenant_session
 from opencredential.eligibility import service as eligibility
 from opencredential.integrations.base import LmsError, LmsTransientError
 from opencredential.integrations.registry import get_adapter
 from opencredential.jobs import enqueue
+from opencredential.jobs import health as job_health
 from opencredential.jobs.defer import defer
 from opencredential.logging import get_logger
 from opencredential.settings import get_settings
@@ -284,6 +285,34 @@ async def recover_stalled_jobs(context: procrastinate.JobContext, timestamp: int
     if stalled:
         log.warning("jobs.stalled_requeued", count=len(stalled))
     return len(stalled)
+
+
+ALERT_EVERY_MINUTES = 10
+#: The tick at which the once-a-day reminder goes out (08:00 UTC).
+ALERT_REMINDER_SECOND_OF_DAY = 8 * 3600
+
+
+@blueprint.periodic(cron=f"*/{ALERT_EVERY_MINUTES} * * * *", periodic_id="alert_failed_jobs")
+@blueprint.task(name="alert_failed_jobs", queue="maintenance", queueing_lock="alert_failed_jobs")
+def alert_failed_jobs(timestamp: int) -> int:
+    """Tell the configured chat channel about jobs that failed since the last tick, and once a
+    day about failed jobs still waiting. Does nothing unless ``OC_ALERT_WEBHOOK_URL`` is set.
+    Returns how many newly failed jobs it reported."""
+    settings = get_settings()
+    if not settings.alert_webhook_url:
+        return 0
+    until = datetime.fromtimestamp(timestamp, UTC)
+    since = until - timedelta(minutes=ALERT_EVERY_MINUTES)
+    with app_engine().connect() as conn:
+        state = job_health.snapshot(conn, since=since, until=until)
+    reminder = timestamp % 86400 == ALERT_REMINDER_SECOND_OF_DAY
+    message = job_health.alert_text(
+        state, site=settings.public_base_url, minutes=ALERT_EVERY_MINUTES, reminder=reminder
+    )
+    if message is None:
+        return 0
+    job_health.send_alert(settings.alert_webhook_url, message, settings.alert_webhook_format)
+    return state.failed_recent_count
 
 
 # ---- issuance and status (W4) -------------------------------------------------------------

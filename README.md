@@ -32,7 +32,7 @@ all came up.
 
 Every secret in `compose.yaml` and `.env.example` is a **development** value. The api and signer
 refuse to start with them when `OC_ENV=production`, and refuse while a development signing key
-is active. See [docs/development/local-setup.md](docs/development/local-setup.md) for running
+is active. `OC_ENV` itself is required: no service starts without it. See [docs/development/local-setup.md](docs/development/local-setup.md) for running
 the pieces without Docker, tests and troubleshooting.
 
 ## Layout

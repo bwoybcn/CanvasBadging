@@ -12,6 +12,8 @@ export interface StoredKey extends Envelope {
 
 export interface KeyRecord extends Envelope {
   issuerKeyId: string;
+  /** Which key-wrapping key protects it: `dev:committed` or `env:SIGNER_KEK`. */
+  kekRef: string;
   isDev: boolean;
   retiredAt: Date | null;
   destroyedAt: Date | null;
@@ -24,6 +26,10 @@ export interface KeyStore {
   retire(issuerKeyId: string): Promise<boolean>;
   /** Irreversibly erase private material (compromise, or 30 days after retirement). */
   destroy(issuerKeyId: string): Promise<boolean>;
+  /**
+   * Whether any key that still has private material is a development key: marked `is_dev`, or
+   * wrapped with the committed development KEK whatever it was marked as.
+   */
   devKeysPresent(): Promise<boolean>;
   ping(): Promise<void>;
   close(): Promise<void>;
@@ -49,7 +55,7 @@ export class PgKeyStore implements KeyStore {
 
   async get(issuerKeyId: string): Promise<KeyRecord | null> {
     const res = await this.pool.query(
-      `SELECT issuer_key_id, ciphertext, dek_wrapped, is_dev, retired_at, destroyed_at
+      `SELECT issuer_key_id, ciphertext, dek_wrapped, kek_ref, is_dev, retired_at, destroyed_at
          FROM keys.private_keys WHERE issuer_key_id = $1`,
       [issuerKeyId],
     );
@@ -59,6 +65,7 @@ export class PgKeyStore implements KeyStore {
       issuerKeyId: row.issuer_key_id,
       ciphertext: row.ciphertext,
       dekWrapped: row.dek_wrapped,
+      kekRef: row.kek_ref,
       isDev: row.is_dev,
       retiredAt: row.retired_at,
       destroyedAt: row.destroyed_at,
@@ -86,7 +93,9 @@ export class PgKeyStore implements KeyStore {
 
   async devKeysPresent(): Promise<boolean> {
     const res = await this.pool.query(
-      "SELECT EXISTS (SELECT 1 FROM keys.private_keys WHERE is_dev AND destroyed_at IS NULL) AS present",
+      `SELECT EXISTS (
+         SELECT 1 FROM keys.private_keys
+          WHERE (is_dev OR kek_ref LIKE 'dev:%') AND destroyed_at IS NULL) AS present`,
     );
     return Boolean(res.rows[0]?.present);
   }
