@@ -32,7 +32,16 @@ export function CanvasRefresh({
   });
   const refresh = useMutation({
     mutationFn: async ({ automatic }: { automatic: boolean }) => {
-      const before = state.data?.last_success_at ?? null;
+      // What Canvas reading looked like before this click, read now rather than from the page
+      // (which may be minutes old): only a run that started after it can be this one's result.
+      let before: SyncState | undefined = state.data;
+      try {
+        before = await apiFetch<SyncState>(`/api/v1/courses/${courseId}/sync`, token);
+      } catch {
+        // Fall back to what the page already holds.
+      }
+      const succeededBefore = before?.last_success_at ?? null;
+      const runBefore = before?.last_run?.started_at ?? null;
       try {
         await apiSend(`/api/v1/courses/${courseId}/sync`, token, "POST");
       } catch (e) {
@@ -46,9 +55,15 @@ export function CanvasRefresh({
           token,
         );
         qc.setQueryData(["sync", courseId], now);
-        if (now.last_success_at && now.last_success_at !== before)
+        if (now.last_success_at && now.last_success_at !== succeededBefore)
           return "done" as const;
-        if (now.last_run?.status === "failed") return "failed" as const;
+        // An earlier failure is still the "last run" until this one starts: it says nothing
+        // about this refresh, so it is not reported as this refresh failing.
+        if (
+          now.last_run?.status === "failed" &&
+          (now.last_run.started_at ?? null) !== runBefore
+        )
+          return "failed" as const;
       }
       return "slow" as const;
     },

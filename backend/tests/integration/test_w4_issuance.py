@@ -530,3 +530,68 @@ def test_issue_task_accepts_w5_contract(tenant: Tenant, signer: SignerClient) ->
     assert issue_credential(**kwargs) == "already_issued"
     with tenant_session(tenant.institution_id) as db:
         assert db.get(m.AwardDecision, d).status == "issued"  # type: ignore[union-attr]
+
+
+def test_key_rotated_while_signing_is_not_used(web_tenant: Tenant, signer: SignerClient) -> None:
+    """Whole-product review, 16 Nov 2026, finding 19: the key was chosen before signing and not
+    looked at again, so a key retired or revoked while the signer was working still went out
+    on the badge. Now the badge stays unsigned and the next attempt uses the current key."""
+    t = web_tenant
+    decision = _decide(t)
+    rotated: dict[str, uuid.UUID] = {}
+
+    def rotate_after_signing(at: str) -> None:
+        if at != "after_sign" or rotated:
+            return
+        with tenant_session(t.institution_id) as db:
+            issuer = db.get(m.Issuer, t.issuer_id)
+            assert issuer is not None
+            rotated["new"] = key_service.rotate(db, issuer, signer, actor_user_id=t.admin_id).id
+
+    first = _issue(t, signer, decision, fault=rotate_after_signing)
+    assert first.outcome == "key_changed"
+    with tenant_session(t.institution_id) as db:
+        cred = db.get(m.Credential, first.credential_id)
+        assert cred is not None
+        assert (cred.status, cred.signed_json) == ("pending_signature", None)
+        assert "signing key" in (cred.last_error or "")
+        assert db.get(m.AwardDecision, decision).status == "ready"  # type: ignore[union-attr]
+
+    # The next attempt (the reconciliation pass in production) signs with the new key.
+    second = _issue(t, signer, decision)
+    assert second.outcome == "issued" and second.credential_id == first.credential_id
+    vc = _signed(t, second.credential_id)
+    assert vc["proof"]["verificationMethod"].endswith(str(rotated["new"]))
+    _publish(t, signer, second.status_list_id)
+    assert _verifier(signer).verify(vc).result == Outcome.verified
+
+
+def test_issue_task_signs_again_at_once_after_a_key_change(
+    web_tenant: Tenant, signer: SignerClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The job does not leave the student waiting for the reconciliation pass: when the key
+    changed under it, it signs again straight away with the current key."""
+    from opencredential.issuance import service as issuance
+    from opencredential.jobs.tasks import issue_credential
+
+    t = web_tenant
+    d = _decide(t)
+    real, calls = issuance.issue, []
+
+    def rotating(*args: Any, **kw: Any) -> Any:
+        calls.append(1)
+        if len(calls) > 1:
+            return real(*args, **kw)
+
+        def rotate(at: str) -> None:
+            if at == "after_sign":
+                with tenant_session(t.institution_id) as db:
+                    issuer = db.get(m.Issuer, t.issuer_id)
+                    assert issuer is not None
+                    key_service.rotate(db, issuer, signer, actor_user_id=t.admin_id)
+
+        return real(*args, fault=rotate, **kw)
+
+    monkeypatch.setattr(issuance, "issue", rotating)
+    assert issue_credential(institution_id=str(t.institution_id), decision_id=str(d)) == "issued"
+    assert len(calls) == 2

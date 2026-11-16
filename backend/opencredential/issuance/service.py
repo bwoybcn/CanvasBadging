@@ -67,7 +67,7 @@ class IssuanceError(RuntimeError):
 @dataclass(frozen=True)
 class IssueResult:
     credential_id: uuid.UUID
-    outcome: str  # issued | already_issued | duplicate | cancelled
+    outcome: str  # issued | already_issued | duplicate | cancelled | key_changed
     status_list_id: uuid.UUID | None = None
 
 
@@ -304,6 +304,7 @@ def _prepare(
 
 
 CANCELLED_ERROR = "award decision cancelled before signing"
+KEY_CHANGED_ERROR = "the signing key was retired or revoked during signing; will be signed again"
 
 
 def _cancel_pending(db: Session, cred: Credential, decision: AwardDecision) -> IssueResult:
@@ -383,6 +384,14 @@ def issue(
             )
             log.info("credential_cancelled", credential_id=str(cred_id))
             return result
+        signing_key = db.get(IssuerKey, key_id)
+        if signing_key is None or signing_key.state != "active":
+            # The key was retired or revoked while the signer was working. A badge signed
+            # with it must not go out: keep the row unsigned, and the reconciliation pass
+            # signs it again with the issuer's current key.
+            cred.last_error = KEY_CHANGED_ERROR
+            log.warning("credential_key_changed", credential_id=str(cred_id))
+            return IssueResult(cred.id, "key_changed")
         cred.signed_json = signed
         cred.content_hash = content_hash(signed)
         cred.issuer_key_id = key_id

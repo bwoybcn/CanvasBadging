@@ -421,3 +421,121 @@ def test_registry_builds_canvas_adapter_for_active_integration(setup: dict[str, 
         get_adapter(integ, "4")  # pending: not authorised yet
     integ.status = "active"
     assert isinstance(get_adapter(integ, "4"), CanvasAdapter)
+
+
+# ---- whole-product review, 16 Nov 2026, finding 19 -----------------------------------------
+
+
+def _roster_roles(course_id: uuid.UUID) -> dict[str, set[str]]:
+    with owner_session() as db:
+        out: dict[str, set[str]] = {}
+        for ms, u in db.execute(
+            select(m.Membership, m.User)
+            .join(m.User, m.User.id == m.Membership.user_id)
+            .where(m.Membership.scope_id == course_id, m.Membership.revoked_at.is_(None))
+        ):
+            out.setdefault(u.display_name or "", set()).add(ms.role)
+        return out
+
+
+def test_one_record_that_cannot_be_stored_does_not_stop_the_class_list(
+    setup: dict[str, Any],
+) -> None:
+    """Two Canvas accounts claiming one identifier used to fail the whole course refresh, so
+    nobody in the course was updated until someone fixed Canvas."""
+    settings = get_settings()
+
+    def refresh(members: list[dict[str, Any]]) -> Any:
+        services.clear_token_cache()
+        with tenant_session(setup["iid"]) as db:
+            integ = db.get(m.CanvasIntegration, setup["integ"])
+            course = db.get(m.Course, setup["course"])
+            return sync_roster(db, settings, integ, course, transport=_nrps(members))  # type: ignore[arg-type]
+
+    refresh(
+        [
+            _member("sub-t", "Tess Teacher", [INSTRUCTOR], "2"),
+            _member("sub-x", "Xan Student", [LEARNER], None),
+            _member("sub-y", "Yui Student", [LEARNER], "7"),
+        ]
+    )
+    # Canvas now says Xan's account has the Canvas id that Yui's account holds, a new student
+    # has joined, and Tess has left.
+    res = refresh(
+        [
+            _member("sub-x", "Xan Renamed", [LEARNER], "7"),
+            _member("sub-y", "Yui Student", [LEARNER], "7"),
+            _member("sub-z", "Zed Student", [LEARNER], "9"),
+        ]
+    )
+    assert (res.members, res.skipped, res.learners) == (3, 1, 2)
+    assert res.revoked == 1  # Tess only
+    # Xan is left exactly as they were (name included) and keeps their place; the rest of
+    # the class is up to date.
+    assert _roster_roles(setup["course"]) == {
+        "Xan Student": {"student"},
+        "Yui Student": {"student"},
+        "Zed Student": {"student"},
+    }
+
+
+def test_test_student_on_the_class_list_is_flagged(setup: dict[str, Any]) -> None:
+    """Canvas's Student View user can be on the class list before anyone opens Badges as them.
+    Unflagged, an automatic award would give "Test Student" a real badge."""
+    from opencredential.eligibility.service import course_students
+    from opencredential.lti.claims import TEST_USER_ROLE
+
+    settings = get_settings()
+    members = [
+        _member("sub-t", "Tess Teacher", [INSTRUCTOR], "2"),
+        _member("sub-s", "Sam Student", [LEARNER], "4"),
+        _member("sub-ts", "Test Student", [LEARNER, TEST_USER_ROLE], "99"),
+    ]
+    with tenant_session(setup["iid"]) as db:
+        integ = db.get(m.CanvasIntegration, setup["integ"])
+        course = db.get(m.Course, setup["course"])
+        sync_roster(db, settings, integ, course, transport=_nrps(members))  # type: ignore[arg-type]
+    with tenant_session(setup["iid"]) as db:
+        flagged = {
+            u.display_name: u.is_test_user
+            for u in db.scalars(
+                select(m.User).where(m.User.display_name.in_(["Sam Student", "Test Student"]))
+            )
+        }
+        students = {
+            db.get(m.User, uid).display_name for uid in course_students(db, setup["course"])
+        }  # type: ignore[union-attr]
+    assert flagged == {"Sam Student": False, "Test Student": True}
+    assert students == {"Sam Student"}
+
+
+def test_class_list_token_is_never_sent_to_another_site(setup: dict[str, Any]) -> None:
+    """The address of the next page comes from the response. One that points somewhere else
+    must be refused, not followed with the service token."""
+    from opencredential.integrations.base import LmsPermissionError
+
+    settings = get_settings()
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        asked.append(request.url.host)
+        if request.url.path == "/login/oauth2/token":
+            return httpx.Response(200, json={"access_token": "svc", "expires_in": 3600})
+        return httpx.Response(
+            200,
+            json={"members": [_member("sub-t", "Tess", [INSTRUCTOR], "2")]},
+            headers={"link": '<https://elsewhere.example/collect?page=2>; rel="next"'},
+        )
+
+    services.clear_token_cache()
+    with (
+        pytest.raises(LmsPermissionError, match=r"elsewhere\.example"),
+        tenant_session(setup["iid"]) as db,
+    ):
+        integ = db.get(m.CanvasIntegration, setup["integ"])
+        course = db.get(m.Course, setup["course"])
+        sync_roster(  # type: ignore[arg-type]
+            db, settings, integ, course, transport=httpx.MockTransport(handler)
+        )
+    assert "elsewhere.example" not in asked
+    assert _roster_roles(setup["course"]) == {}  # and a refused list changes nobody

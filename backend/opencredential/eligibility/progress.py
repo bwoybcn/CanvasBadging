@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
 from opencredential.authoring.preview import asset_data_url, source_names
@@ -16,6 +17,7 @@ from opencredential.db.models import (
     BadgeAsset,
     Course,
     Credential,
+    CredentialStatus,
     EligibilityEvaluation,
     Issuer,
     User,
@@ -91,19 +93,29 @@ def _requirements(
     return out
 
 
+#: Credential states in which the student no longer holds a valid badge.
+WITHDRAWN_STATES = ("revoked", "suspended")
+
+
 def _award_state(
     db: Session, version_id: uuid.UUID, user_id: uuid.UUID
 ) -> tuple[str | None, str | None]:
-    cred = db.scalar(
-        select(Credential).where(
+    """The student's award for one badge: ``issued``, ``revoked`` or ``suspended`` with the
+    credential id, or the latest decision's status when nothing has been issued."""
+    row = db.execute(
+        select(Credential.id, CredentialStatus.state)
+        .outerjoin(CredentialStatus, CredentialStatus.credential_id == Credential.id)
+        .where(
             Credential.version_id == version_id,
             Credential.user_id == user_id,
             Credential.status == "issued",
             Credential.superseded_by_id.is_(None),
         )
-    )
-    if cred is not None:
-        return "issued", str(cred.id)
+    ).first()
+    if row is not None:
+        # A badge the issuer has withdrawn is not "earned": anyone checking it is told so,
+        # and the student must not be shown the opposite.
+        return (row.state if row.state in WITHDRAWN_STATES else "issued"), str(row.id)
     decision = db.scalar(
         select(AwardDecision)
         .where(AwardDecision.version_id == version_id, AwardDecision.user_id == user_id)
@@ -116,6 +128,8 @@ def _award_state(
 def badge_status(outcome: str, decision_status: str | None) -> str:
     if decision_status == "issued":
         return "earned"
+    if decision_status in WITHDRAWN_STATES:
+        return decision_status
     if decision_status in ("ready", "failed"):
         return "awarded"  # decision made; the credential is being issued
     if decision_status == "awaiting_confirmation":
@@ -179,23 +193,47 @@ def course_progress(db: Session, course: Course) -> dict[str, Any]:
     targets = live_targets_for_course(db, course.id)
     students = course_students(db, course.id)
     users = {u.id: u for u in db.scalars(select(User).where(User.id.in_(students)))}
+    version_ids = [t.version.id for t in targets]
+    # Only the newest evaluation and decision of each student for each badge: the history of
+    # a long-running course is thousands of rows that this screen never shows.
     latest: dict[tuple[uuid.UUID, uuid.UUID], EligibilityEvaluation] = {}
-    if targets:
-        rows = db.scalars(
-            select(EligibilityEvaluation)
-            .where(EligibilityEvaluation.version_id.in_([t.version.id for t in targets]))
-            .order_by(EligibilityEvaluation.evaluated_at, EligibilityEvaluation.id)
-        )
-        for e in rows:
-            latest[(e.version_id, e.user_id)] = e
     decisions: dict[tuple[uuid.UUID, uuid.UUID], AwardDecision] = {}
+    credentials: dict[tuple[uuid.UUID, uuid.UUID], tuple[uuid.UUID, str]] = {}
     if targets:
+        for e in db.scalars(
+            select(EligibilityEvaluation)
+            .where(EligibilityEvaluation.version_id.in_(version_ids))
+            .ext(distinct_on(EligibilityEvaluation.version_id, EligibilityEvaluation.user_id))
+            .order_by(
+                EligibilityEvaluation.version_id,
+                EligibilityEvaluation.user_id,
+                EligibilityEvaluation.evaluated_at.desc(),
+                EligibilityEvaluation.id.desc(),
+            )
+        ):
+            latest[(e.version_id, e.user_id)] = e
         for d in db.scalars(
             select(AwardDecision)
-            .where(AwardDecision.version_id.in_([t.version.id for t in targets]))
-            .order_by(AwardDecision.decided_at)
+            .where(AwardDecision.version_id.in_(version_ids))
+            .ext(distinct_on(AwardDecision.version_id, AwardDecision.user_id))
+            .order_by(
+                AwardDecision.version_id,
+                AwardDecision.user_id,
+                AwardDecision.decided_at.desc(),
+                AwardDecision.id.desc(),
+            )
         ):
             decisions[(d.version_id, d.user_id)] = d
+        for c in db.execute(
+            select(Credential.version_id, Credential.user_id, Credential.id, CredentialStatus.state)
+            .outerjoin(CredentialStatus, CredentialStatus.credential_id == Credential.id)
+            .where(
+                Credential.version_id.in_(version_ids),
+                Credential.status == "issued",
+                Credential.superseded_by_id.is_(None),
+            )
+        ):
+            credentials[(c.version_id, c.user_id)] = (c.id, c.state or "active")
     badges = [
         {
             "definition_id": str(t.definition.id),
@@ -215,6 +253,7 @@ def course_progress(db: Session, course: Course) -> dict[str, Any]:
         for t in targets:
             ev = latest.get((t.version.id, uid))
             dec = decisions.get((t.version.id, uid))
+            cred = credentials.get((t.version.id, uid))
             cells.append(
                 {
                     "version_id": str(t.version.id),
@@ -226,6 +265,10 @@ def course_progress(db: Session, course: Course) -> dict[str, Any]:
                     "progress": (ev.detail.get("progress") if ev else None),
                     "decision_status": dec.status if dec else None,
                     "decision_id": str(dec.id) if dec else None,
+                    # The issued badge, so staff can ask for it to be revoked, and whether
+                    # it has been (active, revoked or suspended).
+                    "credential_id": str(cred[0]) if cred else None,
+                    "credential_state": cred[1] if cred else None,
                 }
             )
         u = users.get(uid)

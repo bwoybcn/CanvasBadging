@@ -199,10 +199,6 @@ def openapi(out: Path = typer.Option(None, help="Write to file instead of stdout
         typer.echo(doc, nl=False)
 
 
-if __name__ == "__main__":
-    app()
-
-
 def _register_subcommands() -> None:
     from opencredential.cli_canvas import admin_app, canvas_app, lti_app
 
@@ -212,3 +208,7 @@ def _register_subcommands() -> None:
 
 
 _register_subcommands()
+
+# Last, so that ``python -m opencredential.cli`` has the lti, canvas and admin commands too.
+if __name__ == "__main__":
+    app()

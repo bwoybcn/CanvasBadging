@@ -36,7 +36,7 @@ choice.
 | Audit events (actor, action, resource, time) | System | `audit_events` (append-only) | Institution administrators | 7 years (`audit_event_years`, minimum 1) |
 | Canvas OAuth tokens (for the integration account) | Canvas | encrypted at rest | Nobody (server use only) | Until revoked |
 | Failed job records | System | job queue | Administrators | 90 days (`failed_job_days`) |
-| LTI launch state | System | `lti_launch_state` | Nobody | 10 minutes |
+| LTI launch state | System | `lti_launch_state` | Nobody | 10 minutes (`OC_LTI_STATE_TTL_SECONDS`; the clean-up job follows the same setting) |
 
 No special category data is processed. Marks are processed only once released in Canvas.
 

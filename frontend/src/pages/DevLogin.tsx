@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-/** Development-only sign-in: pick a synthetic user from the demo institution. */
+/**
+ * Where a visitor with no session lands. In development it is the sign-in page: pick a synthetic
+ * user from the demo institution. Anywhere else there is no such sign-in, so it only says how to
+ * open Badges from Canvas, with nothing about development on it.
+ */
 import { Alert, Button, Heading, Spinner, Table, Text, View } from "@instructure/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
@@ -39,6 +43,38 @@ export function DevLogin() {
     },
   });
 
+  if (users.isPending)
+    return (
+      <View as="main" padding="large" maxWidth="60rem" margin="0 auto" display="block">
+        <Spinner renderTitle="Loading" />
+      </View>
+    );
+  if (users.isError) {
+    // The development server answers like this when the demo data has not been loaded.
+    const noDemoData =
+      users.error instanceof ApiError &&
+      /demonstration institution/i.test(users.error.problem.title ?? "");
+    return (
+      <View as="main" padding="large" maxWidth="40rem" margin="0 auto" display="block">
+        <Heading level="h1" margin="0 0 small">
+          Open Badges from Canvas
+        </Heading>
+        <Text as="p">
+          To use Badges, go to your course in Canvas and choose Badges in the course menu.
+        </Text>
+        <Text as="p">
+          If you were already using Badges, your session has ended. Go back to Canvas and open
+          Badges again to carry on where you left off.
+        </Text>
+        {noDemoData && (
+          <Alert variant="info" margin="medium 0 0">
+            Development sign-in is not available yet. Load the demo data with `oc seed`.
+          </Alert>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View as="main" padding="large" maxWidth="60rem" margin="0 auto" display="block">
       <Heading level="h1" margin="0 0 small">
@@ -48,14 +84,6 @@ export function DevLogin() {
         This page exists only in development. Real users open OpenCredential from Canvas. Every
         person listed here is synthetic.
       </Alert>
-      {users.isPending && <Spinner renderTitle="Loading demo users" />}
-      {users.isError && (
-        <Alert variant="error">
-          {users.error instanceof ApiError && users.error.problem.status === 404
-            ? "Development sign-in is not available. Load the demo data with `oc seed`, or open OpenCredential from Canvas."
-            : "Could not load demo users."}
-        </Alert>
-      )}
       {users.data && (
         <TableScroll>
         <Table caption="Demo users">

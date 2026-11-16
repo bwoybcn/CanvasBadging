@@ -13,8 +13,9 @@ set -euo pipefail
 OUT="${1:?usage: backup.sh <output directory>}"
 DB_URL="${OC_BACKUP_DB_URL:?set OC_BACKUP_DB_URL to a database URL that can read every schema}"
 STORAGE="${OC_STORAGE_DIR:-}"
-mkdir -p "$OUT"
+# Before the folder is made, so that it and everything in it is readable by this user only.
 umask 077
+mkdir -p "$OUT"
 
 pg_dump --format=custom --no-owner --file "$OUT/opencredential.dump" "$DB_URL"
 if [ -n "$STORAGE" ] && [ -d "$STORAGE" ]; then

@@ -241,7 +241,7 @@ address. Verified on the local Canvas on 13 November 2026 ([e2e report](../repor
 ## How the launch is secured
 
 See ADR-0008. In short: `state` and `nonce` are server-side, single use and expire after 10
-minutes; the id_token is verified against Canvas's JWKS (RS256 only, cached, `kid` rotation)
+minutes; the id_token is verified against Canvas's JWKS (RS256 only, cached for an hour, `kid` rotation; if Canvas cannot be reached at a refresh, keys already held stay usable for up to a day)
 and its `iss`, `aud`/`azp`, `exp`, `iat`, nonce, message type, LTI version, deployment id,
 target link URI, resource link, roles and **course context** are checked. A replayed state,
 nonce or token is refused. The browser that finishes the launch must prove it started it,

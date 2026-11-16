@@ -307,26 +307,55 @@ def link(
             request_id=request_id,
             data={"account_id": row.account_id, "org_unit_id": str(unit_id)},
         )
-    placed = _place_existing(db, integrations)
-    return {"linked": linked, "courses_placed": placed}
+    placed, waiting = _place_existing(db, integrations, lookups=LOOKUPS_PER_REQUEST)
+    if waiting:
+        # The rest need one Canvas call each: too slow for this request with hundreds of
+        # courses, so a background job finishes them.
+        from opencredential.jobs import enqueue
+
+        enqueue.defer(
+            db,
+            enqueue.PLACE_COURSES,
+            queue="maintenance",
+            institution_id=actor.institution_id,
+            args={},
+            queueing_lock=f"place_courses:{actor.institution_id}",
+        )
+    return {"linked": linked, "courses_placed": placed, "courses_queued": waiting}
 
 
-def _place_existing(db: Session, integration_ids: Iterable[uuid.UUID]) -> int:
-    """Place courses launched before their sub-account was linked."""
-    placed = 0
+#: Canvas calls made while an administrator waits for "Link sub-accounts" to answer.
+LOOKUPS_PER_REQUEST = 20
+
+
+def _place_existing(
+    db: Session, integration_ids: Iterable[uuid.UUID], *, lookups: int | None = None
+) -> tuple[int, int]:
+    """Place courses launched before their sub-account was linked.
+
+    A course whose Canvas sub-account is not known yet costs one Canvas call. At most
+    ``lookups`` of those are made (``None``: no limit). Returns how many courses were placed
+    and how many were left because the limit was reached.
+    """
+    placed = waiting = 0
     for integration_id in integration_ids:
         integration = db.get(CanvasIntegration, integration_id)
         directory = _directory(integration) if integration else None
         courses = db.scalars(
-            select(Course).where(
-                Course.canvas_integration_id == integration_id, Course.org_unit_id.is_(None)
-            )
+            select(Course)
+            .where(Course.canvas_integration_id == integration_id, Course.org_unit_id.is_(None))
+            .order_by(Course.id)
         ).all()
         for course in courses:
             if course.canvas_account_id is None and directory is not None:
                 ref = course.canvas_course_id
                 if ref.startswith("lti:"):
                     continue
+                if lookups is not None and lookups <= 0:
+                    waiting += 1
+                    continue
+                if lookups is not None:
+                    lookups -= 1
                 try:
                     course.canvas_account_id = directory.course_account(ref)
                 except LmsError:
@@ -334,6 +363,14 @@ def _place_existing(db: Session, integration_ids: Iterable[uuid.UUID]) -> int:
             if place_course(db, course):
                 placed += 1
     db.flush()
+    return placed, waiting
+
+
+def place_waiting_courses(db: Session) -> int:
+    """Background half of :func:`link`: place every course of the current institution that is
+    not in an area yet, asking Canvas for each one's sub-account where it is not known."""
+    ids = list(db.scalars(select(CanvasIntegration.id)))
+    placed, _ = _place_existing(db, ids, lookups=None)
     return placed
 
 

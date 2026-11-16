@@ -84,6 +84,54 @@ All notable changes to this project are documented here. The format follows
   and a failed run says why at the end of its log.
 
 ### Fixed
+- Finding 19 of the whole-product review of 16 November (eleven small faults, and six suspected
+  ones that reading the code confirmed):
+  - **A revoked badge still showed as "Earned"** on the student's progress page, while the
+    public check of the same badge said "Revoked". It now says "Withdrawn by the issuer" (or
+    "Suspended by the issuer") and links to the badge's page for the reason. The staff Course
+    progress screen says "Revoked" or "Suspended" too.
+  - The staff Course progress screen never offered **"Request revocation"**, because the server
+    did not say which issued badge a cell stood for. Each cell now carries `credential_id` and
+    `credential_state`, and the button is offered for badges that still stand.
+  - **One class-list record that could not be stored** (two Canvas accounts claiming the same
+    identifier) failed the whole course refresh. That person is now left as they were and
+    counted (`skipped` in the `course.roster_synced` audit entry), and everyone else is
+    refreshed.
+  - Canvas's Student View **"Test Student" on the class list** is flagged when the class list
+    is read, not only when someone opens Badges as them, so an automatic award cannot give
+    them a real badge.
+  - A Canvas failure while progress was read **threw away the class list** that had just been
+    read correctly. The class list is now saved first, on its own.
+  - A role whose grant had **run out could not be granted again**, and a run-out administrator
+    still counted when the last working administrator was removed.
+  - "Refresh from Canvas" in the wizard could **report an earlier failure** as its own.
+  - The sign-in clean-up job deleted sign-ins after ten minutes whatever
+    `OC_LTI_STATE_TTL_SECONDS` said.
+  - The **signing key is checked again** after signing. If it was retired or revoked while the
+    signer worked, the badge is not sent out with it; it is signed again with the current key.
+  - A template's wording **came back into a field the author had emptied**. Template text left
+    in [square brackets] now stops a badge made from a template being submitted, however the
+    draft was saved (`TEMPLATE_PLACEHOLDER`).
+  - In production a visitor with no session landed on a page headed **"Development sign-in"**.
+    It now only says to open Badges from the Canvas course menu.
+  - `python -m opencredential.cli` now has the `lti`, `canvas` and `admin` commands,
+    `scripts/backup.sh` makes its folder private from the start, and a test proves the public
+    verifier's HTTP client never connects to a local address.
+  - Course progress **loads only the newest evaluation and decision** of each student for each
+    badge, not the whole history of the course.
+  - The class-list (NRPS) service token is **never sent to another site**: a "next page"
+    address on a different host is refused.
+  - **Canvas's signing keys keep working for up to a day** when Canvas cannot be reached at
+    the hourly refresh, for tokens signed with a key already held. A short Canvas outage no
+    longer stops everyone opening Badges. A key never seen is still refused.
+  - Linking sub-accounts made **one Canvas call per course inside the request**. It now makes
+    at most 20 and a background job (`oc:place_courses`) finishes the rest; the answer gains
+    `courses_queued` and the page says how many are still being checked.
+  - The verifier called a badge with **several proofs** invalid. It now checks the issuer's own
+    proof, says how many other proofs it did not check, and answers "Unable to verify" (not
+    "Invalid") for a chain of proofs, which it cannot check.
+  - The **licence gate** passed when `npm ls` listed nothing (for example when the packages
+    had not been installed). An empty list now fails it.
 - Findings 7 to 9 of the whole-product review of 16 November:
   - A person who holds only the **Badge reviewer** role was shown "This page is for course
     staff" instead of the Review queue, and had no menu link to it. The server now tells the

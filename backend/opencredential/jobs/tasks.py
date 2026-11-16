@@ -86,7 +86,9 @@ def ping(message: str = "pong") -> str:
 @blueprint.task(name="purge_lti_state", queue="maintenance", queueing_lock="purge_lti_state")
 def purge_lti_state(timestamp: int) -> int:
     """Delete OIDC state and nonce rows past their TTL (data-model.md retention)."""
-    cutoff = datetime.now(UTC) - timedelta(minutes=10)
+    # The configured lifetime, not a fixed ten minutes: with a longer OC_LTI_STATE_TTL_SECONDS
+    # a sign-in still in progress would otherwise lose its state row and fail.
+    cutoff = datetime.now(UTC) - timedelta(seconds=get_settings().lti_state_ttl_seconds)
     with tenant_session(None) as db:
         a = db.execute(delete(LtiLaunchState).where(LtiLaunchState.created_at < cutoff))
         b = db.execute(delete(LtiNonceUsed).where(LtiNonceUsed.expires_at < datetime.now(UTC)))
@@ -125,6 +127,8 @@ def sync_course_task(
     iid, cid = uuid.UUID(institution_id), uuid.UUID(course_id)
     started = datetime.now(UTC)
     try:
+        # The class list first, in a transaction of its own: a Canvas failure while reading
+        # progress afterwards must not undo a class list that was read correctly.
         with tenant_session(iid) as db:
             course = db.get(Course, cid)
             if course is None:
@@ -134,14 +138,17 @@ def sync_course_task(
                 # no evaluation, no awards (spec §4.1).
                 log.info("sync.skipped_inactive", course_id=course_id, status=course.status)
                 return {"status": "course_inactive"}
+            _refresh_roster(db, integration_for(db, course), course)
+        if kind == "roster":
+            # Staff-awarded badges only: keep enrolments current, read no progress data.
+            log.info("sync.roster_only", course_id=course_id)
+            return {"status": "roster_only"}
+        with tenant_session(iid) as db:
+            course = db.get(Course, cid)
+            if course is None or course.status != "active":
+                return {"status": "course_inactive" if course else "course_missing"}
             integration = integration_for(db, course)
-            if kind == "roster":
-                # Staff-awarded badges only: keep enrolments current, read no progress data.
-                _refresh_roster(db, integration, course)
-                log.info("sync.roster_only", course_id=course_id)
-                return {"status": "roster_only"}
             adapter = get_adapter(integration, course.canvas_course_id)
-            _refresh_roster(db, integration, course)
             result = sync_course(db, course, adapter, kind=kind, now=started)
             enqueue.defer(
                 db,
@@ -174,6 +181,20 @@ def sync_course_task(
         if isinstance(exc, LmsTransientError):
             raise  # bounded retry with backoff
         return {"status": "failed", "code": exc.code}
+
+
+@blueprint.task(name="place_courses", queue="maintenance", retry=RETRY_TRANSIENT)
+def place_courses_task(institution_id: str, **_meta: Any) -> int:
+    """Put courses in the area of their Canvas sub-account after sub-accounts were linked.
+
+    One Canvas call per course whose sub-account is not known yet, which is why the web
+    request that links sub-accounts hands the bulk of them to this job."""
+    from opencredential.governance.canvas_accounts import place_waiting_courses
+
+    with tenant_session(uuid.UUID(institution_id)) as db:
+        placed = place_waiting_courses(db)
+    log.info("courses.placed", institution_id=institution_id, placed=placed)
+    return placed
 
 
 @blueprint.task(name="evaluate_course", queue="eligibility", retry=RETRY_TRANSIENT)
@@ -381,12 +402,17 @@ def issue_credential(
         raise ValueError("issue_credential needs decision_id")
     signer = _signer()
     try:
-        result = issue(
-            uuid.UUID(institution_id),
-            uuid.UUID(did),
-            signer=signer,
-            settings=get_settings(),
-        )
+        for _attempt in range(2):
+            result = issue(
+                uuid.UUID(institution_id),
+                uuid.UUID(did),
+                signer=signer,
+                settings=get_settings(),
+            )
+            if result.outcome != "key_changed":
+                break
+            # The issuer's key was rotated while this badge was being signed: sign it again
+            # now with the current key. If that happens twice, reconciliation picks it up.
     except IssuanceError as exc:
         # Permanent: retrying won't help. The pending row and decision stay for reconciliation.
         log.error("issuance_refused", award_decision_id=did, error=str(exc))

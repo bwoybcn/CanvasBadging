@@ -125,7 +125,7 @@ def test_link_chosen_sub_accounts(client: TestClient) -> None:
             },
         )
         assert r.status_code == 200, r.text
-        assert r.json() == {"linked": 3, "courses_placed": 1}
+        assert r.json() == {"linked": 3, "courses_placed": 1, "courses_queued": 0}
 
     with tenant_session(w.iid) as db:
         units = {u.name: u for u in db.scalars(select(m.OrgUnit))}
@@ -190,3 +190,44 @@ def test_a_missing_scope_says_which_scopes_to_add(client: TestClient) -> None:
     body = r.json()
     assert body["code"] == "CANVAS_ACCOUNTS_FORBIDDEN"
     assert "url:GET|/api/v1/accounts/:account_id/sub_accounts" in body["detail"]
+
+
+def test_linking_many_courses_hands_the_rest_to_a_background_job(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Whole-product review, 16 Nov 2026, finding 19: every course whose sub-account was not
+    known cost one Canvas call inside the administrator's request, so linking with hundreds of
+    courses timed out. The request now makes a limited number and a job finishes the rest."""
+    from opencredential.governance import canvas_accounts
+    from opencredential.jobs import tasks
+
+    monkeypatch.setattr(canvas_accounts, "LOOKUPS_PER_REQUEST", 2)
+    w = build_world(client)
+    w.lms.accounts = list(TREE)
+    courses = []
+    for n in range(5):
+        w.lms.course_accounts[f"30{n}"] = "3"
+        courses.append(_course(w, f"30{n}"))
+
+    def placed() -> int:
+        with tenant_session(w.iid) as db:
+            return sum(db.get(m.Course, c).org_unit_id is not None for c in courses)  # type: ignore[union-attr]
+
+    with registry.override(w.lms):
+        w.post("admin", "/api/v1/admin/canvas-accounts/refresh")
+        rows = {x["name"]: x for x in w.get("admin", "/api/v1/admin/canvas-accounts").json()}
+        r = w.post(
+            "admin",
+            "/api/v1/admin/canvas-accounts/link",
+            {"items": [{"id": rows["Chemistry"]["id"]}]},
+        )
+        assert r.status_code == 200, r.text
+        assert r.json() == {"linked": 1, "courses_placed": 2, "courses_queued": 3}
+        assert placed() == 2
+        lookups = [c for c in w.lms.calls if c[0] == "course_account"]
+        assert len(lookups) == 2  # and no more than that while the administrator waits
+
+        jobs = w.jobs("oc:place_courses")
+        assert len(jobs) == 1 and jobs[0]["status"] == "todo"
+        assert tasks.place_courses_task(str(w.iid)) == 3
+    assert placed() == 5

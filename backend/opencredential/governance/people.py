@@ -15,7 +15,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from opencredential import audit
@@ -373,8 +373,14 @@ def grant(
             Membership.revoked_at.is_(None),
         )
     )
+    now = datetime.now(UTC)
     if existing is not None:
-        return existing
+        if existing.expires_at is None or existing.expires_at > now:
+            return existing
+        # The earlier grant ran out. It gives the person nothing any more, so close it and
+        # grant afresh; returning it here made an expired role impossible to give again.
+        existing.revoked_at = existing.expires_at
+        db.flush()
     m = Membership(
         institution_id=actor.institution_id,
         user_id=user_id,
@@ -423,6 +429,8 @@ def revoke(
             .where(
                 Membership.role == "inst_admin",
                 Membership.revoked_at.is_(None),
+                # A grant that has run out is no administrator to fall back on.
+                or_(Membership.expires_at.is_(None), Membership.expires_at > datetime.now(UTC)),
                 Membership.id != m.id,
             )
         )

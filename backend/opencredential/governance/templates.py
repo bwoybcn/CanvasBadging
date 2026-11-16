@@ -170,7 +170,9 @@ def apply(
     if t.status != "active" or not _applies_to(db, t, course):
         raise Forbidden("TEMPLATE_NOT_AVAILABLE", "That template is not available for this course.")
     base = {k: v for k, v in (t.defaults or {}).items() if k in DraftFields.model_fields}
-    typed = fields.model_dump(exclude_none=True)
+    # Everything the author sent wins, an emptied field included: dropping empty values here
+    # brought the template's wording back into a field the author had cleared.
+    typed = fields.model_dump(exclude_unset=True)
     return DraftFields.model_validate({**base, **typed})
 
 

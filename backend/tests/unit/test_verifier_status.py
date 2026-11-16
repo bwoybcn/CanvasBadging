@@ -257,3 +257,65 @@ def test_a_badge_signed_with_a_development_key_is_called_a_test_badge() -> None:
     real = Verifier(AcceptAllSigner(), DevKeyIssuer(["did:key:other#k"])).verify(doc, now=NOW)  # type: ignore[arg-type]
     assert real.issuer_trust["development"] is False
     assert "registered with this service" in real.issuer_trust["detail"]
+
+
+# ---- several proofs on one credential (whole-product review, 16 Nov 2026, finding 19) -------
+
+
+class RecordingSigner(AcceptAllSigner):
+    """Accepts the proof and remembers the document it was asked to check."""
+
+    def __init__(self) -> None:
+        self.seen: list[dict[str, Any]] = []
+
+    def verify(self, credential: dict[str, Any], did_documents: Any = None) -> ProofCheck:
+        self.seen.append(credential)
+        return super().verify(credential, did_documents)
+
+
+def _endorser_proof() -> dict[str, Any]:
+    return {
+        "type": "DataIntegrityProof",
+        "cryptosuite": "eddsa-rdfc-2022",
+        "created": "2026-11-13T12:05:00Z",
+        "verificationMethod": "did:key:z6MkEndorser#z6MkEndorser",
+        "proofPurpose": "assertionMethod",
+        "proofValue": "zOther",
+    }
+
+
+def test_a_credential_with_an_extra_proof_is_checked_by_the_issuers_proof() -> None:
+    doc = _credential()
+    issuer_proof = doc["proof"]
+    doc["proof"] = [_endorser_proof(), issuer_proof]  # the issuer's proof is not the first
+    signer = RecordingSigner()
+    res = Verifier(signer, Lists({LIST_URL: _list()})).verify(doc, now=NOW)  # type: ignore[arg-type]
+    assert res.result == Outcome.verified
+    # Each proof in a set signs the credential without the others, so that is what is checked.
+    assert signer.seen[0]["proof"] == issuer_proof
+    detail = next(c.detail for c in res.checks if c.name == "signature")
+    assert "1 other proof" in detail and "not checked" in detail
+    assert doc["proof"] == [_endorser_proof(), issuer_proof]  # the submitted document is intact
+
+
+def test_a_single_proof_in_a_list_is_accepted() -> None:
+    doc = _credential()
+    doc["proof"] = [doc["proof"]]
+    res, checks = _verify(doc)
+    assert res.result == Outcome.verified and checks["signature"] == CheckStatus.passed
+
+
+def test_proofs_from_other_parties_only_is_invalid() -> None:
+    doc = _credential()
+    doc["proof"] = [_endorser_proof()]
+    res, checks = _verify(doc)
+    assert res.result == Outcome.invalid and checks["issuer"] == CheckStatus.failed
+
+
+def test_a_chain_of_proofs_is_unable_to_verify_not_invalid() -> None:
+    doc = _credential()
+    chained = {**doc["proof"], "previousProof": "urn:uuid:first"}
+    doc["proof"] = [{**_endorser_proof(), "id": "urn:uuid:first"}, chained]
+    res, checks = _verify(doc)
+    assert res.result == Outcome.unable_to_verify
+    assert checks["signature"] == CheckStatus.unavailable

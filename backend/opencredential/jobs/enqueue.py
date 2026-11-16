@@ -21,6 +21,7 @@ ISSUE_CREDENTIAL = "oc:issue_credential"
 SYNC_COURSE = "oc:sync_course"
 EVALUATE_COURSE = "oc:evaluate_course"
 EVALUATE_LEARNER = "oc:evaluate_learner"
+PLACE_COURSES = "oc:place_courses"
 
 
 def defer(

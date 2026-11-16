@@ -4,6 +4,10 @@
 Keys are cached per JWKS URL for ``CACHE_SECONDS``. A token whose ``kid`` is not in the cache
 triggers one refetch (Canvas rotates its LTI keys monthly), rate-limited so that a flood of
 forged tokens with random ``kid`` values cannot turn us into a request amplifier.
+
+If Canvas cannot be reached when the hour is up, the keys already held keep working for up to
+``MAX_STALE_SECONDS`` (for a token signed with a key we know), so a short Canvas outage does
+not stop everyone from opening the tool. A key we have never seen is still refused.
 """
 
 from __future__ import annotations
@@ -21,6 +25,8 @@ from opencredential.settings import Settings
 
 CACHE_SECONDS = 3600
 MIN_REFETCH_SECONDS = 30
+#: How long keys that could not be refreshed may still be used.
+MAX_STALE_SECONDS = 24 * 3600
 
 
 class JwksUnavailable(Exception):
@@ -32,6 +38,8 @@ class _Entry:
     keys: KeySet
     fetched: float
     kids: set[str] = field(default_factory=set)
+    #: When a refresh last failed (monotonic), so a platform that is down is not hammered.
+    failed: float | None = None
 
 
 class JwksCache:
@@ -74,7 +82,22 @@ class JwksCache:
             return entry.keys
         if entry is not None and fresh and now - entry.fetched < MIN_REFETCH_SECONDS:
             return entry.keys  # unknown kid, but we just fetched: do not hammer the platform
-        new = self._fetch(settings, url)
+        usable = entry is not None and known and now - entry.fetched < MAX_STALE_SECONDS
+        if (
+            entry is not None
+            and usable
+            and entry.failed is not None
+            and now - entry.failed < MIN_REFETCH_SECONDS
+        ):
+            return entry.keys  # the platform was down a moment ago: do not ask again yet
+        try:
+            new = self._fetch(settings, url)
+        except JwksUnavailable:
+            if entry is None or not usable:
+                raise
+            # Canvas could not be reached, but the token names a key we already hold.
+            entry.failed = now
+            return entry.keys
         with self._lock:
             self._entries[url] = new
         return new.keys

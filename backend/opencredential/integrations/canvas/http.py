@@ -63,7 +63,8 @@ def host_header(settings: Settings, url: str) -> dict[str, str]:
     return {"host": urlsplit(url).netloc}
 
 
-def _origin(url: str) -> str:
+def url_origin(url: str) -> str:
+    """Scheme and host of a URL, for same-site checks before a token is sent."""
     p = urlsplit(url)
     return f"{p.scheme}://{p.netloc}".lower()
 
@@ -140,9 +141,9 @@ class CanvasHttp:
         self, path_or_url: str, params: dict[str, Any] | list[tuple[str, Any]] | None = None
     ) -> httpx.Response:
         url = self._url(path_or_url)
-        allowed = {_origin(self.base_url), _origin(rewrite_url(self.settings, self.base_url))}
-        if _origin(url) not in allowed:
-            raise LmsPermissionError(f"refusing to call {_origin(url)} with a Canvas token")
+        allowed = {url_origin(self.base_url), url_origin(rewrite_url(self.settings, self.base_url))}
+        if url_origin(url) not in allowed:
+            raise LmsPermissionError(f"refusing to call {url_origin(url)} with a Canvas token")
         refreshed = False
         attempt = 0
         while True:

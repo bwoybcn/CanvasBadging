@@ -32,7 +32,15 @@ const DECISION_LABELS: Record<string, string> = {
   rejected: "Not awarded",
 };
 
-export function cellText(outcome: string | null, decision: string | null, codes: string[]): string {
+export function cellText(
+  outcome: string | null,
+  decision: string | null,
+  codes: string[],
+  credentialState?: string | null,
+): string {
+  // A badge that was issued and then taken back is not "Issued" any more.
+  if (credentialState === "revoked") return "Revoked";
+  if (credentialState === "suspended") return "Suspended";
   if (decision && DECISION_LABELS[decision]) return DECISION_LABELS[decision];
   if (!outcome) return "Not evaluated yet";
   if (outcome === "unknown") {
@@ -315,7 +323,7 @@ export function CourseProgress() {
                     <Table.RowHeader key="name">{l.name ?? "Student"}</Table.RowHeader>,
                     ...l.cells.map((c, i) => (
                     <Table.Cell key={c.version_id}>
-                      <Text>{cellText(c.outcome, c.decision_status, c.codes)}</Text>
+                      <Text>{cellText(c.outcome, c.decision_status, c.codes, c.credential_state)}</Text>
                       {c.progress && (
                         <Text as="div" size="small">
                           {c.progress.completed} of {c.progress.total}
@@ -337,7 +345,7 @@ export function CourseProgress() {
                           Confirm requirement for {l.name ?? "this student"}
                         </Button>
                       )}
-                      {c.decision_status === "issued" && c.credential_id && (
+                      {c.credential_id && c.credential_state === "active" && (
                         <Button
                           size="small"
                           margin="xx-small 0 0"

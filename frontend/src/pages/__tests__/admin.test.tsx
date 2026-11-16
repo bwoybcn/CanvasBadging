@@ -274,7 +274,7 @@ describe("administration", () => {
         acct("a4", "University Library", 1),
       ],
       "POST /api/v1/admin/canvas-accounts/refresh": { accounts: 3 },
-      "POST /api/v1/admin/canvas-accounts/link": { linked: 1, courses_placed: 2 },
+      "POST /api/v1/admin/canvas-accounts/link": { linked: 1, courses_placed: 2, courses_queued: 40 },
     });
     renderAt("/admin/areas");
     await userEvent.click(await screen.findByRole("button", { name: "Read sub-accounts from Canvas" }));
@@ -291,6 +291,8 @@ describe("administration", () => {
     await userEvent.click(await screen.findByRole("option", { name: "service" }));
     await userEvent.click(screen.getByRole("button", { name: "Link selected (1)" }));
     expect(await screen.findByText(/Linked 1 sub-account\. 2 courses not yet in an area joined it/)).toBeInTheDocument();
+    // With many courses, the rest are finished in the background and the page says so.
+    expect(screen.getByText(/40 more courses are being checked against Canvas in the background/)).toBeInTheDocument();
     expect(calls.find((c) => c.url.endsWith("/canvas-accounts/link"))!.body).toEqual({
       items: [{ id: "a4", kind: "service" }],
     });
