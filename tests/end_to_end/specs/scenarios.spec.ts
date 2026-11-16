@@ -212,7 +212,8 @@ test("E5 manual award: lecturer awards with justification; decision recorded and
   await page.getByRole("option", { name: target }).first().click();
   await form.getByLabel(/Justification/).fill("Contributed to six of eight seminars, observed by the tutor.");
   await form.getByRole("button", { name: /Award/ }).last().click();
-  await expect(page.getByText(/awarded|issued|recorded/i).first()).toBeVisible();
+  // Scoped to the form: the hidden "Waiting to confirm" tab also mentions assignments by name.
+  await expect(form.getByText(/awarded|issued|recorded/i).first()).toBeVisible();
   await eventually(async () => {
     const a = (await achievementsOf(page, target)).find((x) => x.title === "Seminar Participation");
     return a?.credential_id;
