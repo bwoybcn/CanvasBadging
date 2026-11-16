@@ -311,6 +311,9 @@ def check_course_ends(timestamp: int) -> dict[str, int]:
             except LmsError as exc:  # no Canvas connection for this course yet
                 log.info("course_end.skipped", course_id=str(cid), code=exc.code)
                 continue
+            except Exception as exc:  # one course must not stop the rest; it is retried tomorrow
+                log.warning("course_end.failed", course_id=str(cid), error=type(exc).__name__)
+                continue
             finally:
                 close = getattr(adapter, "close", None)
                 if callable(close):
