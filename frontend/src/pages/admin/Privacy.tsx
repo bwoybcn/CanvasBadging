@@ -11,6 +11,7 @@ import { ErrorAlert, Loading } from "../../components/Page";
 import { AdminPage, DownloadButton } from "./AdminPage";
 
 interface Retention {
+  sync_days_after_course_end: number;
   snapshot_days_after_course_end: number;
   evaluation_days: number;
   failed_job_days: number;
@@ -18,7 +19,8 @@ interface Retention {
 }
 
 const RETENTION_LABELS: Record<keyof Retention, string> = {
-  snapshot_days_after_course_end: "Keep Canvas progress snapshots after a course is archived (days)",
+  sync_days_after_course_end: "Keep reading a course from Canvas after it ends, so late marks count (days)",
+  snapshot_days_after_course_end: "Keep students' Canvas progress and submissions after a course ends (days)",
   evaluation_days: "Keep eligibility history not used by an award (days)",
   failed_job_days: "Keep failed background jobs (days)",
   audit_event_years: "Keep audit events (years, at least 1)",
@@ -118,6 +120,11 @@ function RetentionSettings() {
       <Text as="p">
         Issued badges, their revocation status and award records are never purged: they are needed for as long as
         anyone may check a badge. Retention runs every night.
+      </Text>
+      <Text as="p">
+        Only what a badge needs is read from Canvas: module progress, and submissions and released marks for the
+        assignments a published badge uses. A course that has ended in Canvas is read for a while longer, then
+        badges are switched off for it, and later the progress and submissions held for it are deleted.
       </Text>
       {(Object.keys(RETENTION_LABELS) as (keyof Retention)[]).map((k) => (
         <NumberInput

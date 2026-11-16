@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -15,6 +16,7 @@ from opencredential.api.errors import ApiError
 from opencredential.authz import policy
 from opencredential.db.models import Course, Institution, Membership, User
 from opencredential.eligibility import progress
+from opencredential.sync import lifecycle
 
 router = APIRouter(prefix="/api/v1/learners", tags=["learners"])
 
@@ -44,6 +46,9 @@ class LaunchCourseOut(BaseModel):
     roles: list[str]
     #: ``lecturer`` view for course staff, ``student`` view otherwise (spec §4.1).
     view: str
+    #: When the course ended in Canvas, if it has, and when it stops (or stopped) being read.
+    ended_at: datetime | None = None
+    read_until: datetime | None = None
 
 
 class HelpOut(BaseModel):
@@ -122,6 +127,8 @@ def me(claims: ClaimsDep, db: TenantDb) -> MeOut:
                 status=course.status,
                 roles=roles,
                 view="lecturer" if set(roles) & policy.COURSE_STAFF else "student",
+                ended_at=course.ended_at,
+                read_until=lifecycle.read_until(db, course),
             )
     canvas_admin_without_access = claims.platform_admin and not any(
         m.role == "inst_admin" for m in rows

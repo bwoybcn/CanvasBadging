@@ -11,7 +11,14 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { apiFetch, apiSend, problemText, type Course, type Me } from "../api";
+import {
+  apiFetch,
+  apiSend,
+  formatDate,
+  problemText,
+  type Course,
+  type Me,
+} from "../api";
 import { useAuth } from "../auth";
 import { AppLink } from "../components/AppLink";
 import { ConfirmButton } from "../components/ConfirmButton";
@@ -186,7 +193,16 @@ function CourseContext({
         {course.course_code ? `${course.course_code} · ` : ""}Canvas course{" "}
         {course.canvas_course_id} · Your role: <strong>{roles}</strong>
       </Text>
-      {course.status !== "active" &&
+      {course.status === "archived" &&
+        (course.view === "lecturer" ? (
+          <EndedCourse courseId={course.id} endedAt={course.ended_at} />
+        ) : (
+          <Alert variant="info" margin="small 0">
+            This course has ended, so no more badges are awarded from your
+            Canvas activity in it. You keep the badges you earned.
+          </Alert>
+        ))}
+      {course.status === "inactive" &&
         (course.view === "lecturer" ? (
           <ActivateCourse courseId={course.id} />
         ) : (
@@ -194,6 +210,18 @@ function CourseContext({
             Course staff have not switched on badges for this course yet.
           </Alert>
         ))}
+      {course.status === "active" &&
+        course.ended_at &&
+        course.view === "lecturer" && (
+          <Alert variant="info" margin="small 0">
+            This course ended in Canvas on {formatDate(course.ended_at)}.
+            {course.read_until
+              ? ` Canvas is still read until ${formatDate(course.read_until)}, so marks released late still count.`
+              : ""}{" "}
+            After that, badges are switched off for this course. Students keep
+            the badges they earned.
+          </Alert>
+        )}
       {course.view === "lecturer" && course.status === "active" && (
         <BadgeTeamsToggle courseId={course.id} />
       )}
@@ -213,6 +241,49 @@ function CourseContext({
         </Text>
       )}
     </View>
+  );
+}
+
+/** A course that ended in Canvas and is no longer read. It can be switched on again only if
+ * Canvas says the course is running again; the server checks. */
+function EndedCourse({
+  courseId,
+  endedAt,
+}: {
+  courseId: string;
+  endedAt?: string | null;
+}) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const activate = useMutation({
+    mutationFn: () =>
+      apiSend<{ status: string }>(
+        `/api/v1/courses/${courseId}/activate`,
+        token,
+        "POST",
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+  });
+  return (
+    <Alert variant="info" margin="small 0">
+      <Text as="p">
+        This course ended in Canvas{endedAt ? ` on ${formatDate(endedAt)}` : ""}
+        , so it is no longer read and badges are switched off for it. Students
+        keep the badges they earned. If the course has been opened again in
+        Canvas, you can switch badges back on.
+      </Text>
+      <Button
+        onClick={() => activate.mutate()}
+        interaction={activate.isPending ? "disabled" : "enabled"}
+      >
+        Switch badges on again
+      </Button>
+      {activate.isError && (
+        <Text as="p" color="danger">
+          {problemText(activate.error)}
+        </Text>
+      )}
+    </Alert>
   );
 }
 

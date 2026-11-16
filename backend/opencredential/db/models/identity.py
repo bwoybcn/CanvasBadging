@@ -148,6 +148,12 @@ class Course(TenantMixin, Base):
     status: Mapped[str] = mapped_column(
         choice("inactive", "active", "archived", name="status"), default="inactive"
     )
+    #: When the course ended in Canvas (its end date, or when we first saw it concluded).
+    #: Cleared if Canvas later says it is running again. Retention counts from here.
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: When Canvas stopped being read for the course, some weeks after it ended
+    #: (``sync_days_after_course_end``), and ``status`` became ``archived``.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Membership(TenantMixin, Base):

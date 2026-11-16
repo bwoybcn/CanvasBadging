@@ -105,6 +105,7 @@ def setup_checklist(db: TenantDb, actor: ActorDep, settings: SettingsDep) -> dic
 
 class RetentionIn(BaseModel):
     snapshot_days_after_course_end: int | None = None
+    sync_days_after_course_end: int | None = None
     evaluation_days: int | None = None
     failed_job_days: int | None = None
     audit_event_years: int | None = None

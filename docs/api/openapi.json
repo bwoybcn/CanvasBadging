@@ -2861,10 +2861,34 @@
             ],
             "title": "Course Code"
           },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "read_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Until"
           },
           "roles": {
             "items": {
@@ -3380,6 +3404,17 @@
               }
             ],
             "title": "Snapshot Days After Course End"
+          },
+          "sync_days_after_course_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Days After Course End"
           }
         },
         "title": "RetentionIn",

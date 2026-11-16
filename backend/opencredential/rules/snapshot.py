@@ -42,6 +42,9 @@ class AssignmentInfo:
     published: bool
     deleted: bool
     fetched_at: datetime
+    #: ``False`` while this assignment's submissions have not been read (it only just started
+    #: being used by a rule): "no submission" would then be a guess, so rules stay ``unknown``.
+    submissions_fetched: bool = True
 
 
 @dataclass(frozen=True)
@@ -49,6 +52,8 @@ class Submission:
     assignment_id: str
     workflow_state: str  # unsubmitted | submitted | pending_review | graded
     submitted_at: datetime | None
+    #: The released mark. ``None`` while ungraded, and also while a mark exists but has not
+    #: been released to the student (sync never stores an unreleased mark).
     score: float | None
     excused: bool
     posted_at: datetime | None

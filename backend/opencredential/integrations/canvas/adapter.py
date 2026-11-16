@@ -13,6 +13,7 @@ Method map (spec §4.5 name → method → Canvas endpoint):
 ``get_submission``          :meth:`list_submissions`    ``GET /courses/:id/students/submissions``
 ``get_grade``               :meth:`get_grade`           same, released (``posted_at``) only
 (sub-account linking)       :meth:`list_accounts`       ``GET /accounts`` + ``/:id/sub_accounts``
+(course end)                :meth:`course_state`        ``GET /api/v1/courses/:id``
 ==========================  ==========================  ==========================================
 
 Every list is fully paginated or the call raises; nothing returns a silently partial result.
@@ -23,13 +24,14 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from opencredential.db.models import CanvasIntegration
 from opencredential.integrations.base import (
     AccountRecord,
     AssignmentRecord,
+    CourseStateRecord,
     LmsNotFound,
     ModuleProgressRecord,
     ModuleRecord,
@@ -90,6 +92,39 @@ class CanvasAdapter:
 
     def course_account(self, course_ref: str) -> str | None:
         return self.get_course(course_ref).account_id
+
+    def course_state(self, course_ref: str) -> CourseStateRecord:
+        """Whether the course has ended: concluded by hand, deleted, or past the end date of
+        the course or its term (Canvas reports all of these as ``concluded``).
+
+        A developer key with enforced scopes drops ``include[]`` unless "Allow Include
+        Parameters" is ticked on the key. Canvas then sends neither ``concluded`` nor the term,
+        and only what the plain course record shows is seen: concluded by hand, deleted, or
+        past the course's own end date where the course uses its own dates.
+        """
+        data = self.http.get_json(
+            f"/api/v1/courses/{_id(course_ref)}",
+            [("include[]", "concluded"), ("include[]", "term")],
+        )
+        now = datetime.now(UTC)
+        state = str(data.get("workflow_state") or "")
+        own_end = _dt(data.get("end_at"))
+        concluded = bool(data.get("concluded")) or state in ("completed", "deleted")
+        if not concluded and "concluded" not in data:
+            concluded = bool(
+                data.get("restrict_enrollments_to_course_dates")
+                and own_end is not None
+                and own_end <= now
+            )
+        if not concluded:
+            return CourseStateRecord(concluded=False)
+        term = data.get("term")
+        term_end = _dt(term.get("end_at")) if isinstance(term, dict) else None
+        # The course's own end date wins over the term's, as it does in Canvas.
+        for ended in (own_end, term_end):
+            if ended is not None and ended <= now:
+                return CourseStateRecord(concluded=True, ended_at=ended)
+        return CourseStateRecord(concluded=True)
 
     # ---- accounts ----------------------------------------------------------------------------
 

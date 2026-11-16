@@ -254,6 +254,7 @@ def _build(db: Session, data: dict[str, Any], key: Any) -> SeedResult:
             excused = sub.get("excused", False)
             posted = sub.get("posted", True) and not excused
             graded = sub.get("score") is not None or excused
+            released = posted and graded
             db.add(
                 m.LmsSubmission(
                     institution_id=iid,
@@ -262,9 +263,10 @@ def _build(db: Session, data: dict[str, Any], key: Any) -> SeedResult:
                     canvas_assignment_id=canvas_ids[akey],
                     workflow_state="graded" if graded else "submitted",
                     submitted_at=None if excused else fetched - timedelta(days=4),
-                    score=sub.get("score"),
+                    # as a sync would: a mark that is not released is not stored
+                    score=sub.get("score") if released else None,
                     excused=excused,
-                    posted_at=fetched - timedelta(days=1) if posted and graded else None,
+                    posted_at=fetched - timedelta(days=1) if released else None,
                     fetched_at=fetched,
                 )
             )

@@ -132,6 +132,14 @@ answers the most common questions.
   every verifier will then show it as revoked, including for copies the student has downloaded.
 * **Canvas was down.** Nothing is awarded on missing data. Once Canvas is back, the next refresh
   catches up.
+* **You published a badge that uses an assignment no badge used before.** Only the assignments
+  your badges use are read from Canvas, so students' work for the new one is fetched as soon as
+  you publish. For a minute or two that requirement shows as not yet confirmed.
+* **The course has ended.** When Canvas shows the course as concluded, or its end date has
+  passed, badges keep working for 60 more days (your institution can change this), so marks you
+  release late still count. After that the course is no longer read and nothing more is awarded
+  from Canvas activity. Students keep their badges. If the course is opened again in Canvas,
+  open Badges from the course and choose **Switch badges on again**.
 * **An award has not turned into a badge.** Administrators see it under Failed issuance and
   can retry it safely; it can never be issued twice.
 

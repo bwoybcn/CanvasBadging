@@ -78,4 +78,58 @@ describe("LTI launch hand-over", () => {
     expect(ctx).toHaveTextContent("Badges in my courses and my progress");
     expect(ctx).not.toHaveTextContent("Course progress");
   });
+
+  function renderHome(launch_course: Record<string, unknown>, fetchImpl?: (url: string, init?: RequestInit) => Response) {
+    const me = { ...BASE_ME, launch_course: { ...BASE_ME.launch_course, ...launch_course } };
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) =>
+      String(url).endsWith("/learners/me") || !fetchImpl ? json(me) : fetchImpl(String(url), init),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers token="tok-1">
+        <MemoryRouter initialEntries={["/"]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </Providers>,
+    );
+    return fetchMock;
+  }
+
+  it("tells course staff when a course has ended and how long it is still read", async () => {
+    renderHome({ status: "active", ended_at: "2026-06-30T00:00:00Z", read_until: "2026-08-29T00:00:00Z" });
+    const ctx = await screen.findByTestId("course-context");
+    expect(ctx).toHaveTextContent("This course ended in Canvas on 30 June 2026.");
+    expect(ctx).toHaveTextContent("Canvas is still read until 29 August 2026, so marks released late still count.");
+    expect(ctx).toHaveTextContent("Students keep the badges they earned.");
+  });
+
+  it("says an archived course has ended, and offers to switch it on again only through the server", async () => {
+    const fetchMock = renderHome({ status: "archived", ended_at: "2026-06-30T00:00:00Z" }, (url) =>
+      url.endsWith("/courses/c-4/activate")
+        ? json(
+            {
+              code: "COURSE_ARCHIVED",
+              title:
+                "This course has ended in Canvas, so badges are switched off for it. If the course is opened again in Canvas, you can switch badges on here.",
+              status: 409,
+            },
+            409,
+          )
+        : json([]),
+    );
+    const ctx = await screen.findByTestId("course-context");
+    expect(ctx).toHaveTextContent("This course ended in Canvas on 30 June 2026, so it is no longer read");
+    expect(ctx).not.toHaveTextContent("Badges are not switched on for this course yet");
+    screen.getByRole("button", { name: "Switch badges on again" }).click();
+    expect(await screen.findByText(/This course has ended in Canvas, so badges are switched off/)).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url).endsWith("/activate") && init?.method === "POST")).toBe(true);
+  });
+
+  it("tells a student that an ended course awards no more badges", async () => {
+    renderHome({ status: "archived", roles: ["student"], view: "student", ended_at: "2026-06-30T00:00:00Z" });
+    const ctx = await screen.findByTestId("course-context");
+    expect(ctx).toHaveTextContent("This course has ended");
+    expect(ctx).toHaveTextContent("You keep the badges you earned.");
+    expect(ctx).not.toHaveTextContent("have not switched on badges");
+  });
 });

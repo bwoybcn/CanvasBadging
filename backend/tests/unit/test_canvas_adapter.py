@@ -290,3 +290,75 @@ def test_url_rewrite_for_containers() -> None:
         "http://host.docker.internal:3000/api/v1/courses/4"
     )
     assert rewrite_url(s, "https://other/x") == "https://other/x"
+
+
+# ---- has the course ended? (whole-product review, finding 2) ----------------------------------
+
+
+def _course_state(body: dict[str, Any]) -> Any:
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert req.url.path == "/api/v1/courses/4"
+        assert req.url.params.get_list("include[]") == ["concluded", "term"]
+        return page({"id": 4, "name": "Course", **body})
+
+    return make(handler).course_state("4")
+
+
+def test_running_course_has_not_ended() -> None:
+    state = _course_state(
+        {"workflow_state": "available", "concluded": False, "end_at": "2099-06-30T00:00:00Z"}
+    )
+    assert state.concluded is False and state.ended_at is None
+
+
+def test_course_past_its_term_end_has_ended_on_that_date() -> None:
+    state = _course_state(
+        {
+            "workflow_state": "available",
+            "concluded": True,
+            "end_at": None,
+            "term": {"id": 2, "end_at": "2026-06-30T00:00:00Z"},
+        }
+    )
+    assert state.concluded is True
+    assert state.ended_at is not None and state.ended_at.isoformat() == "2026-06-30T00:00:00+00:00"
+
+
+def test_course_end_date_wins_over_the_term() -> None:
+    state = _course_state(
+        {
+            "workflow_state": "available",
+            "concluded": True,
+            "end_at": "2026-05-01T00:00:00Z",
+            "term": {"id": 2, "end_at": "2026-06-30T00:00:00Z"},
+        }
+    )
+    assert state.ended_at is not None and state.ended_at.month == 5
+
+
+def test_course_concluded_by_hand_has_no_date() -> None:
+    # "Conclude this course" in Canvas settings: workflow_state completed, no end date.
+    state = _course_state({"workflow_state": "completed", "end_at": None, "term": {"end_at": None}})
+    assert state.concluded is True and state.ended_at is None
+
+
+def test_course_end_is_still_seen_when_canvas_drops_include_parameters() -> None:
+    """A developer key with enforced scopes and without "Allow Include Parameters" gets the
+    plain course record: no ``concluded``, no term. The course's own dates still tell."""
+    ended = _course_state(
+        {
+            "workflow_state": "available",
+            "end_at": "2026-05-01T00:00:00Z",
+            "restrict_enrollments_to_course_dates": True,
+        }
+    )
+    assert ended.concluded is True and ended.ended_at is not None
+    # An end date that the course does not use for participation does not end it.
+    running = _course_state(
+        {
+            "workflow_state": "available",
+            "end_at": "2026-05-01T00:00:00Z",
+            "restrict_enrollments_to_course_dates": False,
+        }
+    )
+    assert running.concluded is False

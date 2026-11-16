@@ -85,6 +85,10 @@ export interface LaunchCourse {
   status: string;
   roles: string[];
   view: "lecturer" | "student";
+  /** When the course ended in Canvas, if it has. */
+  ended_at?: string | null;
+  /** When an ended course stops (or stopped) being read from Canvas. */
+  read_until?: string | null;
 }
 
 /* ---- W5: authoring, rules and awards ------------------------------------------------------ */

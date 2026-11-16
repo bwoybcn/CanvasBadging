@@ -78,15 +78,19 @@ screens show it, and the API returns it.
 
 - **Key Name**: `OpenCredential API`
 - **Redirect URIs**: `<public URL>/api/v1/canvas/oauth/callback`
-- **Enforce Scopes**: on, then tick only these (all GET):
+- **Enforce Scopes**: on, then tick only these (all GET).
+- **Allow Include Parameters**: tick it. OpenCredential asks Canvas whether a course has ended
+  (`include[]=concluded` and `term` on the course). Without the tick Canvas drops those, and
+  a course is only seen to have ended when it was concluded by hand or is past its own end
+  date; a course that simply ran to the end of its term would go on being read.
 
   | Scope | Used for |
   |---|---|
-  | `url:GET\|/api/v1/courses/:id` | course name and state |
+  | `url:GET\|/api/v1/courses/:id` | course name and state, and whether the course has ended |
   | `url:GET\|/api/v1/courses/:course_id/modules` | modules and per-student progress (`student_id=`) |
   | `url:GET\|/api/v1/courses/:course_id/modules/:module_id/items` | completion requirements |
   | `url:GET\|/api/v1/courses/:course_id/assignments` | assignments, points possible |
-  | `url:GET\|/api/v1/courses/:course_id/students/submissions` | submissions, scores, `posted_at`, excused |
+  | `url:GET\|/api/v1/courses/:course_id/students/submissions` | submissions, released scores, `posted_at`, excused; asked only for the assignments a published badge uses |
   | `url:GET\|/api/v1/courses/:course_id/enrollments` | enrolment checks |
   | `url:GET\|/api/v1/users/:user_id/profile` | the authorising account's identity |
   | `url:GET\|/api/v1/accounts` | accounts the connected admin can see (linking sub-accounts to areas) |

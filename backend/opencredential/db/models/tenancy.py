@@ -42,6 +42,9 @@ DEFAULT_POLICY: dict[str, Any] = {
 DEFAULT_RETENTION: dict[str, Any] = {
     "lti_launch_state_minutes": 10,
     "snapshot_days_after_course_end": 365,
+    #: Canvas is still read for this long after a course ends, so marks released late still
+    #: count. After that the course is archived and no longer read.
+    "sync_days_after_course_end": 60,
     "audit_event_years": 7,
     "failed_job_days": 90,
     "evaluation_days": 730,

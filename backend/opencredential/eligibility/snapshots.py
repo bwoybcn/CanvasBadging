@@ -67,7 +67,13 @@ def load_course(db: Session, course_id: uuid.UUID | None) -> CourseData:
     }
     assignments = {
         a.canvas_assignment_id: AssignmentInfo(
-            a.canvas_assignment_id, a.name, a.points_possible, a.published, a.deleted, a.fetched_at
+            a.canvas_assignment_id,
+            a.name,
+            a.points_possible,
+            a.published,
+            a.deleted,
+            a.fetched_at,
+            a.submissions_synced,
         )
         for a in db.scalars(select(LmsAssignment).where(LmsAssignment.course_id == course_id))
     }

@@ -40,6 +40,7 @@ CONFIG_FIELDS = (
 #: Retention keys an administrator can change, with (minimum, maximum).
 RETENTION_BOUNDS: dict[str, tuple[int, int]] = {
     "snapshot_days_after_course_end": (30, 3650),
+    "sync_days_after_course_end": (0, 365),
     "evaluation_days": (30, 3650),
     "failed_job_days": (7, 3650),
     "audit_event_years": (1, 30),

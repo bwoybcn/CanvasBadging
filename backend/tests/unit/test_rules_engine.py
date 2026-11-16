@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from opencredential.rules import MET, NOT_MET, UNKNOWN, evaluate, parse
 from opencredential.rules.engine import combine
+from opencredential.rules.schema import RuleSet
 from opencredential.rules.snapshot import (
     MODULES,
     SUBMISSIONS,
@@ -228,6 +229,8 @@ def test_submission_states() -> None:
         (sub(score=14.0), MET, "SCORE_MET"),  # exactly 70% is enough
         (sub(score=13.99), NOT_MET, "SCORE_BELOW_THRESHOLD"),
         (sub(posted_at=None), UNKNOWN, "AWAITING_RELEASE"),
+        # what sync stores for a mark that is not released: that it exists, never its value
+        (sub(score=None, posted_at=None), UNKNOWN, "AWAITING_RELEASE"),
         (sub(score=None, workflow_state="submitted", posted_at=None), UNKNOWN, "AWAITING_GRADE"),
         (sub(excused=True), UNKNOWN, "EXCUSED"),
         (sub(grade_matches_current_submission=False), UNKNOWN, "GRADE_OUTDATED"),
@@ -242,6 +245,15 @@ def test_submission_states() -> None:
 def test_score_rule(submission: Submission, outcome: str, expected: str) -> None:
     ev = evaluate(SCORE, snap(submissions={"a1": submission}))
     assert (ev.outcome, code(ev)) == (outcome, expected)
+
+
+@pytest.mark.parametrize("rules", [SCORE, SUBMIT])
+def test_assignment_whose_submissions_have_not_been_read_is_unknown(rules: RuleSet) -> None:
+    """Submissions are only held for assignments a live rule uses. A rule that has only just
+    started using one must not read "nothing held" as "not submitted"."""
+    not_read = AssignmentInfo("a1", "Essay", 20.0, True, False, FRESH, submissions_fetched=False)
+    ev = evaluate(rules, snap(assignments={"a1": not_read}))
+    assert (ev.outcome, code(ev)) == (UNKNOWN, "DATA_NOT_SYNCED")
 
 
 def test_unreleased_mark_is_not_recorded() -> None:

@@ -47,6 +47,34 @@ All notable changes to this project are documented here. The format follows
   Institution settings (whole-product review, finding 10; migration 0014).
 - The wizard takes an optional link to each skill's official description.
 
+### Changed
+- **Less is read from Canvas, and for less long** (whole-product review, finding 2; migration
+  0016):
+  - Submissions and marks are read and kept only for the assignments that a published badge's
+    rules use. Every assignment's submissions for every student used to be copied every 30
+    minutes. The list of assignments (names and points, no student data) is still kept for the
+    badge editor. Submissions held for an assignment no badge uses any more are deleted at the
+    next refresh, and nightly.
+  - A mark that Canvas has not released to the student is never stored, only the fact that one
+    exists, so students still see "Awaiting published result". Unreleased marks already held
+    are cleared by the migration.
+  - Publishing or restoring a badge that uses an assignment not read before queues a refresh
+    from Canvas at once. Until it has run, that requirement shows as not yet confirmed rather
+    than "not submitted".
+  - **A course that has ended in Canvas stops being read.** Once a day each course is checked:
+    concluded, deleted, or past the end date of the course or its term counts as ended. The
+    course is read for 60 more days so marks released late still count, then archived: no more
+    reads and nothing more awarded from Canvas activity. Issued badges are not affected. The
+    progress and submissions held for it are deleted a year after it ended. This retention
+    rule existed before but never ran, because nothing ever recorded that a course had ended.
+    Both periods are settings under Administration, Personal data and retention
+    (`sync_days_after_course_end`, `snapshot_days_after_course_end`). Course staff see a
+    notice on the course's Badges home, and can switch badges back on if the course is opened
+    again in Canvas.
+  - **Upgrading:** tick **Allow Include Parameters** on the Canvas API developer key
+    (docs/integrations/canvas.md, step 3). Without it a course is only seen to have ended when
+    it was concluded by hand or is past its own end date, not when its term ended.
+
 ### Fixed
 - Findings 7 to 9 of the whole-product review of 16 November:
   - A person who holds only the **Badge reviewer** role was shown "This page is for course
