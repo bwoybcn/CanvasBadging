@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Header, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 
@@ -99,6 +99,10 @@ class DefinitionOut(BaseModel):
     can_edit: bool
     can_review: bool
     can_award: bool = False
+    revision: str = Field(
+        description="Send back as If-Match when saving the draft; a save from an out-of-date "
+        "form is refused with 409 DRAFT_CHANGED"
+    )
     effective_award_policy: str | None = Field(
         description="What publication would resolve the awarding method to right now"
     )
@@ -186,6 +190,7 @@ def _out(db: TenantDb, actor: authz.Actor, d: AchievementDefinition) -> Definiti
         award_policy=d.award_policy,
         live_version_id=d.current_version_id if d.state != "archived" else None,
         working_version=_version_out(v),
+        revision=authoring.revision(v),
         rules=rules.model_dump(mode="json", exclude_none=True) if rules else None,
         readiness=[Issue(**i) for i in authoring.readiness(db, d, v)] if not v.frozen else [],
         reviews=[
@@ -334,9 +339,10 @@ def update_achievement(
     db: TenantDb,
     actor: ActorDep,
     rid: RequestIdDep,
+    if_match: Annotated[str | None, Header()] = None,
 ) -> DefinitionOut:
     d = _get(db, actor, definition_id)
-    authoring.update_draft(db, actor, d, body, request_id=rid)
+    authoring.update_draft(db, actor, d, body, request_id=rid, expected_revision=if_match)
     return _out(db, actor, d)
 
 
@@ -348,10 +354,15 @@ def delete_achievement(definition_id: uuid.UUID, db: TenantDb, actor: ActorDep) 
 
 @router.put("/achievements/{definition_id}/rules", response_model=DefinitionOut)
 def put_rules(
-    definition_id: uuid.UUID, body: RuleSet, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+    definition_id: uuid.UUID,
+    body: RuleSet,
+    db: TenantDb,
+    actor: ActorDep,
+    rid: RequestIdDep,
+    if_match: Annotated[str | None, Header()] = None,
 ) -> DefinitionOut:
     d = _get(db, actor, definition_id)
-    authoring.set_rules(db, actor, d, body, request_id=rid)
+    authoring.set_rules(db, actor, d, body, request_id=rid, expected_revision=if_match)
     return _out(db, actor, d)
 
 

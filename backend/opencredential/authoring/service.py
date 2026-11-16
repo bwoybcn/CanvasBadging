@@ -294,17 +294,46 @@ def _require_state(definition: AchievementDefinition, *states: str) -> None:
         )
 
 
+def revision(version: AchievementVersion) -> str:
+    """A token that changes whenever the draft's fields or requirements are saved. An editor
+    sends back the token it loaded, so a save from a form that is out of date is refused instead
+    of silently replacing what a colleague saved in the meantime (finding H1 of round 3)."""
+    return version.updated_at.astimezone(UTC).isoformat()
+
+
+def _check_revision(version: AchievementVersion, expected: str | None) -> None:
+    if expected is None:
+        return
+    if expected.strip().strip('"') != revision(version):
+        raise Conflict(
+            "DRAFT_CHANGED",
+            "Someone else saved changes to this badge after you opened it, so your changes on "
+            "this step were not saved. Load the latest version to see their changes, then make "
+            "yours again.",
+        )
+
+
+def _touch(db: Session, version: AchievementVersion) -> None:
+    """Mark the draft as changed, so its revision moves on even when only its requirements
+    (stored in other tables) changed."""
+    version.updated_at = _now()
+    db.flush()
+
+
 def update_draft(
     db: Session,
     actor: authz.Actor,
     definition: AchievementDefinition,
     fields: DraftFields,
     request_id: str | None = None,
+    expected_revision: str | None = None,
 ) -> AchievementVersion:
     authz.require_edit(db, actor, definition)
     _require_state(definition, "draft")
     version = working_version(db, definition)
+    _check_revision(version, expected_revision)
     _apply(db, version, fields)
+    _touch(db, version)
     audit.record(
         db,
         action="achievement.edit",
@@ -324,9 +353,11 @@ def set_rules(
     definition: AchievementDefinition,
     rules: RuleSet,
     request_id: str | None = None,
+    expected_revision: str | None = None,
 ) -> RuleSet:
     authz.require_edit(db, actor, definition)
     _require_state(definition, "draft")
+    _check_revision(working_version(db, definition), expected_revision)
     if definition.course_id is None and any(
         not isinstance(r, ManualApproval) for r in rules.leaves()
     ):
@@ -337,6 +368,7 @@ def set_rules(
         )
     version = working_version(db, definition)
     saved = rules_store.save(db, actor.institution_id, version.id, rules)
+    _touch(db, version)
     audit.record(
         db,
         action="rules.edit",

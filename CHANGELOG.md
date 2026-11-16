@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- Two people editing the same draft badge no longer silently overwrite each other (third round
+  of hands-on testing). Each badge response carries a `revision`. The wizard sends it back as
+  `If-Match`, so a save from a form opened before a colleague's save is refused with
+  409 `DRAFT_CHANGED`. The wizard says so and offers **Load the latest version**. A save
+  without `If-Match` still works as before.
 - The badge wizard, from the first round of hands-on testing:
   - Step 4 needs artwork before **Next**, instead of being marked "(done)" and blocking
     "Submit for review" later.
