@@ -57,6 +57,11 @@ class Institution(Base):
     name: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     website_url: Mapped[str | None] = mapped_column(Text)
+    #: Who people at this institution ask for help with badges. Shown on the Help page that every
+    #: screen links to; all optional, set by an institution administrator.
+    help_contact_name: Mapped[str | None] = mapped_column(Text)
+    help_email: Mapped[str | None] = mapped_column(Text)
+    help_url: Mapped[str | None] = mapped_column(Text)
     logo_asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     branding: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     #: Unique across institutions: the did:web issuers of one institution live under this host,

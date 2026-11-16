@@ -83,7 +83,9 @@ function PersonalData() {
           {erase.data && (
             <Alert variant="success" margin="small 0">
               Erased. {erase.data.credentials_kept} issued badges kept; {erase.data.share_links_withdrawn} public share
-              links taken down; {erase.data.awards_cancelled} pending awards cancelled.
+              links taken down; {erase.data.awards_cancelled} pending awards cancelled. Canvas will not bring this
+              person back, even while they are still enrolled. If they later ask to use Badges again, whoever runs the
+              service can allow it.
             </Alert>
           )}
         </View>

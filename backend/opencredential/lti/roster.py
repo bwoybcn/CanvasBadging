@@ -19,7 +19,13 @@ from opencredential import audit
 from opencredential.db.models import CanvasIntegration, Course, Membership
 from opencredential.integrations.base import LmsPermissionError
 from opencredential.lti.claims import map_roles
-from opencredential.lti.provision import LTI_SOURCES, link_identity, set_course_roles, upsert_user
+from opencredential.lti.provision import (
+    LTI_SOURCES,
+    ErasedPerson,
+    link_identity,
+    set_course_roles,
+    upsert_user,
+)
 from opencredential.lti.services import nrps_members
 from opencredential.settings import Settings
 
@@ -31,6 +37,8 @@ class RosterResult:
     staff: int
     revoked: int
     without_canvas_id: int
+    #: Members left out because their data was erased here (they stay erased).
+    erased_skipped: int = 0
 
 
 def sync_roster(
@@ -55,22 +63,27 @@ def sync_roster(
     )
     now = datetime.now(UTC)
     seen: set = set()
-    learners = staff = no_canvas_id = revoked = 0
+    learners = staff = no_canvas_id = revoked = erased = 0
     for m in members:
         roles = map_roles(list(m.roles)) if m.status == "Active" else set()
-        user, _ = upsert_user(
-            db,
-            course.institution_id,
-            integration.id,
-            sub=m.sub,
-            canvas_user_id=m.canvas_user_id,
-            sis_user_id=m.sis_user_id,
-            name=m.name,
-            given_name=m.given_name,
-            family_name=m.family_name,
-            email=m.email,
-            verified_by="nrps",
-        )
+        try:
+            user, _ = upsert_user(
+                db,
+                course.institution_id,
+                integration.id,
+                sub=m.sub,
+                canvas_user_id=m.canvas_user_id,
+                sis_user_id=m.sis_user_id,
+                name=m.name,
+                given_name=m.given_name,
+                family_name=m.family_name,
+                email=m.email,
+                verified_by="nrps",
+            )
+        except ErasedPerson:
+            # Still on the Canvas class list, but erased here: leave them out and carry on.
+            erased += 1
+            continue
         link_identity(
             db, course.institution_id, integration.id, user.id, "lti11_user_id", m.lti11_user_id
         )
@@ -96,7 +109,7 @@ def sync_roster(
             ms.revoked_at = now
             revoked += 1
 
-    result = RosterResult(len(members), learners, staff, revoked, no_canvas_id)
+    result = RosterResult(len(members), learners, staff, revoked, no_canvas_id, erased)
     audit.record(
         db,
         action="course.roster_synced",

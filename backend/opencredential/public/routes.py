@@ -30,6 +30,7 @@ from opencredential.db.models import AchievementVersion, Institution
 from opencredential.db.session import tenant_session
 from opencredential.institutions.identity import base_url, did_web_for
 from opencredential.issuance import ob3
+from opencredential.issuance.service import alignments as issuance_alignments
 from opencredential.verification.service import Verifier
 from opencredential.verification.sources import (
     DefaultSources,
@@ -112,6 +113,9 @@ def achievement(version_id: uuid.UUID, settings: SettingsDep) -> Response:
                 criteria_id=f"{url}#criteria",
                 achievement_type=version.achievement_type,
                 tags=(version.category,) if version.category else (),
+                # The same skills as every credential of this version carries; credentials
+                # point here for a skill the author gave no link of its own.
+                alignments=issuance_alignments(version, url),
             )
         )
     body = {"@context": [ob3.VC_V2_CONTEXT, ob3.OB_CONTEXT], **body}

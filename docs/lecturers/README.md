@@ -34,7 +34,7 @@ server still refuses something, the message names the field and says what to cha
 |---|---|---|
 | 1. Course and issuer | The course and the issuer | Only issuers delegated to your course appear |
 | 2. About the badge | Title, short description, full description, category, and what the badge shows: completing, participating or assessed proficiency | A "completion" badge cannot claim competency. Words such as "credit" or "credits" need a reviewer's explicit approval. |
-| 3. Outcomes and criteria | Learning outcomes and the criteria in plain language | Students and employers read the criteria on the public page |
+| 3. Outcomes and criteria | Learning outcomes, the criteria in plain language, and optionally the skills the badge shows | Students and employers read the criteria on the public page. Each skill can name its framework and link to its official description; skills are written into every badge issued. |
 | 4. Artwork | Upload a PNG or SVG, or build one from a template by choosing its two colours from a colour swatch, and write its alt text | Unsafe SVG content is removed. Alt text is required. If you were given a brand colour as a code such as #212b58, paste it in the box beside the swatch. |
 | 5. Requirements | What a student must do: complete a module, complete several modules, submit an assignment, reach a minimum score, or have a lecturer confirm. Combine them with **all** or **any**. | Modules and assignments are picked from your Canvas course. A score counts only once the mark is **released** in Canvas. |
 | 6. Awarding | Automatic, or a lecturer confirms each award | Your institution may require confirmation for badges that use marks |
@@ -122,6 +122,10 @@ from Canvas**, wait a minute and check the list again. Then select **Award to N 
 You can move between the tabs without losing what you have typed.
 
 ## If something goes wrong
+
+Every screen has a **Help** link in its menu. It names who to ask at your institution and
+answers the most common questions.
+
 
 * **A badge was issued in error.** In **Course progress**, choose **Request revocation for <name>** on the issued cell, with a
   reason. An administrator approves the request. Revocation never deletes the record, but

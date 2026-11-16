@@ -973,7 +973,7 @@ export function CreateBadge() {
             Skills (optional)
           </Heading>
           {f.skills.map((k, i) => (
-            <Flex key={i} gap="small" alignItems="end" margin="0 0 x-small">
+            <Flex key={i} gap="small" alignItems="end" margin="0 0 x-small" wrap="wrap">
               <TextInput
                 maxLength={120}
                 renderLabel={`Skill ${i + 1}`}
@@ -994,6 +994,20 @@ export function CreateBadge() {
                   setF({
                     skills: f.skills.map((x, j) =>
                       j === i ? { ...x, framework: v || null } : x,
+                    ),
+                  })
+                }
+              />
+              <TextInput
+                maxLength={500}
+                type="url"
+                renderLabel="Link to its description (optional)"
+                placeholder="https://"
+                value={k.url ?? ""}
+                onChange={(_e, v) =>
+                  setF({
+                    skills: f.skills.map((x, j) =>
+                      j === i ? { ...x, url: v.trim() || null } : x,
                     ),
                   })
                 }

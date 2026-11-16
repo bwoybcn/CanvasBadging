@@ -360,6 +360,35 @@ def test_institution_configuration(world: World) -> None:
     )
     assert world.get("lecturer", "/api/v1/institutions/current").status_code == 403
 
+    # Who to ask for help: set by the administrator, shown to everyone on the Help page.
+    assert world.get("s1", "/api/v1/learners/me").json()["help"] == {
+        "contact_name": None,
+        "email": None,
+        "url": None,
+    }
+    contact = {
+        "help_contact_name": " Digital Education team ",
+        "help_email": "badges-help@liverpool.example",
+        "help_url": "https://www.liverpool.example/badges-help",
+    }
+    r = world.patch("admin", "/api/v1/institutions/current", contact)
+    assert r.status_code == 200, r.text
+    assert r.json()["help_contact_name"] == "Digital Education team"
+    assert world.get("s1", "/api/v1/learners/me").json()["help"] == {
+        "contact_name": "Digital Education team",
+        "email": "badges-help@liverpool.example",
+        "url": "https://www.liverpool.example/badges-help",
+    }
+    for bad_contact, code in (
+        ({"help_email": "not an address"}, "EMAIL_INVALID"),
+        ({"help_url": "http://insecure.example"}, "URL_INVALID"),
+    ):
+        r = world.patch("admin", "/api/v1/institutions/current", bad_contact)
+        assert r.status_code == 422 and r.json()["code"] == code
+    # Clearing a field removes it.
+    r = world.patch("admin", "/api/v1/institutions/current", {"help_email": ""})
+    assert r.status_code == 200 and r.json()["help_email"] is None
+
     r = world.patch("admin", "/api/v1/institutions/current/retention", {"audit_event_years": 0})
     assert r.status_code == 422
     r = world.patch("admin", "/api/v1/institutions/current/retention", {"evaluation_days": 400})

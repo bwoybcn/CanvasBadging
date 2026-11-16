@@ -21,11 +21,15 @@ HOST_RE = re.compile(
     r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(:\d{2,5})?$"
 )
 COLOUR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 CONFIG_FIELDS = (
     "name",
     "description",
     "website_url",
+    "help_contact_name",
+    "help_email",
+    "help_url",
     "logo_asset_id",
     "branding",
     "categories",
@@ -60,6 +64,9 @@ def config_out(inst: Institution) -> dict[str, Any]:
         "name": inst.name,
         "description": inst.description,
         "website_url": inst.website_url,
+        "help_contact_name": inst.help_contact_name,
+        "help_email": inst.help_email,
+        "help_url": inst.help_url,
         "logo_asset_id": str(inst.logo_asset_id) if inst.logo_asset_id else None,
         "branding": inst.branding or {},
         "verification_host": inst.verification_host,
@@ -86,6 +93,14 @@ def update_config(
         elif key == "website_url" and value:
             if not str(value).startswith("https://"):
                 raise Invalid("URL_INVALID", "The website must be an https:// address.")
+        elif key in ("help_contact_name", "help_email", "help_url"):
+            value = (value or "").strip() or None
+            if key == "help_email" and value and not EMAIL_RE.match(value):
+                raise Invalid(
+                    "EMAIL_INVALID", "The help email must look like badges-help@example.ac.uk."
+                )
+            if key == "help_url" and value and not value.startswith("https://"):
+                raise Invalid("URL_INVALID", "The help page must be an https:// address.")
         elif key == "verification_host":
             # Operator-only (review finding S3): an admin may resend the current value, as the
             # settings form does, but cannot change it. See set_verification_host.

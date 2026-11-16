@@ -288,6 +288,102 @@ def test_roster_sync_provisions_and_revokes(setup: dict[str, Any]) -> None:
     assert roles() == {"Tess Teacher": {"lecturer"}}
 
 
+def test_erased_person_is_not_brought_back_by_canvas(setup: dict[str, Any]) -> None:
+    """Erasure deletes the person's Canvas identifiers, so the next class-list refresh or launch
+    used to create them again, name and email included, while they were still enrolled."""
+    from typer.testing import CliRunner
+
+    from opencredential.cli import app as cli_app
+    from opencredential.lti.provision import ErasedPerson, upsert_user
+
+    settings = get_settings()
+    members = [
+        _member("sub-t", "Tess Teacher", [INSTRUCTOR], "2"),
+        _member("sub-s1", "Sam Student", [LEARNER], "4"),
+    ]
+    members[1]["lis_person_sourcedid"] = "201234567"
+
+    def refresh() -> Any:
+        services.clear_token_cache()
+        with tenant_session(setup["iid"]) as db:
+            integ = db.get(m.CanvasIntegration, setup["integ"])
+            course = db.get(m.Course, setup["course"])
+            return sync_roster(db, settings, integ, course, transport=_nrps(members))  # type: ignore[arg-type]
+
+    def people() -> dict[str | None, str]:
+        with owner_session() as db:
+            return {
+                u.display_name: u.status
+                for u in db.scalars(select(m.User).where(m.User.institution_id == setup["iid"]))
+            }
+
+    refresh()
+    with owner_session() as db:
+        sam = db.scalar(
+            select(m.User.id).where(
+                m.User.institution_id == setup["iid"], m.User.display_name == "Sam Student"
+            )
+        )
+    r = _client().post(
+        f"/api/v1/admin/people/{sam}/erase",
+        json={"confirm": "ERASE"},
+        headers=_auth(setup["iid"], setup["admin"]),
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["return_blocked_for_identifiers"] == 3  # sub, Canvas id, student ID
+    assert "Sam Student" not in people()
+
+    # The markers hold fingerprints, never the identifiers themselves.
+    with owner_session() as db:
+        markers = list(db.scalars(select(m.ErasedIdentity).where(m.ErasedIdentity.user_id == sam)))
+        assert {x.kind for x in markers} == {"lti_sub", "canvas_user_id", "sis_user_id"}
+        assert all(len(x.value_digest) == 64 for x in markers)
+        assert not {x.value_digest for x in markers} & {"sub-s1", "4", "201234567"}
+
+    # Still on the Canvas class list: left out, and everyone else is read as usual.
+    result = refresh()
+    assert (result.members, result.learners, result.staff, result.erased_skipped) == (2, 0, 1, 1)
+    assert "Sam Student" not in people() and people()["Tess Teacher"] == "active"
+
+    # Opening Badges from Canvas is refused too, by any identifier that names them.
+    for identifiers in (
+        {"sub": "sub-s1", "canvas_user_id": None},
+        {"sub": "a-new-sub", "canvas_user_id": "4"},
+        {"sub": "a-new-sub", "canvas_user_id": None, "sis_user_id": "201234567"},
+    ):
+        with pytest.raises(ErasedPerson), tenant_session(setup["iid"]) as db:
+            upsert_user(
+                db,
+                setup["iid"],
+                setup["integ"],
+                name="Sam Student",
+                given_name=None,
+                family_name=None,
+                email="sam@x.test",
+                verified_by="lti",
+                **identifiers,  # type: ignore[arg-type]
+            )
+    assert "Sam Student" not in people()
+
+    # If they ask to come back, the operator removes the markers; they start again from empty.
+    with owner_session() as db:
+        slug = db.get(m.Institution, setup["iid"]).slug  # type: ignore[union-attr]
+    runner = CliRunner()
+    args = ["admin", "readmit", "--institution", slug, "--user-id"]
+    assert runner.invoke(cli_app, [*args, str(setup["admin"])]).exit_code == 1  # not erased
+    out = runner.invoke(cli_app, [*args, str(sam)])
+    assert out.exit_code == 0 and "removed 3 marker(s)" in out.output
+    assert refresh().erased_skipped == 0
+    assert people()["Sam Student"] == "active"
+    with owner_session() as db:
+        again = db.scalar(
+            select(m.User.id).where(
+                m.User.institution_id == setup["iid"], m.User.display_name == "Sam Student"
+            )
+        )
+        assert again != sam and db.get(m.User, sam).status == "deleted"  # type: ignore[union-attr]
+
+
 def test_partial_roster_never_revokes(setup: dict[str, Any]) -> None:
     from opencredential.integrations.base import LmsTransientError
 

@@ -16,6 +16,35 @@ request (it is refused with `ACCOUNT_INACTIVE`), rather than lasting until it ex
 cannot view their collection, change sharing settings or export data afterwards. A new launch
 from Canvas is refused too. Public verification does not need a session and keeps working.
 
+## Erasure while the person is still enrolled in Canvas
+
+Canvas still lists an enrolled person in its class lists, and they can still choose **Badges**
+in a course menu. OpenCredential does not create them again. When their data is erased it keeps
+a marker for each of their Canvas identifiers (the LTI subject, the Canvas user id and the
+student ID number). A marker is a keyed one-way fingerprint (HMAC-SHA256, keyed from
+`OC_TOKEN_ENCRYPTION_KEY`); the identifier itself is deleted and cannot be read back from it.
+
+* A class-list refresh leaves the person out and carries on with everyone else. The refresh's
+  audit record counts them under `erased_skipped`.
+* If the person opens Badges from Canvas they are told their data was erased at their request
+  and who to ask if they want to use Badges again.
+* Nothing is awarded to them, because they no longer have an account here.
+
+If the person later asks to use Badges again, the service operator removes the markers:
+
+```sh
+oc admin readmit --institution <slug> --user-id <id of the erased account>
+```
+
+The id is in the audit record of the erasure (`privacy.erase`). The person then starts again
+with a new, empty account the next time they open Badges or their class list is read. Nothing
+that was erased comes back, and badges issued before the erasure stay with the old, nameless
+record. The change is audited (`privacy.readmit`).
+
+The markers depend on `OC_TOKEN_ENCRYPTION_KEY`. If that key is ever replaced, markers made
+with the old key no longer match, so replace it only as part of a planned change and list the
+erased accounts first.
+
 ## Public share pages
 
 Erasure takes down the person's public share pages, because afterwards they can no longer sign
@@ -41,6 +70,8 @@ separate, explicit request.
   answering for credentials in circulation (spec §16, scenario 9).
 * **Audit events.** They identify the learner only by an opaque id and are kept for the audit
   retention period, then purged.
+* **Markers that stop Canvas bringing the person back** (see above): fingerprints of their
+  Canvas identifiers, kept so that the erasure holds while they are still enrolled.
 
 After erasure, records show the learner as "Erased learner"; a verifier who holds the learner's
 copy can still verify it, but OpenCredential can no longer link it to a named person.

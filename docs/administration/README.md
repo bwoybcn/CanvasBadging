@@ -55,6 +55,12 @@ review by area**, **Badge templates**) and the records.
 
 Name, description, website, brand colours, achievement categories and LinkedIn organisation.
 Brand colours are chosen from a colour swatch, or pasted as a code such as #212b58.
+
+**Help for your users** names who staff and students should ask about badges: a team or
+person, an email address and a help page of your own. All three are optional. Every screen has
+a **Help** link in its menu; the Help page shows this contact, links to the guides and answers
+the most common questions. Until a contact is set, the page tells people to ask the team that
+supports Canvas.
 The settings page also shows the **public verification domain**, read-only. The verification
 domain is where issuers' `did:web` documents and revocation lists are published (ADR-0004).
 
@@ -255,7 +261,9 @@ See [erasure.md](erasure.md) for how erasure interacts with credentials.
 
 - **Download** everything held about a person as JSON (students can download their own from
   `GET /api/v1/learners/me/data-export`).
-- **Erase** a person's personal data (type `ERASE` to confirm).
+- **Erase** a person's personal data (type `ERASE` to confirm). Canvas does not bring an
+  erased person back while they are still enrolled; the operator can let them return on request
+  (`oc admin readmit`, see [erasure.md](erasure.md)).
 - **Retention**: Canvas snapshots after a course is archived, eligibility history not used by
   an award, failed jobs and audit events. Applied nightly and on demand.
 

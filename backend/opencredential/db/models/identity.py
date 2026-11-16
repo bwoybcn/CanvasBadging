@@ -71,6 +71,30 @@ class ExternalIdentity(TenantMixin, Base):
     value: Mapped[str] = mapped_column(Text)
 
 
+class ErasedIdentity(TenantMixin, Base):
+    """A marker left when a person's data is erased, so Canvas cannot bring them back.
+
+    Erasure deletes the person's :class:`ExternalIdentity` rows. Without something to recognise
+    them by, the next class-list refresh or launch would create them again, name and email
+    included. Each marker holds a keyed one-way fingerprint of one Canvas identifier
+    (``secretbox.keyed_digest``), never the identifier itself.
+    """
+
+    __tablename__ = "erased_identities"
+    __table_args__ = tenant_args(
+        "erased_identities",
+        tenant_fk("user_id", "users", ondelete="CASCADE"),
+        tenant_fk("canvas_integration_id", "canvas_integrations", ondelete="CASCADE"),
+        UniqueConstraint("canvas_integration_id", "kind", "value_digest"),
+    )
+
+    #: The erased account's remaining row (no personal data), which issued badges still point at.
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    canvas_integration_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    kind: Mapped[str] = mapped_column(Text)
+    value_digest: Mapped[str] = mapped_column(Text)
+
+
 class OrgUnit(TenantMixin, Base):
     __tablename__ = "org_units"
     __table_args__ = tenant_args("org_units", tenant_fk("parent_id", "org_units"))

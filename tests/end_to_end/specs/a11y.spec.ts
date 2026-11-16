@@ -61,6 +61,7 @@ test.beforeAll(async ({ request }) => {
     { who: student, path: "/app/me/credentials", ready: "badge" },
     { who: student, path: `/app/me/credentials/${creds[0].id}`, ready: creds[0].name },
     { who: student, path: "/app/me/keeping", ready: "" },
+    { who: student, path: "/app/help", ready: "Who to ask" },
     { who: STAFF.lecturer, path: "/app/", ready: "Welcome" },
     { who: STAFF.lecturer, path: "/app/badges", ready: "Academic Writing Foundations" },
     { who: STAFF.lecturer, path: "/app/badges/new", ready: "" },
@@ -70,6 +71,7 @@ test.beforeAll(async ({ request }) => {
     { who: STAFF.lecturer, path: "/app/awards?tab=list", ready: "Award a badge to a list of students" },
     { who: STAFF.lecturer, path: `/app/courses/${course}/progress`, ready: "" },
     { who: STAFF.reviewer, path: "/app/reviews", ready: "" },
+    { who: STAFF.lecturer, path: "/app/help", ready: "Who to ask" },
     ...[
       "",
       "/institution",

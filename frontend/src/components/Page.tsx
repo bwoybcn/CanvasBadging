@@ -8,7 +8,8 @@ import { useAuth } from "../auth";
 import { AppLink } from "./AppLink";
 
 const STAFF = new Set(["lecturer", "course_admin", "dept_admin", "inst_admin", "issuer_manager"]);
-const REVIEWERS = new Set(["dept_admin", "inst_admin"]);
+// Used only until the profile has loaded from a server too old to send `may_review`.
+const REVIEWERS = new Set(["reviewer", "dept_admin", "inst_admin"]);
 
 /** The signed-in user's profile, shared by every page through the query cache. */
 export function useMe() {
@@ -21,7 +22,9 @@ export function roleFlags(me: Me | undefined) {
   return {
     isStudent: roles.has("student"),
     isStaff: [...roles].some((r) => STAFF.has(r)),
-    isReviewer: [...roles].some((r) => REVIEWERS.has(r)),
+    // The server decides who can review (it knows the institution's policy, for example
+    // whether course staff may approve); the screens only ask.
+    isReviewer: me?.may_review ?? [...roles].some((r) => REVIEWERS.has(r)),
     isInstAdmin: roles.has("inst_admin"),
     isAdmin: roles.has("inst_admin") || roles.has("dept_admin"),
   };
@@ -52,6 +55,7 @@ export function Nav() {
         {f.isStaff && <NavLink to="/awards">Award badges</NavLink>}
         {f.isReviewer && <NavLink to="/reviews">Review queue</NavLink>}
         {f.isAdmin && <NavLink to="/admin">Administration</NavLink>}
+        <NavLink to="/help">Help</NavLink>
       </Flex>
     </View>
   );
@@ -114,12 +118,17 @@ export function NotForYou({ who }: { who: "staff" | "admins" }) {
   );
 }
 
-/** Shows ``children`` only to course staff (lecturers, TAs, course and other admins). */
-export function StaffOnly({ children }: { children: ReactNode }) {
+/**
+ * Shows ``children`` only to course staff (lecturers, TAs, course and other admins). With
+ * ``orReviewers`` it also lets in people who can review badges, who may hold no staff role at
+ * all (a named Badge reviewer for a faculty).
+ */
+export function StaffOnly({ children, orReviewers = false }: { children: ReactNode; orReviewers?: boolean }) {
   const me = useMe();
   if (me.isPending) return <Loading what="your roles" />;
+  const f = roleFlags(me.data);
   // If the profile cannot be read, let the page show its own error rather than guess.
-  if (me.isError || roleFlags(me.data).isStaff) return <>{children}</>;
+  if (me.isError || f.isStaff || (orReviewers && f.isReviewer)) return <>{children}</>;
   return <NotForYou who="staff" />;
 }
 

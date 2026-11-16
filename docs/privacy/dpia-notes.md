@@ -26,6 +26,7 @@ choice.
 |---|---|---|---|---|
 | Name (display, given, family), email | Canvas LTI launch and roster | `users` | The person; staff of their courses; administrators in scope | While the account is active; removed on erasure |
 | Canvas user id, LTI subject | Canvas | `external_identities` | Administrators | As above |
+| Fingerprints of an erased person's Canvas identifiers (keyed one-way hashes, not the identifiers) | Made at erasure | `erased_identities` | Nobody; used only to stop Canvas re-creating the person | Until the person asks to return (`oc admin readmit`) |
 | Course roles | Canvas launch and roster; delegated staff roles | `memberships` | Administrators in scope | Until removed in Canvas, or the role expires |
 | Module progress, submission state, scores (released marks only) | Canvas API | `lms_module_progress`, `lms_submissions` | Course staff; the learner sees their own progress | 365 days after the course is archived (`snapshot_days_after_course_end`) |
 | Eligibility evaluations (rule results, with the source of each) | Computed | `eligibility_evaluations` | Course staff, administrators | 730 days, unless an award relies on it (`evaluation_days`) |

@@ -2266,6 +2266,46 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HelpOut": {
+        "description": "Who to ask for help with badges here, as set by an institution administrator.",
+        "properties": {
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "HelpOut",
+        "type": "object"
+      },
       "ImageOut": {
         "properties": {
           "alt_text": {
@@ -2329,6 +2369,42 @@
               }
             ],
             "title": "Description"
+          },
+          "help_contact_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help Contact Name"
+          },
+          "help_email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help Email"
+          },
+          "help_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Help Url"
           },
           "linkedin_org_id": {
             "anyOf": [
@@ -2923,6 +2999,10 @@
             ],
             "title": "Email"
           },
+          "help": {
+            "$ref": "#/components/schemas/HelpOut",
+            "default": {}
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2948,6 +3028,11 @@
                 "type": "null"
               }
             ]
+          },
+          "may_review": {
+            "default": false,
+            "title": "May Review",
+            "type": "boolean"
           },
           "memberships": {
             "items": {

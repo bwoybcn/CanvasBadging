@@ -71,6 +71,10 @@ export interface Me {
   canvas_admin_without_access?: boolean;
   /** Institution administrators to ask, given only when `canvas_admin_without_access`. */
   institution_admins?: string[];
+  /** Whether to offer the Review queue. Decided by the server from the institution's policy. */
+  may_review?: boolean;
+  /** Who to ask for help with badges here, set by an institution administrator. */
+  help?: { contact_name: string | null; email: string | null; url: string | null };
 }
 
 export interface LaunchCourse {
@@ -548,7 +552,7 @@ export interface CredentialDetail extends CredentialSummary {
   criteria: string;
   achievement_type: string | null;
   learning_outcomes: string[];
-  skills: { name: string | null; url: string | null }[];
+  skills: { name: string | null; url: string | null; framework?: string | null }[];
   evidence: Evidence[];
   issuer: { name: string; id: string; url: string | null; institution: string };
   verification: Verification;

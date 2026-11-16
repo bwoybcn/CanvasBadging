@@ -6,7 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A **Help** link in the menu of every screen. The Help page names who to ask at the
+  institution, links to the guides and answers the most common questions. Institution
+  administrators set the contact (a name, an email address and a help page of their own) in
+  Institution settings (whole-product review, finding 10; migration 0014).
+- The wizard takes an optional link to each skill's official description.
+
 ### Fixed
+- Findings 7 to 9 of the whole-product review of 16 November:
+  - A person who holds only the **Badge reviewer** role was shown "This page is for course
+    staff" instead of the Review queue, and had no menu link to it. The server now tells the
+    screens who can review (`may_review` on the profile, from the institution's approver
+    roles), so course staff who are approvers get the Review queue link too.
+  - Skills typed into a badge never reached the issued badge or its public page. They are now
+    written into every badge as Open Badges alignments, with their framework and code. A skill
+    without a link of its own points at the badge's published definition, which lists the same
+    skills.
+  - Erasing a person's data did not hold while they were still enrolled in Canvas: the next
+    class-list refresh or launch created them again with their name and email. Erasure now
+    leaves a keyed one-way fingerprint of each Canvas identifier (`erased_identities`,
+    migration 0014). Class-list refreshes leave the person out, a launch tells them why, and
+    `oc admin readmit` lets them return if they ask.
 - The lower findings from the third round of hands-on testing:
   - "Remove Requirement" buttons keep their width beside a long message.
   - On the Issuers page, each issuer's delegation controls name that issuer ("Let a course or

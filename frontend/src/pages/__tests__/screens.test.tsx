@@ -1884,6 +1884,119 @@ describe("staff pages reached by a student", () => {
   );
 });
 
+describe("people who review badges but hold no staff role", () => {
+  const REVIEWER_ME = {
+    ...STAFF_ME,
+    may_review: true,
+    memberships: [
+      {
+        role: "reviewer",
+        scope_type: "org_unit",
+        scope_id: "ou-1",
+        scope_name: null,
+      },
+    ],
+  };
+
+  it("are offered the Review queue and can open it", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": REVIEWER_ME,
+      "GET /api/v1/achievements?review_queue=true": { items: [] },
+    });
+    renderAt("/reviews");
+    expect(
+      await screen.findByRole("heading", { name: "Review queue" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Review queue" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Nothing is waiting for your review."),
+    ).toBeInTheDocument();
+    // They do not create or award badges, so those menus stay away.
+    expect(screen.queryByRole("link", { name: "Award badges" })).toBeNull();
+  });
+
+  it("are still kept out of pages for course staff", async () => {
+    stubApi({ "GET /api/v1/learners/me": REVIEWER_ME });
+    renderAt("/awards");
+    expect(
+      await screen.findByRole("heading", {
+        name: "This page is for course staff",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("course staff get the link when the institution lets them approve", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": { ...STAFF_ME, may_review: true },
+      "GET /api/v1/achievements?review_queue=true": { items: [] },
+    });
+    renderAt("/reviews");
+    expect(
+      await screen.findByRole("link", { name: "Review queue" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the Help page", () => {
+  it("is linked from every page and names the contact the administrator set", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": {
+        ...STAFF_ME,
+        help: {
+          contact_name: "Digital Education team",
+          email: "badges-help@demo.example",
+          url: "https://demo.example/badges-help",
+        },
+      },
+    });
+    renderAt("/help");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Help" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Help" })).toHaveAttribute(
+      "href",
+      "/help",
+    );
+    expect(await screen.findByText("Digital Education team")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "badges-help@demo.example" }),
+    ).toHaveAttribute("href", "mailto:badges-help@demo.example");
+    expect(
+      screen.getByRole("link", { name: "Help page at Demo University" }),
+    ).toHaveAttribute("href", "https://demo.example/badges-help");
+    // Course staff get their own guide first.
+    const guides = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("href")?.includes("/docs/"));
+    expect(guides[0]).toHaveTextContent("guide for course staff");
+    expect(guides).toHaveLength(3);
+  });
+
+  it("says what to do when no contact is set, and speaks to students", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": {
+        ...STAFF_ME,
+        memberships: [
+          { role: "student", scope_type: "course", scope_id: "c-1", scope_name: "S" },
+        ],
+      },
+    });
+    renderAt("/help");
+    expect(
+      await screen.findByText(/has not named a contact for badges yet/),
+    ).toBeInTheDocument();
+    const guides = screen
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("href")?.includes("/docs/"));
+    expect(guides[0]).toHaveTextContent("guide for students");
+    expect(
+      screen.getByRole("link", { name: "Keeping your badges" }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("the home page speaks to the reader", () => {
   it("gives students student instructions, with a skip link and a page title", async () => {
     stubApi({

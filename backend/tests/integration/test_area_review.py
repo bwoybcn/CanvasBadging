@@ -238,6 +238,11 @@ def test_named_reviewer_role(world: World) -> None:
     assert [i["id"] for i in queue["items"]] == [d["id"]]
     detail = world.get("outsider", f"/api/v1/achievements/{d['id']}").json()
     assert detail["can_review"] is True and detail["can_edit"] is False
+    # The profile tells the screens to offer the Review queue, although this person holds no
+    # staff role at all (they were once shown "This page is for course staff" instead).
+    me = world.get("outsider", "/api/v1/learners/me").json()
+    assert me["may_review"] is True
+    assert {x["role"] for x in me["memberships"]} == {"reviewer"}
     r = world.post("outsider", f"/api/v1/achievements/{d['id']}/approve", {"checklist": CHECKLIST})
     assert r.status_code == 200 and r.json()["state"] == "approved"
 
@@ -365,3 +370,25 @@ def test_asking_for_review_is_honoured_where_none_is_needed(world: World) -> Non
     d = _badge(world)
     r = _submit(world, d["id"], "colleague")
     assert r.status_code == 200 and r.json()["state"] == "in_review"
+
+
+def test_profile_says_who_is_offered_the_review_queue(world: World) -> None:
+    """``may_review`` follows the institution's approver roles, so the menu matches what the
+    server will allow (product recommendation 1: lecturers who approve get the link too)."""
+
+    def may(who: str) -> bool:
+        return bool(world.get(who, "/api/v1/learners/me").json()["may_review"])
+
+    assert (may("admin"), may("reviewer"), may("lecturer"), may("s1")) == (
+        True,
+        True,
+        False,
+        False,
+    )
+    r = world.patch(
+        "admin",
+        "/api/v1/institutions/current/policy",
+        {"approver_roles": ["lecturer", "dept_admin", "inst_admin"]},
+    )
+    assert r.status_code == 200, r.text
+    assert (may("lecturer"), may("s1")) == (True, False)
