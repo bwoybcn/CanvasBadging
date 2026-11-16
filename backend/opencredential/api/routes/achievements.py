@@ -300,7 +300,7 @@ def list_achievements(
                 version_no=v.version_no,
                 live_version_id=d.current_version_id if d.state != "archived" else None,
                 award_policy=shown_policy,
-                updated_at=d.updated_at,
+                updated_at=max(d.updated_at, v.updated_at),
                 course_title=course.title if course else None,
                 can_award=can_award,
             )

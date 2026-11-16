@@ -266,6 +266,8 @@ def provision_launch(
         email=launch.email,
         verified_by="lti",
     )
+    if launch.is_test_user and not user.is_test_user:
+        user.is_test_user = True  # Canvas Student View: never listed, synced or awarded
     course, created_course = upsert_course(db, institution_id, integration_id, launch)
     added, revoked = set_course_roles(
         db, institution_id, user.id, course.id, launch.course_roles, source="lti"

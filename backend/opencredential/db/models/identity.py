@@ -6,7 +6,7 @@ Email is never an identifier (§12.2): it is nullable so erasure can clear it.
 
 from __future__ import annotations
 
-from sqlalchemy import Index, UniqueConstraint, text
+from sqlalchemy import Index, UniqueConstraint, false, text
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
@@ -48,6 +48,8 @@ class User(TenantMixin, Base):
         choice("active", "deleted", name="status"), default="active"
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Canvas's Student View "Test Student": may look around, but is never listed or awarded.
+    is_test_user: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
 
 class ExternalIdentity(TenantMixin, Base):

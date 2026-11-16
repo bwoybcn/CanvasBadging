@@ -350,7 +350,7 @@ export function RuleBuilder({
                 </RadioInputGroup>
                 {g.rules.map((c, j) => (
                   <Flex key={j} alignItems="start" gap="small">
-                    <Flex.Item shouldGrow>
+                    <Flex.Item shouldGrow shouldShrink>
                       <LeafEditor
                         rule={c}
                         label={`${label}.${j + 1}`}
@@ -363,17 +363,20 @@ export function RuleBuilder({
                         }
                       />
                     </Flex.Item>
-                    <Button
-                      size="small"
-                      onClick={() =>
-                        setRule(i, {
-                          ...g,
-                          rules: g.rules.filter((_, k) => k !== j),
-                        })
-                      }
-                    >
-                      Remove {label}.{j + 1}
-                    </Button>
+                    {/* Its own item, so a long message beside it cannot squeeze the button. */}
+                    <Flex.Item>
+                      <Button
+                        size="small"
+                        onClick={() =>
+                          setRule(i, {
+                            ...g,
+                            rules: g.rules.filter((_, k) => k !== j),
+                          })
+                        }
+                      >
+                        Remove {label}.{j + 1}
+                      </Button>
+                    </Flex.Item>
                   </Flex>
                 ))}
                 <Button
@@ -396,7 +399,7 @@ export function RuleBuilder({
           }
           return (
             <Flex key={i} alignItems="start" gap="small">
-              <Flex.Item shouldGrow>
+              <Flex.Item shouldGrow shouldShrink>
                 <LeafEditor
                   rule={r}
                   label={label}
@@ -404,9 +407,11 @@ export function RuleBuilder({
                   onChange={(nr) => setRule(i, nr)}
                 />
               </Flex.Item>
-              <Button size="small" onClick={() => remove(i)}>
-                Remove {label}
-              </Button>
+              <Flex.Item>
+                <Button size="small" onClick={() => remove(i)}>
+                  Remove {label}
+                </Button>
+              </Flex.Item>
             </Flex>
           );
         })}

@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- The lower findings from the third round of hands-on testing:
+  - "Remove Requirement" buttons keep their width beside a long message.
+  - On the Issuers page, each issuer's delegation controls name that issuer ("Let a course or
+    department award as …", "Add delegation for …").
+  - Publishing an automatic badge says it is awarded automatically.
+  - Staff who open Badges in a course where they have no role are told that the staff links are
+    for their other courses.
+  - Canvas's Student View "Test Student" is marked on launch (`users.is_test_user`, migration
+    0013) and left out of progress lists, the award picker and syncs.
+  - The one-student award form marks students who already have the badge and says so before
+    **Award badge** is pressed.
+  - The Badges list has a "Last changed" column and labels badges that share a title.
 - The medium findings from the third round of hands-on testing:
   - The wizard marks unpublished Canvas modules and assignments "(not published in Canvas)", and
     warns when one is chosen: students cannot see it, so nobody could earn the badge. The

@@ -43,12 +43,17 @@ export const CHECKLIST_LABELS: Record<string, string> = {
   level: "The level and size of the achievement are stated honestly",
   evidence: "The requirements genuinely evidence the learning outcomes",
   alignment: "Category and how it is demonstrated match what is assessed",
-  accessibility: "Artwork has meaningful alternative text and readable contrast",
+  accessibility:
+    "Artwork has meaningful alternative text and readable contrast",
   consistency: "Consistent with similar badges in the institution",
-  terminology: "No wording implies academic credit or a formal qualification unless approved",
+  terminology:
+    "No wording implies academic credit or a formal qualification unless approved",
 };
 
-const STATE_COLOR: Record<string, "info" | "success" | "warning" | "primary" | "danger"> = {
+const STATE_COLOR: Record<
+  string,
+  "info" | "success" | "warning" | "primary" | "danger"
+> = {
   draft: "primary",
   in_review: "warning",
   approved: "info",
@@ -57,12 +62,15 @@ const STATE_COLOR: Record<string, "info" | "success" | "warning" | "primary" | "
 };
 
 function Readiness({ issues }: { issues: Issue[] }) {
-  if (!issues.length) return <Alert variant="success">Ready to submit for review.</Alert>;
+  if (!issues.length)
+    return <Alert variant="success">Ready to submit for review.</Alert>;
   const errors = issues.filter((i) => i.severity === "error");
   return (
     <Alert variant={errors.length ? "warning" : "info"}>
       <Text weight="bold">
-        {errors.length ? "Before this can be submitted:" : "Things a reviewer will look at:"}
+        {errors.length
+          ? "Before this can be submitted:"
+          : "Things a reviewer will look at:"}
       </Text>
       <List>
         {issues.map((i) => (
@@ -77,7 +85,8 @@ function PreviewPanel({ id }: { id: string }) {
   const { token } = useAuth();
   const p = useQuery({
     queryKey: ["preview", id],
-    queryFn: () => apiFetch<Preview>(`/api/v1/achievements/${id}/preview`, token),
+    queryFn: () =>
+      apiFetch<Preview>(`/api/v1/achievements/${id}/preview`, token),
   });
   if (p.isPending) return <Loading what="preview" />;
   if (p.isError) return <ErrorAlert error={p.error} />;
@@ -85,12 +94,18 @@ function PreviewPanel({ id }: { id: string }) {
   return (
     <View as="section" aria-label="Preview" display="block">
       <Alert variant="warning" margin="0 0 medium">
-        <Text weight="bold">{p.data.notice}</Text>. This is how the badge would look. It is not a real badge and
-        cannot be verified.
+        <Text weight="bold">{p.data.notice}</Text>. This is how the badge would
+        look. It is not a real badge and cannot be verified.
       </Alert>
       <Flex gap="medium" alignItems="start">
         {p.data.artwork.data_url ? (
-          <Img src={p.data.artwork.data_url} alt={p.data.artwork.alt_text ?? ""} width="10rem" height="10rem" constrain="contain" />
+          <Img
+            src={p.data.artwork.data_url}
+            alt={p.data.artwork.alt_text ?? ""}
+            width="10rem"
+            height="10rem"
+            constrain="contain"
+          />
         ) : (
           <Text>No artwork yet</Text>
         )}
@@ -124,7 +139,13 @@ function PreviewPanel({ id }: { id: string }) {
   );
 }
 
-function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: string[] }) {
+function ReviewPanel({
+  d,
+  checklistKeys,
+}: {
+  d: Definition;
+  checklistKeys: string[];
+}) {
   const { token } = useAuth();
   const qc = useQueryClient();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -134,12 +155,22 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
   const act = useMutation({
     mutationFn: (kind: "approve" | "reject") =>
       kind === "approve"
-        ? apiSend<Definition>(`/api/v1/achievements/${d.id}/approve`, token, "POST", {
-            checklist: checks,
-            comment: comment || null,
-            credit_claim_approved: creditWarning ? credit : null,
-          })
-        : apiSend<Definition>(`/api/v1/achievements/${d.id}/reject`, token, "POST", { comment, checklist: checks }),
+        ? apiSend<Definition>(
+            `/api/v1/achievements/${d.id}/approve`,
+            token,
+            "POST",
+            {
+              checklist: checks,
+              comment: comment || null,
+              credit_claim_approved: creditWarning ? credit : null,
+            },
+          )
+        : apiSend<Definition>(
+            `/api/v1/achievements/${d.id}/reject`,
+            token,
+            "POST",
+            { comment, checklist: checks },
+          ),
     onSuccess: (nd) => {
       qc.setQueryData(["achievement", d.id], nd);
       qc.invalidateQueries({ queryKey: ["achievements"] });
@@ -147,11 +178,22 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
   });
   const all = checklistKeys.every((k) => checks[k]);
   return (
-    <View as="section" aria-labelledby="review-h" padding="medium" borderWidth="small" borderRadius="medium" display="block" margin="medium 0">
+    <View
+      as="section"
+      aria-labelledby="review-h"
+      padding="medium"
+      borderWidth="small"
+      borderRadius="medium"
+      display="block"
+      margin="medium 0"
+    >
       <Heading level="h2" id="review-h">
         Review
       </Heading>
-      <Text as="p">Confirm each point before approving. To send it back, explain what needs to change.</Text>
+      <Text as="p">
+        Confirm each point before approving. To send it back, explain what needs
+        to change.
+      </Text>
       {checklistKeys.map((k) => (
         <Checkbox
           key={k}
@@ -167,15 +209,28 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
           onChange={(e) => setCredit(e.target.checked)}
         />
       )}
-      <LimitedTextArea maxLength={4000} label="Comment to the author" value={comment} onChange={(e) => setComment(e.target.value)} />
+      <LimitedTextArea
+        maxLength={4000}
+        label="Comment to the author"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
       {act.isError && <ErrorAlert error={act.error} />}
       <Flex gap="small" margin="small 0 0">
-        <Button color="primary" interaction={all && !act.isPending ? "enabled" : "disabled"} onClick={() => act.mutate("approve")}>
+        <Button
+          color="primary"
+          interaction={all && !act.isPending ? "enabled" : "disabled"}
+          onClick={() => act.mutate("approve")}
+        >
           Approve
         </Button>
         <Button
           color="secondary"
-          interaction={comment.trim().length >= 5 && !act.isPending ? "enabled" : "disabled"}
+          interaction={
+            comment.trim().length >= 5 && !act.isPending
+              ? "enabled"
+              : "disabled"
+          }
           onClick={() => act.mutate("reject")}
         >
           Return to author
@@ -184,7 +239,9 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
       {(!all || comment.trim().length < 5) && (
         <Text as="p" size="small">
           {!all ? "Tick every point above to approve. " : ""}
-          {comment.trim().length < 5 ? "Write a comment to the author to return it." : ""}
+          {comment.trim().length < 5
+            ? "Write a comment to the author to return it."
+            : ""}
         </Text>
       )}
     </View>
@@ -192,8 +249,10 @@ function ReviewPanel({ d, checklistKeys }: { d: Definition; checklistKeys: strin
 }
 
 const FORCED_REASON: Record<string, string> = {
-  assessed: "Badges that claim assessed proficiency always need a colleague's review.",
-  credit: "The wording refers to credit or a qualification, so a colleague must review it.",
+  assessed:
+    "Badges that claim assessed proficiency always need a colleague's review.",
+  credit:
+    "The wording refers to credit or a qualification, so a colleague must review it.",
 };
 
 /** How this badge will be reviewed, and the author's choice where their area lets them decide. */
@@ -215,8 +274,14 @@ function ReviewChoice({
           value={value}
           onChange={(_e, v) => onChange(v as "colleague" | "skip")}
         >
-          <RadioInput value="colleague" label="Ask a colleague to review it first (recommended)" />
-          <RadioInput value="skip" label="Publish without review. Administrators can see badges published this way." />
+          <RadioInput
+            value="colleague"
+            label="Ask a colleague to review it first (recommended)"
+          />
+          <RadioInput
+            value="skip"
+            label="Publish without review. Administrators can see badges published this way."
+          />
         </RadioInputGroup>
       </View>
     );
@@ -233,7 +298,11 @@ function ReviewChoice({
   );
 }
 
-const TEAM_ROLE: Record<string, string> = { owner: "Owner", editor: "Can edit and award", awarder: "Can award" };
+const TEAM_ROLE: Record<string, string> = {
+  owner: "Owner",
+  editor: "Can edit and award",
+  awarder: "Can award",
+};
 
 /** Who works on this badge when its course has badge teams switched on. */
 const NO_NAME = "A colleague without a name in Canvas";
@@ -246,22 +315,48 @@ function TeamPanel({ id }: { id: string }) {
   const [removing, setRemoving] = useState<string | null>(null);
   const [newOwner, setNewOwner] = useState("");
   const [done, setDone] = useState("");
-  const team = useQuery({ queryKey: ["team", id], queryFn: () => apiFetch<BadgeTeam>(`/api/v1/achievements/${id}/team`, token) });
+  const team = useQuery({
+    queryKey: ["team", id],
+    queryFn: () =>
+      apiFetch<BadgeTeam>(`/api/v1/achievements/${id}/team`, token),
+  });
   const change = useMutation({
-    mutationFn: ({ user, r }: { user: string; r: "editor" | "awarder" | null; name: string }) =>
+    mutationFn: ({
+      user,
+      r,
+    }: {
+      user: string;
+      r: "editor" | "awarder" | null;
+      name: string;
+    }) =>
       r
-        ? apiSend<BadgeTeam>(`/api/v1/achievements/${id}/team/${user}`, token, "PUT", { role: r })
-        : apiSend<BadgeTeam>(`/api/v1/achievements/${id}/team/${user}`, token, "DELETE"),
+        ? apiSend<BadgeTeam>(
+            `/api/v1/achievements/${id}/team/${user}`,
+            token,
+            "PUT",
+            { role: r },
+          )
+        : apiSend<BadgeTeam>(
+            `/api/v1/achievements/${id}/team/${user}`,
+            token,
+            "DELETE",
+          ),
     onSuccess: (t, v) => {
       qc.setQueryData(["team", id], t);
       setWho("");
       setRemoving(null);
-      setDone(v.r ? `Added ${v.name} to the team.` : `Removed ${v.name} from the team.`);
+      setDone(
+        v.r
+          ? `Added ${v.name} to the team.`
+          : `Removed ${v.name} from the team.`,
+      );
     },
   });
   const transfer = useMutation({
     mutationFn: ({ user }: { user: string; name: string }) =>
-      apiSend<BadgeTeam>(`/api/v1/achievements/${id}/owner`, token, "PUT", { user_id: user }),
+      apiSend<BadgeTeam>(`/api/v1/achievements/${id}/owner`, token, "PUT", {
+        user_id: user,
+      }),
     onSuccess: (t, v) => {
       qc.setQueryData(["team", id], t);
       qc.invalidateQueries({ queryKey: ["achievement", id] });
@@ -274,7 +369,10 @@ function TeamPanel({ id }: { id: string }) {
   const t = team.data;
   const nameOf = (n: string | null) => n ?? NO_NAME;
   // Anyone on staff who is not the owner can take the badge over.
-  const others = [...t.members.filter((mb) => mb.role !== "owner"), ...t.candidates];
+  const others = [
+    ...t.members.filter((mb) => mb.role !== "owner"),
+    ...t.candidates,
+  ];
   return (
     <View as="div" display="block" margin="small 0">
       <Text as="p">
@@ -287,23 +385,41 @@ function TeamPanel({ id }: { id: string }) {
           <List.Item key={mb.user_id}>
             {nameOf(mb.name)}: {TEAM_ROLE[mb.role]}
             {t.can_manage && mb.role !== "owner" && removing !== mb.user_id && (
-              <Button size="small" margin="0 0 0 small" onClick={() => setRemoving(mb.user_id)}>
+              <Button
+                size="small"
+                margin="0 0 0 small"
+                onClick={() => setRemoving(mb.user_id)}
+              >
                 Remove {mb.name ?? "this colleague"} from the team
               </Button>
             )}
             {removing === mb.user_id && (
               <>
-                <Text> Remove them? They will no longer be able to work on this badge.</Text>
+                <Text>
+                  {" "}
+                  Remove them? They will no longer be able to work on this
+                  badge.
+                </Text>
                 <Button
                   size="small"
                   color="danger"
                   margin="0 0 0 small"
                   interaction={change.isPending ? "disabled" : "enabled"}
-                  onClick={() => change.mutate({ user: mb.user_id, r: null, name: nameOf(mb.name) })}
+                  onClick={() =>
+                    change.mutate({
+                      user: mb.user_id,
+                      r: null,
+                      name: nameOf(mb.name),
+                    })
+                  }
                 >
                   Remove
                 </Button>
-                <Button size="small" margin="0 0 0 x-small" onClick={() => setRemoving(null)}>
+                <Button
+                  size="small"
+                  margin="0 0 0 x-small"
+                  onClick={() => setRemoving(null)}
+                >
                   Keep
                 </Button>
               </>
@@ -316,17 +432,31 @@ function TeamPanel({ id }: { id: string }) {
       </Text>
       {t.can_manage && t.candidates.length > 0 && (
         <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0">
-          <SimpleSelect renderLabel="Add a colleague from this course" value={who} onChange={(_e, { value }) => setWho(String(value))} width="16rem">
+          <SimpleSelect
+            renderLabel="Add a colleague from this course"
+            value={who}
+            onChange={(_e, { value }) => setWho(String(value))}
+            width="16rem"
+          >
             <SimpleSelect.Option id="tm-none" value="">
               Choose
             </SimpleSelect.Option>
             {t.candidates.map((c) => (
-              <SimpleSelect.Option key={c.user_id} id={`tm-${c.user_id}`} value={c.user_id}>
+              <SimpleSelect.Option
+                key={c.user_id}
+                id={`tm-${c.user_id}`}
+                value={c.user_id}
+              >
                 {nameOf(c.name)}
               </SimpleSelect.Option>
             ))}
           </SimpleSelect>
-          <SimpleSelect renderLabel="They can" value={role} onChange={(_e, { value }) => setRole(value as "editor" | "awarder")} width="14rem">
+          <SimpleSelect
+            renderLabel="They can"
+            value={role}
+            onChange={(_e, { value }) => setRole(value as "editor" | "awarder")}
+            width="14rem"
+          >
             <SimpleSelect.Option id="tr-awarder" value="awarder">
               Award only
             </SimpleSelect.Option>
@@ -337,7 +467,13 @@ function TeamPanel({ id }: { id: string }) {
           <Button
             interaction={who && !change.isPending ? "enabled" : "disabled"}
             onClick={() =>
-              change.mutate({ user: who, r: role, name: nameOf(t.candidates.find((c) => c.user_id === who)?.name ?? null) })
+              change.mutate({
+                user: who,
+                r: role,
+                name: nameOf(
+                  t.candidates.find((c) => c.user_id === who)?.name ?? null,
+                ),
+              })
             }
           >
             Add to team
@@ -351,24 +487,41 @@ function TeamPanel({ id }: { id: string }) {
             Hand this badge to a colleague
           </Heading>
           <Text as="p" size="small">
-            For example when you are leaving or handing over a service. The new owner manages the team; you stay on it
-            as an editor while you are staff in this course.
+            For example when you are leaving or handing over a service. The new
+            owner manages the team; you stay on it as an editor while you are
+            staff in this course.
           </Text>
           <Flex gap="small" alignItems="end" wrap="wrap" margin="small 0">
-            <SimpleSelect renderLabel="New owner" value={newOwner} onChange={(_e, { value }) => setNewOwner(String(value))} width="16rem">
+            <SimpleSelect
+              renderLabel="New owner"
+              value={newOwner}
+              onChange={(_e, { value }) => setNewOwner(String(value))}
+              width="16rem"
+            >
               <SimpleSelect.Option id="ow-none" value="">
                 Choose
               </SimpleSelect.Option>
               {others.map((c) => (
-                <SimpleSelect.Option key={c.user_id} id={`ow-${c.user_id}`} value={c.user_id}>
+                <SimpleSelect.Option
+                  key={c.user_id}
+                  id={`ow-${c.user_id}`}
+                  value={c.user_id}
+                >
                   {nameOf(c.name)}
                 </SimpleSelect.Option>
               ))}
             </SimpleSelect>
             <Button
-              interaction={newOwner && !transfer.isPending ? "enabled" : "disabled"}
+              interaction={
+                newOwner && !transfer.isPending ? "enabled" : "disabled"
+              }
               onClick={() =>
-                transfer.mutate({ user: newOwner, name: nameOf(others.find((c) => c.user_id === newOwner)?.name ?? null) })
+                transfer.mutate({
+                  user: newOwner,
+                  name: nameOf(
+                    others.find((c) => c.user_id === newOwner)?.name ?? null,
+                  ),
+                })
               }
             >
               Hand over
@@ -388,27 +541,52 @@ export function BadgeDetail() {
   const navigate = useNavigate();
   const [tab, setTab] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
-  const [reviewChoice, setReviewChoice] = useState<"colleague" | "skip">("colleague");
+  const [reviewChoice, setReviewChoice] = useState<"colleague" | "skip">(
+    "colleague",
+  );
   const d = useQuery({
     queryKey: ["achievement", id],
     queryFn: () => apiFetch<Definition>(`/api/v1/achievements/${id}`, token),
   });
-  const cat = useQuery({ queryKey: ["categories"], queryFn: () => apiFetch<Catalogue>("/api/v1/categories", token) });
+  const cat = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => apiFetch<Catalogue>("/api/v1/categories", token),
+  });
 
   const action = useMutation({
     mutationFn: async (
-      kind: "submit" | "publish" | "archive" | "restore" | "new-version" | "discard-version" | "delete",
+      kind:
+        | "submit"
+        | "publish"
+        | "archive"
+        | "restore"
+        | "new-version"
+        | "discard-version"
+        | "delete",
     ) => {
       if (kind === "delete") {
-        await apiFetch<unknown>(`/api/v1/achievements/${id}`, token, { method: "DELETE" }).catch((e) => {
+        await apiFetch<unknown>(`/api/v1/achievements/${id}`, token, {
+          method: "DELETE",
+        }).catch((e) => {
           if (e instanceof SyntaxError) return null; // 204 has no body
           throw e;
         });
         return { kind, def: null };
       }
-      const body = kind === "submit" && d.data?.review.mode === "author_decides" ? { review: reviewChoice } : undefined;
-      const res = await apiSend<unknown>(`/api/v1/achievements/${id}/${kind}`, token, "POST", body);
-      const def = await apiFetch<Definition>(`/api/v1/achievements/${id}`, token);
+      const body =
+        kind === "submit" && d.data?.review.mode === "author_decides"
+          ? { review: reviewChoice }
+          : undefined;
+      const res = await apiSend<unknown>(
+        `/api/v1/achievements/${id}/${kind}`,
+        token,
+        "POST",
+        body,
+      );
+      const def = await apiFetch<Definition>(
+        `/api/v1/achievements/${id}`,
+        token,
+      );
       return { kind, def, res };
     },
     onSuccess: ({ kind, def }) => {
@@ -432,8 +610,10 @@ export function BadgeDetail() {
             def?.state === "published"
               ? "Restored. The badge is live again, and students who meet the requirements will be checked shortly."
               : "Restored. The published version is live again, and the newer version you were working on is back as a draft.",
-          "new-version": "A new draft version was created. The published version stays live until you publish this one.",
-          "discard-version": "The new version was discarded. The published version is unchanged and still live.",
+          "new-version":
+            "A new draft version was created. The published version stays live until you publish this one.",
+          "discard-version":
+            "The new version was discarded. The published version is unchanged and still live.",
         }[kind as "submit"] ?? null,
       );
     },
@@ -463,24 +643,39 @@ export function BadgeDetail() {
         )}
       </Flex>
       {notice && (
-        <Alert variant="success" margin="0 0 small" liveRegion={() => document.body} liveRegionPoliteness="polite">
+        <Alert
+          variant="success"
+          margin="0 0 small"
+          liveRegion={() => document.body}
+          liveRegionPoliteness="polite"
+        >
           {notice}
         </Alert>
       )}
       {action.isError && <ErrorAlert error={action.error} />}
       {def.state === "archived" && !notice && (
         <Alert variant="info" margin="0 0 small">
-          This badge is archived: no new awards are made, and badges already issued stay valid.
-          {def.can_edit || def.can_review ? " Restore it to start awarding again." : ""}
+          This badge is archived: no new awards are made, and badges already
+          issued stay valid.
+          {def.can_edit || def.can_review
+            ? " Restore it to start awarding again."
+            : ""}
         </Alert>
       )}
 
       <Flex gap="small" wrap="wrap" margin="0 0 medium">
         {def.can_edit && def.state === "draft" && (
           <>
-            <Button onClick={() => navigate(`/badges/${id}/edit`)}>Edit draft</Button>
-            <Button color="primary" interaction={blocking ? "disabled" : "enabled"} onClick={() => action.mutate("submit")}>
-              {def.review.mode === "not_required" || (def.review.mode === "author_decides" && reviewChoice === "skip")
+            <Button onClick={() => navigate(`/badges/${id}/edit`)}>
+              Edit draft
+            </Button>
+            <Button
+              color="primary"
+              interaction={blocking ? "disabled" : "enabled"}
+              onClick={() => action.mutate("submit")}
+            >
+              {def.review.mode === "not_required" ||
+              (def.review.mode === "author_decides" && reviewChoice === "skip")
                 ? "Mark ready to publish"
                 : "Submit for review"}
             </Button>
@@ -503,7 +698,10 @@ export function BadgeDetail() {
             consequence={
               def.live_version_id
                 ? "Publish this version? It replaces the version students see now. Badges already issued keep the version they were issued under."
-                : "Publish this badge? Students can then earn it, and it can be awarded from Award badges."
+                : (def.effective_award_policy ?? def.award_policy) ===
+                    "automatic"
+                  ? "Publish this badge? Students who meet the requirements are then awarded it automatically."
+                  : "Publish this badge? Students can then earn it, and staff award it from Award badges."
             }
             confirmLabel="Publish"
             cancelLabel="Not yet"
@@ -526,7 +724,9 @@ export function BadgeDetail() {
           )}
         {def.can_edit && def.state === "published" && (
           <>
-            <Button onClick={() => action.mutate("new-version")}>Start a new version</Button>
+            <Button onClick={() => action.mutate("new-version")}>
+              Start a new version
+            </Button>
             <ConfirmButton
               label="Archive"
               color="danger"
@@ -548,19 +748,30 @@ export function BadgeDetail() {
           </Button>
         )}
         {def.course_id && def.live_version_id && (
-          <AppLink to={`/courses/${def.course_id}/progress`}>Student progress for this course</AppLink>
+          <AppLink to={`/courses/${def.course_id}/progress`}>
+            Student progress for this course
+          </AppLink>
         )}
       </Flex>
 
       {def.can_edit && def.state === "draft" && (
-        <ReviewChoice review={def.review} value={reviewChoice} onChange={setReviewChoice} />
+        <ReviewChoice
+          review={def.review}
+          value={reviewChoice}
+          onChange={setReviewChoice}
+        />
       )}
-      {def.can_edit && def.state === "draft" && <Readiness issues={def.readiness} />}
+      {def.can_edit && def.state === "draft" && (
+        <Readiness issues={def.readiness} />
+      )}
       {def.state === "in_review" && def.can_review && cat.data && (
         <ReviewPanel d={def} checklistKeys={cat.data.review_checklist} />
       )}
 
-      <Tabs onRequestTabChange={(_e, { index }) => setTab(index)} margin="medium 0 0">
+      <Tabs
+        onRequestTabChange={(_e, { index }) => setTab(index)}
+        margin="medium 0 0"
+      >
         <Tabs.Panel id="details" renderTitle="Details" isSelected={tab === 0}>
           <Text as="p">{v.short_description}</Text>
           <Text as="p">Category: {v.category || "(not set)"}</Text>
@@ -585,8 +796,7 @@ export function BadgeDetail() {
                   {r.without_review
                     ? "Published without a colleague's review"
                     : `${r.decision === "approve" ? "Approved" : "Returned"} by ${r.reviewer ?? "a reviewer"}`}{" "}
-                  on{" "}
-                  {new Date(r.created_at).toLocaleDateString()}
+                  on {new Date(r.created_at).toLocaleDateString()}
                   {r.comment ? `: ${r.comment}` : ""}
                 </List.Item>
               ))}
