@@ -38,6 +38,7 @@ from opencredential.db.models import (
     LmsSubmission,
     Membership,
     SyncRun,
+    User,
 )
 from opencredential.integrations.base import LmsAdapter, LmsError, LmsTransientError
 from opencredential.logging import get_logger
@@ -58,11 +59,14 @@ class SyncResult:
 def course_learners(db: Session, course: Course) -> dict[uuid.UUID, str | None]:
     """Active students of ``course`` → their LMS user id (``None`` if unknown)."""
     rows = db.execute(
-        select(Membership.user_id).where(
+        select(Membership.user_id)
+        .join(User, User.id == Membership.user_id)
+        .where(
             Membership.scope_type == "course",
             Membership.scope_id == course.id,
             Membership.role == "student",
             Membership.revoked_at.is_(None),
+            User.is_test_user.is_(False),  # Canvas's Student View test user
         )
     ).all()
     ids = [r[0] for r in rows]

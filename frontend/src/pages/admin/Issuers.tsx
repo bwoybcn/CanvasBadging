@@ -1,16 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 /** Issuers with explicit delegated authority (spec §10.2). */
-import { Alert, Button, Flex, Heading, SimpleSelect, Text, TextInput, View } from "@instructure/ui";
+import {
+  Alert,
+  Button,
+  Flex,
+  Heading,
+  ScreenReaderContent,
+  SimpleSelect,
+  Text,
+  TextInput,
+  View,
+} from "@instructure/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiDelete, apiFetch, apiSend, type AdminCourse, type AdminIssuer, type OrgUnit } from "../../api";
+import {
+  apiDelete,
+  apiFetch,
+  apiSend,
+  type AdminCourse,
+  type AdminIssuer,
+  type OrgUnit,
+} from "../../api";
 import { useAuth } from "../../auth";
 import { LimitedTextArea } from "../../components/Fields";
 import { ConfirmButton } from "../../components/ConfirmButton";
 import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage, fmtDate } from "./AdminPage";
-
 
 const LEVELS: Record<AdminIssuer["level"], string> = {
   university: "University",
@@ -26,23 +42,35 @@ const STATUS: Record<AdminIssuer["status"], string> = {
 
 function useLookups() {
   const { token } = useAuth();
-  const units = useQuery({ queryKey: ["org-units"], queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token) });
-  const courses = useQuery({ queryKey: ["admin-courses"], queryFn: () => apiFetch<AdminCourse[]>("/api/v1/admin/courses", token) });
+  const units = useQuery({
+    queryKey: ["org-units"],
+    queryFn: () => apiFetch<OrgUnit[]>("/api/v1/admin/org-units", token),
+  });
+  const courses = useQuery({
+    queryKey: ["admin-courses"],
+    queryFn: () => apiFetch<AdminCourse[]>("/api/v1/admin/courses", token),
+  });
   return { units: units.data ?? [], courses: courses.data ?? [] };
 }
 
 export function Issuers() {
   const { token } = useAuth();
-  const q = useQuery({ queryKey: ["admin-issuers"], queryFn: () => apiFetch<AdminIssuer[]>("/api/v1/admin/issuers", token) });
+  const q = useQuery({
+    queryKey: ["admin-issuers"],
+    queryFn: () => apiFetch<AdminIssuer[]>("/api/v1/admin/issuers", token),
+  });
   return (
     <AdminPage title="Issuers">
       <Text as="p">
-        An issuer is the body named on a badge. Creating one does not make it an awarding body: an institution
-        administrator must authorise it and record the basis of its authority before anyone can award under it.
+        An issuer is the body named on a badge. Creating one does not make it an
+        awarding body: an institution administrator must authorise it and record
+        the basis of its authority before anyone can award under it.
       </Text>
       {q.isError && <ErrorAlert error={q.error} />}
       {q.isPending && <Loading what="issuers" />}
-      {q.data?.map((i) => <IssuerCard key={i.id} issuer={i} />)}
+      {q.data?.map((i) => (
+        <IssuerCard key={i.id} issuer={i} />
+      ))}
       <CreateIssuer />
     </AdminPage>
   );
@@ -58,20 +86,40 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
   const [target, setTarget] = useState("");
   const refresh = () => qc.invalidateQueries({ queryKey: ["admin-issuers"] });
   const act = useMutation({
-    mutationFn: ({ path, body, method = "POST" }: { path: string; body?: unknown; method?: string }) =>
-      apiSend<unknown>(path, token, method, body),
+    mutationFn: ({
+      path,
+      body,
+      method = "POST",
+    }: {
+      path: string;
+      body?: unknown;
+      method?: string;
+    }) => apiSend<unknown>(path, token, method, body),
     onSuccess: refresh,
   });
   const remove = useMutation({
-    mutationFn: (id: string) => apiDelete(`/api/v1/admin/issuer-delegations/${id}`, token),
+    mutationFn: (id: string) =>
+      apiDelete(`/api/v1/admin/issuer-delegations/${id}`, token),
     onSuccess: refresh,
   });
   const options = [
-    ...units.filter((u) => u.manageable).map((u) => ({ id: `org_unit:${u.id}`, label: `${u.name} (${u.kind})` })),
-    ...courses.map((c) => ({ id: `course:${c.id}`, label: `Course: ${c.title}` })),
+    ...units
+      .filter((u) => u.manageable)
+      .map((u) => ({ id: `org_unit:${u.id}`, label: `${u.name} (${u.kind})` })),
+    ...courses.map((c) => ({
+      id: `course:${c.id}`,
+      label: `Course: ${c.title}`,
+    })),
   ];
   return (
-    <View as="section" borderWidth="small" borderRadius="medium" padding="small" margin="0 0 small" display="block">
+    <View
+      as="section"
+      borderWidth="small"
+      borderRadius="medium"
+      padding="small"
+      margin="0 0 small"
+      display="block"
+    >
       <Flex justifyItems="space-between" wrap="wrap">
         <Heading level="h2" margin="0">
           {issuer.name}
@@ -79,7 +127,9 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
         <Text weight="bold">{STATUS[issuer.status]}</Text>
       </Flex>
       <Text as="p" size="small">
-        {LEVELS[issuer.level]} level{issuer.org_unit_name ? `, ${issuer.org_unit_name}` : ""} · short name {issuer.slug}
+        {LEVELS[issuer.level]} level
+        {issuer.org_unit_name ? `, ${issuer.org_unit_name}` : ""} · short name{" "}
+        {issuer.slug}
         {issuer.did ? ` · ${issuer.did}` : ""}
         {issuer.active_key?.is_dev ? " · development key" : ""}
       </Text>
@@ -90,7 +140,8 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
       )}
       {issuer.authority_basis && (
         <Text as="p">
-          Authority: {issuer.authority_basis} (authorised {fmtDate(issuer.authorised_at)})
+          Authority: {issuer.authority_basis} (authorised{" "}
+          {fmtDate(issuer.authorised_at)})
         </Text>
       )}
       <Heading level="h3" margin="small 0 x-small">
@@ -102,7 +153,8 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
         <ul>
           {issuer.delegations.map((d) => (
             <li key={d.id}>
-              {d.scope_type === "course" ? "Course" : "Unit"}: {d.scope_name ?? d.scope_id}{" "}
+              {d.scope_type === "course" ? "Course" : "Unit"}:{" "}
+              {d.scope_name ?? d.scope_id}{" "}
               <ConfirmButton
                 size="small"
                 label={`Remove ${d.scope_name ?? "delegation"}`}
@@ -118,7 +170,7 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
       )}
       <Flex gap="small" alignItems="end" wrap="wrap">
         <SimpleSelect
-          renderLabel="Delegate to"
+          renderLabel={`Let a course or department award as ${issuer.name}`}
           value={target}
           onChange={(_e, { value }) => setTarget(String(value))}
           width="20rem"
@@ -136,10 +188,14 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
           interaction={target ? "enabled" : "disabled"}
           onClick={() => {
             const [scope_type, scope_id] = target.split(":");
-            act.mutate({ path: `/api/v1/admin/issuers/${issuer.id}/delegations`, body: { scope_type, scope_id } });
+            act.mutate({
+              path: `/api/v1/admin/issuers/${issuer.id}/delegations`,
+              body: { scope_type, scope_id },
+            });
           }}
         >
           Add delegation
+          <ScreenReaderContent> for {issuer.name}</ScreenReaderContent>
         </Button>
       </Flex>
       {f.isInstAdmin && issuer.status !== "active" && (
@@ -154,7 +210,12 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
             color="primary"
             margin="x-small 0"
             interaction={basis.trim().length >= 10 ? "enabled" : "disabled"}
-            onClick={() => act.mutate({ path: `/api/v1/admin/issuers/${issuer.id}/authorise`, body: { authority_basis: basis } })}
+            onClick={() =>
+              act.mutate({
+                path: `/api/v1/admin/issuers/${issuer.id}/authorise`,
+                body: { authority_basis: basis },
+              })
+            }
           >
             Authorise {issuer.name}
           </Button>
@@ -162,16 +223,29 @@ function IssuerCard({ issuer }: { issuer: AdminIssuer }) {
       )}
       {f.isInstAdmin && issuer.status === "active" && (
         <Flex gap="small" alignItems="end" margin="small 0 0" wrap="wrap">
-          <TextInput maxLength={2000} renderLabel="Reason to suspend" value={reason} onChange={(_e, v) => setReason(v)} width="20rem" />
+          <TextInput
+            maxLength={2000}
+            renderLabel="Reason to suspend"
+            value={reason}
+            onChange={(_e, v) => setReason(v)}
+            width="20rem"
+          />
           <Button
             interaction={reason.trim().length >= 5 ? "enabled" : "disabled"}
-            onClick={() => act.mutate({ path: `/api/v1/admin/issuers/${issuer.id}/suspend`, body: { reason } })}
+            onClick={() =>
+              act.mutate({
+                path: `/api/v1/admin/issuers/${issuer.id}/suspend`,
+                body: { reason },
+              })
+            }
           >
             Suspend new awards
           </Button>
         </Flex>
       )}
-      {(act.isError || remove.isError) && <ErrorAlert error={act.error ?? remove.error} />}
+      {(act.isError || remove.isError) && (
+        <ErrorAlert error={act.error ?? remove.error} />
+      )}
     </View>
   );
 }
@@ -181,7 +255,13 @@ function CreateIssuer() {
   const qc = useQueryClient();
   const f = roleFlags(useMe().data);
   const { units } = useLookups();
-  const [v, setV] = useState({ name: "", slug: "", level: f.isInstAdmin ? "university" : "department", org_unit_id: "", url: "" });
+  const [v, setV] = useState({
+    name: "",
+    slug: "",
+    level: f.isInstAdmin ? "university" : "department",
+    org_unit_id: "",
+    url: "",
+  });
   const create = useMutation({
     mutationFn: () =>
       apiSend<AdminIssuer>("/api/v1/admin/issuers", token, "POST", {
@@ -194,20 +274,31 @@ function CreateIssuer() {
       qc.invalidateQueries({ queryKey: ["admin-issuers"] });
     },
   });
-  const levels = f.isInstAdmin ? Object.keys(LEVELS) : ["department", "programme"];
+  const levels = f.isInstAdmin
+    ? Object.keys(LEVELS)
+    : ["department", "programme"];
   return (
     <View as="section" margin="medium 0 0" display="block" maxWidth="40rem">
       <Heading level="h2" margin="0 0 small">
         New issuer
       </Heading>
-      <TextInput maxLength={200} renderLabel="Name as it appears on badges" value={v.name} onChange={(_e, x) => setV({ ...v, name: x })} />
+      <TextInput
+        maxLength={200}
+        renderLabel="Name as it appears on badges"
+        value={v.name}
+        onChange={(_e, x) => setV({ ...v, name: x })}
+      />
       <TextInput
         maxLength={63}
         renderLabel="Short name (lowercase, used in web addresses)"
         value={v.slug}
         onChange={(_e, x) => setV({ ...v, slug: x })}
       />
-      <SimpleSelect renderLabel="Level" value={v.level} onChange={(_e, { value }) => setV({ ...v, level: String(value) })}>
+      <SimpleSelect
+        renderLabel="Level"
+        value={v.level}
+        onChange={(_e, { value }) => setV({ ...v, level: String(value) })}
+      >
         {levels.map((l) => (
           <SimpleSelect.Option key={l} id={`lvl-${l}`} value={l}>
             {LEVELS[l as AdminIssuer["level"]]}
@@ -230,7 +321,12 @@ function CreateIssuer() {
             </SimpleSelect.Option>
           ))}
       </SimpleSelect>
-      <TextInput maxLength={500} renderLabel="Web address (https://, optional)" value={v.url} onChange={(_e, x) => setV({ ...v, url: x })} />
+      <TextInput
+        maxLength={500}
+        renderLabel="Web address (https://, optional)"
+        value={v.url}
+        onChange={(_e, x) => setV({ ...v, url: x })}
+      />
       {create.isError && <ErrorAlert error={create.error} />}
       <Button color="primary" margin="small 0" onClick={() => create.mutate()}>
         Create issuer (not yet authorised)

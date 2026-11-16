@@ -92,13 +92,17 @@ def live_targets_for_course(db: Session, course_id: uuid.UUID) -> list[Target]:
 
 
 def course_students(db: Session, course_id: uuid.UUID) -> list[uuid.UUID]:
+    """The course's real students: Canvas's Student View test user is left out."""
     return list(
         db.scalars(
-            select(Membership.user_id).where(
+            select(Membership.user_id)
+            .join(User, User.id == Membership.user_id)
+            .where(
                 Membership.scope_type == "course",
                 Membership.scope_id == course_id,
                 Membership.role == "student",
                 Membership.revoked_at.is_(None),
+                User.is_test_user.is_(False),
             )
         )
     )

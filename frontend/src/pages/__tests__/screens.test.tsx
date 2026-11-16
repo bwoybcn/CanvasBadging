@@ -1920,3 +1920,142 @@ describe("the home page speaks to the reader", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("round 3 low findings", () => {
+  it("tells staff who open a course where they have no role what the links are for", async () => {
+    stubApi({
+      "GET /api/v1/learners/me": {
+        ...STAFF_ME,
+        launch_course: {
+          id: "c-9",
+          title: "Library Volunteers",
+          course_code: null,
+          canvas_course_id: "9",
+          status: "active",
+          roles: [],
+        },
+      },
+    });
+    renderAt("/");
+    expect(
+      await screen.findByText(
+        /You have no role in Library Volunteers, so there is nothing for you to manage here/,
+      ),
+    ).toHaveTextContent("where you are staff: Study Skills 101");
+  });
+
+  it("tells same-title badges apart in the list", async () => {
+    const row = (id: string, state: string) => ({
+      id,
+      state,
+      course_id: "c-1",
+      title: "Library Induction",
+      category: "Completion",
+      version_no: 1,
+      live_version_id: null,
+      award_policy: "automatic",
+      updated_at: "2026-11-16T06:10:00Z",
+      course_title: "Library Volunteers",
+    });
+    stubApi({
+      "GET /api/v1/achievements": {
+        items: [row("d-1", "draft"), row("d-2", "published")],
+      },
+      "GET /api/v1/achievements?review_queue=true": { items: [] },
+    });
+    renderAt("/badges");
+    expect(
+      await screen.findByText(
+        "Draft, Library Volunteers: another badge has the same title",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Published, Library Volunteers: another badge has the same title",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Last changed" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("round 3: awarding a badge the student already has", () => {
+  it("says so in the list and before Award is pressed", async () => {
+    stubApi({
+      "GET /api/v1/awards?status=awaiting_confirmation&limit=500": [],
+      "GET /api/v1/achievements?awardable=true": {
+        items: [
+          {
+            id: "d-1",
+            state: "published",
+            course_id: "c-1",
+            course_title: "Writing",
+            title: "Seminar Participation",
+            category: "Participation",
+            version_no: 1,
+            live_version_id: "v-1",
+            award_policy: "manual",
+            updated_at: "2026-11-14T10:00:00Z",
+          },
+        ],
+      },
+      "GET /api/v1/courses/c-1/progress": {
+        course: { id: "c-1", title: "Writing" },
+        badges: [
+          {
+            definition_id: "d-1",
+            version_id: "v-1",
+            title: "Seminar Participation",
+            award_policy: "manual",
+            rules: [],
+            source_flags: [],
+          },
+        ],
+        learners: [
+          {
+            user_id: "u-1",
+            name: "Sam Student",
+            cells: [
+              {
+                version_id: "v-1",
+                outcome: "met",
+                evaluated_at: null,
+                codes: [],
+                progress: null,
+                decision_status: "issued",
+                decision_id: "x",
+                credential_id: "cr-1",
+              },
+            ],
+          },
+          { user_id: "u-2", name: "Priya Patel", cells: [] },
+        ],
+      },
+    });
+    renderAt("/awards");
+    await userEvent.click(
+      await screen.findByRole("tab", { name: "One student" }),
+    );
+    await userEvent.click(await screen.findByLabelText("Badge"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Seminar Participation" }),
+    );
+    await userEvent.click(screen.getByLabelText("Student"));
+    await userEvent.click(
+      await screen.findByRole("option", {
+        name: "Sam Student (already has this badge)",
+      }),
+    );
+    expect(
+      screen.getByText(
+        "This student already has this badge, so it cannot be awarded again.",
+      ),
+    ).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByLabelText(/^Justification \(at least/),
+      "Led two seminars, observed by the tutor.",
+    );
+    expect(screen.getByRole("button", { name: "Award badge" })).toBeDisabled();
+  });
+});

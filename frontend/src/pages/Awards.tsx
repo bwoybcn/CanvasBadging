@@ -212,7 +212,24 @@ function ManualAward() {
       setNarrative("");
     },
   });
-  const ok = badge && learner && justification.trim().length >= 20;
+  // Who already holds the chosen badge, so the form says so before Award is pressed (round 3, L6).
+  const live = learners.data?.badges.find((b) => b.definition_id === badge);
+  const holders = new Set(
+    (learners.data?.learners ?? [])
+      .filter((l) =>
+        l.cells.some(
+          (c) =>
+            c.version_id === live?.version_id &&
+            (!!c.credential_id ||
+              c.decision_status === "ready" ||
+              c.decision_status === "issued"),
+        ),
+      )
+      .map((l) => l.user_id),
+  );
+  const alreadyHas = !!learner && holders.has(learner);
+  const ok =
+    badge && learner && !alreadyHas && justification.trim().length >= 20;
   return (
     <View as="section" aria-labelledby="manual-h" display="block">
       <Heading level="h2" id="manual-h">
@@ -251,11 +268,16 @@ function ManualAward() {
         }
         options={(learners.data?.learners ?? []).map((l) => ({
           id: l.user_id,
-          label: l.name ?? l.user_id,
+          label: `${l.name ?? l.user_id}${holders.has(l.user_id) ? " (already has this badge)" : ""}`,
         }))}
         value={learner}
         onChange={setLearner}
       />
+      {alreadyHas && (
+        <Alert variant="info" margin="small 0">
+          This student already has this badge, so it cannot be awarded again.
+        </Alert>
+      )}
       <LimitedTextArea
         maxLength={4000}
         label="Justification (at least 20 characters)"
