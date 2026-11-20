@@ -125,7 +125,7 @@ jobs:
         # of them (repo.osgeo.org, for GeoTools) answered 502 on 16 November 2026, this job
         # failed five times and once hung for a quarter of an hour without a word. The cache
         # keeps a good copy, keyed on the pinned commit.
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.m2/repository
           key: dcpv-m2-4c6631fb5ea206ee60c2e7128749b44d70801098
