@@ -20,6 +20,7 @@ export const SECTIONS: { to: string; label: string; instOnly: boolean }[] = [
   // The rules.
   { to: "/admin/policy", label: "Approval and awarding policy", instOnly: true },
   { to: "/admin/review", label: "Colleague review by area", instOnly: false },
+  { to: "/admin/attributes", label: "Graduate attributes", instOnly: true },
   { to: "/admin/templates", label: "Badge templates", instOnly: false },
   { to: "/admin/credentials", label: "Issued badges and revocation", instOnly: false },
   { to: "/admin/reports", label: "Reports", instOnly: false },

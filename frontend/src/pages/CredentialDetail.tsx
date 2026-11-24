@@ -375,6 +375,19 @@ export function CredentialDetail() {
                 </List>
               </>
             )}
+            {(d.graduate_attributes ?? []).length > 0 && (
+              <>
+                <Heading level="h3">Graduate attributes it develops</Heading>
+                <List>
+                  {(d.graduate_attributes ?? []).map((a) => (
+                    <List.Item key={a.name ?? ""}>
+                      <Text weight="bold">{a.name}</Text>
+                      {a.description ? `: ${a.description}` : ""}
+                    </List.Item>
+                  ))}
+                </List>
+              </>
+            )}
             {d.evidence.length > 0 && (
               <>
                 <Heading level="h3">Evidence in this badge</Heading>

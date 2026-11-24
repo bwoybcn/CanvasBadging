@@ -9,6 +9,7 @@ import { StaffOnly } from "./components/Page";
 import { AdminHome } from "./pages/admin/AdminHome";
 import { Audit } from "./pages/admin/Audit";
 import { Credentials } from "./pages/admin/Credentials";
+import { GraduateAttributes } from "./pages/admin/GraduateAttributes";
 import { InstitutionSettings } from "./pages/admin/Institution";
 import { Issuers } from "./pages/admin/Issuers";
 import { AreaReviewPage, Areas, CoursePlacement, StaffRoles } from "./pages/admin/People";
@@ -66,6 +67,7 @@ export function AppRoutes() {
           ["/admin/review", <AreaReviewPage />],
           // "Departments and roles" was one long page until it was split into the four above.
           ["/admin/people", <Navigate to="/admin/areas" replace />],
+          ["/admin/attributes", <GraduateAttributes />],
           ["/admin/templates", <Templates />],
           ["/admin/credentials", <Credentials />],
           ["/admin/reports", <Reports />],

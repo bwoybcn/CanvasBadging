@@ -236,6 +236,71 @@
         "title": "AssignmentSubmitted",
         "type": "object"
       },
+      "AttributeIn": {
+        "additionalProperties": false,
+        "description": "One attribute as an administrator edits it; a new one may leave the key out.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "framework": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z0-9][a-z0-9-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AttributeIn",
+        "type": "object"
+      },
       "AuthoriseIn": {
         "properties": {
           "authority_basis": {
@@ -1091,6 +1156,15 @@
             "title": "Evidence",
             "type": "array"
           },
+          "graduate_attributes": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Graduate Attributes",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1926,6 +2000,22 @@
             ],
             "title": "Evidence Description"
           },
+          "graduate_attributes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keys from the institution's graduate attribute list",
+            "title": "Graduate Attributes"
+          },
           "learning_outcomes": {
             "anyOf": [
               {
@@ -2130,6 +2220,83 @@
           "narrative"
         ],
         "title": "Evidence",
+        "type": "object"
+      },
+      "GraduateAttribute": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 600,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "framework": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework"
+          },
+          "key": {
+            "description": "Fixed identifier; badges refer to it",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,39}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "pattern": "^https://",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ],
+        "title": "GraduateAttribute",
+        "type": "object"
+      },
+      "GraduateAttributesIn": {
+        "properties": {
+          "attributes": {
+            "items": {
+              "$ref": "#/components/schemas/AttributeIn"
+            },
+            "maxItems": 20,
+            "title": "Attributes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attributes"
+        ],
+        "title": "GraduateAttributesIn",
         "type": "object"
       },
       "GrantIn": {
@@ -3429,6 +3596,24 @@
         "title": "OwnerIn",
         "type": "object"
       },
+      "PackInstallIn": {
+        "properties": {
+          "org_unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Unit Id"
+          }
+        },
+        "title": "PackInstallIn",
+        "type": "object"
+      },
       "ReasonIn": {
         "properties": {
           "reason": {
@@ -4228,6 +4413,22 @@
             ],
             "title": "Evidence Description"
           },
+          "graduate_attributes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keys from the institution's graduate attribute list",
+            "title": "Graduate Attributes"
+          },
           "learning_outcomes": {
             "anyOf": [
               {
@@ -4613,6 +4814,14 @@
           "frozen": {
             "title": "Frozen",
             "type": "boolean"
+          },
+          "graduate_attributes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GraduateAttribute"
+            },
+            "title": "Graduate Attributes",
+            "type": "array"
           },
           "id": {
             "format": "uuid",
@@ -6775,6 +6984,77 @@
         ]
       }
     },
+    "/api/v1/admin/graduate-attributes": {
+      "get": {
+        "operationId": "list_graduate_attributes_api_v1_admin_graduate_attributes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Graduate Attributes Api V1 Admin Graduate Attributes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Graduate Attributes",
+        "tags": [
+          "institutional administration"
+        ]
+      },
+      "put": {
+        "description": "Save the institution's whole graduate attribute list, in order. Leave a new\nattribute's key out and one is made from its name; keep the key of an existing one.",
+        "operationId": "save_graduate_attributes_api_v1_admin_graduate_attributes_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraduateAttributesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Save Graduate Attributes Api V1 Admin Graduate Attributes Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Graduate Attributes",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
     "/api/v1/admin/grantable-roles": {
       "get": {
         "description": "The roles the caller may grant, so the screen does not keep its own list.",
@@ -8217,6 +8497,87 @@
           }
         },
         "summary": "The setup checklist: what is done and what is left before staff can create badges",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/template-packs": {
+      "get": {
+        "operationId": "list_template_packs_api_v1_admin_template_packs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Template Packs Api V1 Admin Template Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Template Packs",
+        "tags": [
+          "institutional administration"
+        ]
+      }
+    },
+    "/api/v1/admin/template-packs/{pack_key}/install": {
+      "post": {
+        "description": "Add a pack's graduate attributes and templates that are not there yet.",
+        "operationId": "install_template_pack_api_v1_admin_template_packs__pack_key__install_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_key",
+            "required": true,
+            "schema": {
+              "title": "Pack Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackInstallIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Install Template Pack Api V1 Admin Template Packs  Pack Key  Install Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Install Template Pack",
         "tags": [
           "institutional administration"
         ]

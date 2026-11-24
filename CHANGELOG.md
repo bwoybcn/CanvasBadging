@@ -26,6 +26,16 @@ All notable changes to this project are documented here. The format follows
   visitor counts as the proxy and shares one allowance.
 
 ### Added
+- **Graduate attributes and the University of Liverpool template pack** (migration 0017).
+  Institution administrators keep a list of graduate attributes (Administration > Graduate
+  attributes); authors tick the ones a badge develops; issued badges carry them as Open Badges
+  3.0 alignments (`targetType` `ext:GraduateAttribute`), and the student's page and the public
+  page list them apart from skills. A badge keeps its own copy of each attribute, so editing
+  the list never changes a published badge. Badge templates > Template packs adds the
+  Liverpool pack: Confidence, Digital Fluency and Global Citizenship, and six templates
+  (one per attribute, sustainability literacy, AI literacy, Year in Industry). Its wording is
+  a draft to agree with the Centre for Innovation in Education and lives in
+  `backend/opencredential/governance/packs/liverpool.toml`.
 - **A browser test of the sign-in from Canvas** (whole-product review, finding 20). Five new
   end-to-end tests open Badges the way Canvas does (LTI 1.3), in a real browser, against a
   stand-in Canvas the test starts: inside Canvas's frame with the cookie withheld (so Canvas's

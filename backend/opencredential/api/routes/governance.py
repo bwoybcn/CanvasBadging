@@ -21,11 +21,13 @@ from opencredential.authz import policy as authz
 from opencredential.authz.roles import GrantableRole, ScopeType
 from opencredential.credentials.state import CredentialState
 from opencredential.db.models.issuers import ISSUER_LEVELS
+from opencredential.governance import attributes as graduate_attributes
 from opencredential.governance import (
     audit_log,
     canvas_accounts,
     institution,
     issuers,
+    packs,
     people,
     privacy,
     reconciliation,
@@ -469,6 +471,52 @@ def install_starter_templates(
     participation, CPD activity) that are not there yet. Returns the ones added."""
     added = templates.install_starters(db, actor, org_unit_id=body.org_unit_id, request_id=rid)
     return [templates.out(db, t) for t in added]
+
+
+# ---- graduate attributes and template packs (migration 0017) ---------------------------------
+
+
+class GraduateAttributesIn(BaseModel):
+    attributes: list[graduate_attributes.AttributeIn] = Field(max_length=20)
+
+
+@router.get("/admin/graduate-attributes")
+def list_graduate_attributes(db: TenantDb, actor: ActorDep) -> list[dict[str, Any]]:
+    authz.require_admin(actor)
+    return graduate_attributes.listing(db, actor)
+
+
+@router.put("/admin/graduate-attributes")
+def save_graduate_attributes(
+    body: GraduateAttributesIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> list[dict[str, Any]]:
+    """Save the institution's whole graduate attribute list, in order. Leave a new
+    attribute's key out and one is made from its name; keep the key of an existing one."""
+    return graduate_attributes.replace(db, actor, body.attributes, request_id=rid)
+
+
+@router.get("/admin/template-packs")
+def list_template_packs(actor: ActorDep) -> list[dict[str, Any]]:
+    authz.require_admin(actor)
+    return packs.listing()
+
+
+class PackInstallIn(BaseModel):
+    org_unit_id: uuid.UUID | None = None
+
+
+@router.post("/admin/template-packs/{pack_key}/install", status_code=201)
+def install_template_pack(
+    pack_key: str, body: PackInstallIn, db: TenantDb, actor: ActorDep, rid: RequestIdDep
+) -> dict[str, Any]:
+    """Add a pack's graduate attributes and templates that are not there yet."""
+    added_attributes, added_templates = packs.install(
+        db, actor, pack_key, org_unit_id=body.org_unit_id, request_id=rid
+    )
+    return {
+        "attributes": added_attributes,
+        "templates": [templates.out(db, t) for t in added_templates],
+    }
 
 
 @router.patch("/admin/templates/{template_id}")

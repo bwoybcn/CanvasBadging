@@ -11,6 +11,8 @@ import {
   NumberInput,
   Alert,
   Button,
+  Checkbox,
+  CheckboxGroup,
   Flex,
   Heading,
   Img,
@@ -43,6 +45,7 @@ import {
   type DraftFields,
   type IssuerRef,
   type RuleSet,
+  type GraduateAttribute,
   type Skill,
   ApiError,
 } from "../api";
@@ -98,6 +101,7 @@ interface FormState {
     validity_days: string;
     learning_outcomes: string[];
     skills: Skill[];
+    graduate_attributes: string[]; // keys from the institution's list
     asset_id: string | null;
     award_policy: string; // "" = institution default
   };
@@ -120,6 +124,7 @@ const EMPTY: FormState = {
     validity_days: "",
     learning_outcomes: [""],
     skills: [],
+    graduate_attributes: [],
     asset_id: null,
     award_policy: "",
   },
@@ -146,6 +151,7 @@ function fromDefinition(d: Definition): FormState {
         ? v.learning_outcomes
         : [""],
       skills: v.skills,
+      graduate_attributes: (v.graduate_attributes ?? []).map((a) => a.key),
       asset_id: v.asset_id,
       award_policy: v.award_policy ?? "",
     },
@@ -179,6 +185,9 @@ export function fromTemplate(t: BadgeTemplate, current: FormState): FormState {
           ? d.learning_outcomes
           : [""],
       skills: Array.isArray(d.skills) ? d.skills : [],
+      graduate_attributes: Array.isArray(d.graduate_attributes)
+        ? d.graduate_attributes.filter((k): k is string => typeof k === "string")
+        : [],
       asset_id: current.fields.asset_id,
     },
   };
@@ -199,6 +208,7 @@ export function toDraftFields(f: FormState["fields"]): DraftFields {
     validity_days: f.validity_days ? Number(f.validity_days) : null,
     learning_outcomes: f.learning_outcomes.map((o) => o.trim()).filter(Boolean),
     skills: f.skills.filter((k) => k.name.trim()),
+    graduate_attributes: f.graduate_attributes,
     asset_id: f.asset_id,
     award_policy: (f.award_policy || null) as DraftFields["award_policy"],
   };
@@ -1025,6 +1035,12 @@ export function CreateBadge() {
           >
             Add skill
           </Button>
+          <GraduateAttributePicker
+            available={cat?.graduate_attributes ?? []}
+            chosen={f.graduate_attributes}
+            current={existing.data?.working_version.graduate_attributes ?? []}
+            onChange={(keys) => setF({ graduate_attributes: keys })}
+          />
           <NumberInput
             renderLabel="Valid for (days, leave empty if it does not expire)"
             showArrows={false}
@@ -1108,6 +1124,16 @@ export function CreateBadge() {
           <List>
             <List.Item>Title: {f.title || "(not set)"}</List.Item>
             <List.Item>Category: {f.category || "(not set)"}</List.Item>
+            {f.graduate_attributes.length > 0 && (
+              <List.Item>
+                Graduate attributes:{" "}
+                {attributeNames(
+                  f.graduate_attributes,
+                  cat?.graduate_attributes ?? [],
+                  existing.data?.working_version.graduate_attributes ?? [],
+                ).join(", ")}
+              </List.Item>
+            )}
             <List.Item>
               Learning outcomes:{" "}
               {f.learning_outcomes.filter((o) => o.trim()).length}
@@ -1186,5 +1212,59 @@ export function CreateBadge() {
               : "Your work is saved as a draft each time you choose Next, from step 2 onwards."}
       </Text>
     </Page>
+  );
+}
+
+/** Names for attribute keys: from the institution's list, else the copy the draft already has. */
+export function attributeNames(
+  keys: string[],
+  available: GraduateAttribute[],
+  current: GraduateAttribute[],
+): string[] {
+  const byKey = new Map([...current, ...available].map((a) => [a.key, a.name]));
+  return keys.map((k) => byKey.get(k) ?? k);
+}
+
+/**
+ * Tick the institution's graduate attributes this badge develops. Hidden when the institution
+ * has none. An attribute the draft has but the list no longer offers stays ticked, so saving
+ * never drops it by surprise.
+ */
+function GraduateAttributePicker({
+  available,
+  chosen,
+  current,
+  onChange,
+}: {
+  available: GraduateAttribute[];
+  chosen: string[];
+  current: GraduateAttribute[];
+  onChange: (keys: string[]) => void;
+}) {
+  const options = [
+    ...available,
+    ...current.filter((c) => !available.some((a) => a.key === c.key)),
+  ];
+  if (!options.length) return null;
+  return (
+    <View as="div" margin="small 0">
+      <CheckboxGroup
+        name="graduate-attributes"
+        description="Graduate attributes this badge develops (optional)"
+        value={chosen}
+        onChange={(value) =>
+          // Keep the institution's order whatever order they were ticked in.
+          onChange(options.map((o) => o.key).filter((k) => value.includes(k)))
+        }
+      >
+        {options.map((a) => (
+          <Checkbox
+            key={a.key}
+            value={a.key}
+            label={a.description ? `${a.name}: ${a.description}` : a.name}
+          />
+        ))}
+      </CheckboxGroup>
+    </View>
   );
 }

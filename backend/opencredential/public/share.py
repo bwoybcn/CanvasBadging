@@ -272,6 +272,18 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
             for s in view["skills"]
         )
         skills = f'<section class="card"><h2>Skills</h2><ul>{items}</ul></section>'
+    attributes = ""
+    if view.get("graduate_attributes"):
+        items = "".join(
+            f"<li><strong>{escape(a['name'] or '')}</strong>"
+            + (f": {escape(a['description'])}" if a.get("description") else "")
+            + "</li>"
+            for a in view["graduate_attributes"]
+        )
+        attributes = (
+            '<section class="card"><h2>Graduate attributes it develops</h2>'
+            f"<ul>{items}</ul></section>"
+        )
     evidence = ""
     if view["evidence"]:
         items = "".join(
@@ -304,6 +316,7 @@ def render_share_page(view: dict[str, Any], result: dict[str, Any], url: str, sh
         f'<section class="card"><h2>Criteria</h2><p>{escape(view["criteria"])}</p></section>'
         + outcomes
         + skills
+        + attributes
         + evidence
         + '<section class="card"><h2>What verification means</h2>'
         f"<p>{escape(WHAT_IT_MEANS)}</p>"

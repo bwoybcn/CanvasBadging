@@ -177,6 +177,7 @@ class CredentialDetail(CredentialSummary):
     achievement_type: str | None
     learning_outcomes: list[str]
     skills: list[dict[str, Any]]
+    graduate_attributes: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]]
     issuer: dict[str, Any]
     verification: dict[str, Any]
@@ -218,6 +219,7 @@ def detail(
         achievement_type=view["achievement_type"],
         learning_outcomes=list(version.learning_outcomes or []),
         skills=view["skills"],
+        graduate_attributes=view["graduate_attributes"],
         evidence=view["evidence"],
         issuer=view["issuer"],
         verification=verify_signed(signer, settings, cred.signed_json),

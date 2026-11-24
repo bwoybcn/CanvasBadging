@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Index, UniqueConstraint
+from sqlalchemy import Index, UniqueConstraint, text
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
@@ -134,6 +134,11 @@ class AchievementVersion(TenantMixin, Base):
     evidence_description: Mapped[str | None] = mapped_column(Text)
     validity_days: Mapped[int | None] = mapped_column(Integer)
     skills: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    #: The graduate attributes this badge develops, copied from the institution's list when the
+    #: author picks them (migration 0017), so a published version never changes if the list does.
+    graduate_attributes: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
     asset_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     credit_claim_approved: Mapped[bool] = mapped_column(Boolean, default=False)
     #: Awarding policy chosen for this version. ``NULL`` while drafting means "use the

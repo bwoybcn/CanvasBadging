@@ -784,6 +784,11 @@ export function BadgeDetail() {
         <Tabs.Panel id="details" renderTitle="Details" isSelected={tab === 0}>
           <Text as="p">{v.short_description}</Text>
           <Text as="p">Category: {v.category || "(not set)"}</Text>
+          {(v.graduate_attributes ?? []).length > 0 && (
+            <Text as="p">
+              Graduate attributes: {v.graduate_attributes.map((a) => a.name).join(", ")}
+            </Text>
+          )}
           <Heading level="h2">Requirements</Heading>
           {def.rules ? (
             <Text as="p">

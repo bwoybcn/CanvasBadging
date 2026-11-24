@@ -131,6 +131,7 @@ def build(
             "criteria": version.criteria_narrative,
             "requirements": requirements,
             "skills": version.skills,
+            "graduate_attributes": version.graduate_attributes,
             "validity_days": version.validity_days,
         },
         "issuer": {
