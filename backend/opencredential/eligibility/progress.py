@@ -12,7 +12,12 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.orm import Session
 
 from opencredential.authoring.preview import asset_data_url, source_names
-from opencredential.credentials.state import WITHDRAWN_STATES, credential_state
+from opencredential.credentials.state import (
+    ACTIVE,
+    EXPIRED,
+    WITHDRAWN_STATES,
+    credential_state,
+)
 from opencredential.db.models import (
     AwardDecision,
     BadgeAsset,
@@ -97,10 +102,10 @@ def _requirements(
 def _award_state(
     db: Session, version_id: uuid.UUID, user_id: uuid.UUID
 ) -> tuple[str | None, str | None]:
-    """The student's award for one badge: ``issued``, ``revoked`` or ``suspended`` with the
-    credential id, or the latest decision's status when nothing has been issued."""
+    """The student's award for one badge: ``issued``, ``revoked``, ``suspended`` or ``expired``
+    with the credential id, or the latest decision's status when nothing has been issued."""
     row = db.execute(
-        select(Credential.id, CredentialStatus.state)
+        select(Credential.id, Credential.valid_until, CredentialStatus.state)
         .outerjoin(CredentialStatus, CredentialStatus.credential_id == Credential.id)
         .where(
             Credential.version_id == version_id,
@@ -110,9 +115,11 @@ def _award_state(
         )
     ).first()
     if row is not None:
-        # A badge the issuer has withdrawn is not "earned": anyone checking it is told so,
-        # and the student must not be shown the opposite.
-        return (row.state if row.state in WITHDRAWN_STATES else "issued"), str(row.id)
+        # A badge the issuer has withdrawn, or whose expiry date has passed, is not "earned":
+        # anyone checking it is told so, and the student must not be shown the opposite. The
+        # same rule as every staff screen (credentials/state.py).
+        state = credential_state(row.state, row.valid_until)
+        return ("issued" if state == ACTIVE else state), str(row.id)
     decision = db.scalar(
         select(AwardDecision)
         .where(AwardDecision.version_id == version_id, AwardDecision.user_id == user_id)
@@ -125,7 +132,7 @@ def _award_state(
 def badge_status(outcome: str, decision_status: str | None) -> str:
     if decision_status == "issued":
         return "earned"
-    if decision_status in WITHDRAWN_STATES:
+    if decision_status in (*WITHDRAWN_STATES, EXPIRED):
         return decision_status
     if decision_status in ("ready", "failed"):
         return "awarded"  # decision made; the credential is being issued

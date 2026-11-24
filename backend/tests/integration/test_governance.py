@@ -1010,6 +1010,27 @@ def test_a_revoked_badge_is_not_shown_as_earned(world: World, signer_available: 
     assert (cell()["credential_id"], cell()["credential_state"]) == (cred_id, "revoked")
 
 
+def test_an_expired_badge_is_not_shown_as_earned(
+    world: World, owner_conn: psycopg.Connection, signer_available: bool
+) -> None:
+    """Architecture review, 24 Nov 2026: the student's page still said "Earned" for a badge
+    whose expiry date had passed, while the staff progress grid said "Expired"."""
+    issuer_id = _authorised_issuer(world)
+    definition_id = _manual_badge(world, issuer_id)
+    cred_id = _issue_to(world, definition_id, "s1")
+
+    def mine() -> dict[str, Any]:
+        badges = world.get("s1", "/api/v1/learners/me/achievements").json()
+        return next(b for b in badges if b["definition_id"] == definition_id)
+
+    assert mine()["status"] == "earned"
+    _expire(owner_conn, cred_id)
+    assert (mine()["status"], mine()["credential_id"]) == ("expired", cred_id)
+    progress = world.get("lecturer", f"/api/v1/courses/{world.course_id}/progress").json()
+    row = next(r for r in progress["learners"] if r["user_id"] == str(world.users["s1"]))
+    assert row["cells"][0]["credential_state"] == "expired"  # the two screens now agree
+
+
 def test_course_progress_reads_only_the_newest_evaluation(world: World) -> None:
     """A course evaluated every half hour for a term has thousands of evaluation rows; the
     progress screen shows the newest one for each student and must not load the rest."""

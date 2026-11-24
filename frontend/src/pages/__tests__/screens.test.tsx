@@ -1197,6 +1197,79 @@ describe("badge page", () => {
     };
     expect(Object.values(body.checklist).filter(Boolean)).toHaveLength(7);
   });
+
+  // Architecture review, 24 Nov 2026: the server lets a badge's reviewers publish, archive and
+  // send back an approved badge, but the page only offered those to its editors.
+  it("lets a reviewer publish an approved badge or send it back", async () => {
+    const calls = stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({
+        state: "approved",
+        can_edit: false,
+        can_review: true,
+      }),
+      "POST /api/v1/achievements/d-1/reject": definition({
+        state: "draft",
+        can_edit: false,
+        can_review: true,
+      }),
+    });
+    renderAt("/badges/d-1");
+    expect(
+      await screen.findByRole("button", { name: "Publish" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.queryByRole("checkbox")).toBeNull(); // nothing left to approve
+    const back = screen.getByRole("button", { name: "Return to author" });
+    expect(back).toBeDisabled();
+    await userEvent.type(
+      screen.getByLabelText(/Comment to the author/),
+      "The learning outcome needs a measurable verb.",
+    );
+    expect(back).toBeEnabled();
+    await userEvent.click(back);
+    await waitFor(() =>
+      expect(calls.some((c) => c.url.endsWith("/reject"))).toBe(true),
+    );
+  });
+
+  it("lets a reviewer archive a published badge but not start a new version", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({
+        state: "published",
+        live_version_id: "v-1",
+        can_edit: false,
+        can_review: true,
+      }),
+    });
+    renderAt("/badges/d-1");
+    expect(
+      await screen.findByRole("button", { name: "Archive" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Start a new version" }),
+    ).toBeNull();
+  });
+
+  it("offers course staff who only view a badge none of its lifecycle actions", async () => {
+    stubApi({
+      ...COURSE_ROUTES,
+      "GET /api/v1/achievements/d-1": definition({
+        state: "approved",
+        can_edit: false,
+        can_review: false,
+      }),
+    });
+    renderAt("/badges/d-1");
+    expect(
+      await screen.findByRole("heading", {
+        name: "Academic Writing Foundations",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Return to author" })).toBeNull();
+  });
 });
 
 describe("awards and progress", () => {
@@ -1698,7 +1771,7 @@ describe("awards and progress", () => {
     expect(within(card).queryByText(/Awaiting confirmation/)).toBeNull();
   });
 
-  it("tells the student when a badge they earned has been withdrawn", async () => {
+  it("tells the student when a badge they earned has been withdrawn or has expired", async () => {
     const badge = (n: number, status: string) => ({
       definition_id: `d-${n}`,
       version_id: `v-${n}`,
@@ -1720,6 +1793,7 @@ describe("awards and progress", () => {
       "GET /api/v1/learners/me/achievements": [
         badge(1, "revoked"),
         badge(2, "suspended"),
+        badge(3, "expired"),
       ],
     });
     renderAt("/me/progress");
@@ -1743,6 +1817,17 @@ describe("awards and progress", () => {
       within(suspended).getByText("Suspended by the issuer"),
     ).toBeInTheDocument();
     expect(within(suspended).queryByText(/You have this badge/)).toBeNull();
+    // Architecture review, 24 Nov 2026: an expired badge was still shown as "Earned".
+    const expired = screen.getByRole("region", { name: "Badge 3" });
+    expect(within(expired).getByText("Expired")).toBeInTheDocument();
+    expect(within(expired).queryByText("Earned")).toBeNull();
+    expect(within(expired).queryByText(/You have this badge/)).toBeNull();
+    expect(
+      within(expired).getByText(/passed its expiry date/),
+    ).toBeInTheDocument();
+    expect(
+      within(expired).getByRole("link", { name: "See this badge" }),
+    ).toHaveAttribute("href", "/me/credentials/cred-3");
   });
 
   it("says a badge is waiting for staff when that is all that is missing", async () => {
@@ -2318,7 +2403,24 @@ describe("round 3: awarding a badge the student already has", () => {
               },
             ],
           },
-          { user_id: "u-2", name: "Priya Patel", cells: [] },
+          {
+            user_id: "u-2",
+            name: "Priya Patel",
+            cells: [
+              {
+                version_id: "v-1",
+                outcome: "met",
+                evaluated_at: null,
+                codes: [],
+                progress: null,
+                decision_status: "issued",
+                decision_id: "y",
+                credential_id: "cr-2",
+                credential_state: "revoked",
+              },
+            ],
+          },
+          { user_id: "u-3", name: "Ola Okafor", cells: [] },
         ],
       },
     });
@@ -2346,6 +2448,23 @@ describe("round 3: awarding a badge the student already has", () => {
       "Led two seminars, observed by the tutor.",
     );
     expect(screen.getByRole("button", { name: "Award badge" })).toBeDisabled();
+    // A revoked badge is not "held" (architecture review, 24 Nov 2026); the server still
+    // refuses a second award, so the form says why instead.
+    await userEvent.click(screen.getByLabelText("Student"));
+    await userEvent.click(
+      await screen.findByRole("option", {
+        name: "Priya Patel (badge revoked)",
+      }),
+    );
+    expect(
+      screen.getByText(/was awarded this badge and it was later revoked/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/already has this badge, so/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Award badge" })).toBeDisabled();
+    await userEvent.click(screen.getByLabelText("Student"));
+    expect(
+      await screen.findByRole("option", { name: "Ola Okafor" }),
+    ).toBeInTheDocument();
   });
 });
 
