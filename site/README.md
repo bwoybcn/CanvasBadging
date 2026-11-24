@@ -12,6 +12,13 @@ python3 -m http.server 8765 --directory site
 
 Then open <http://localhost:8765/>.
 
+## Publishing
+
+The Website workflow (`.github/workflows/site.yml`) publishes this folder to GitHub Pages
+whenever `site/` changes on `main`, at <https://bwoybcn.github.io/CanvasBadging/>. It needs
+Settings > Pages > Source set to "GitHub Actions" once. It can also be run by hand from the
+Actions tab.
+
 ## Notes
 
 - Motion is CSS only (scroll-driven animations where the browser supports them) and is switched
