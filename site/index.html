@@ -1,0 +1,465 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>OpenCredential: open badges for Canvas</title>
+  <meta name="description" content="OpenCredential is an open-source Canvas plugin for recording what students achieve beyond their marks, as signed Open Badges 3.0 badges they own, share when they choose, and anyone can check.">
+  <meta property="og:title" content="OpenCredential: open badges for Canvas">
+  <meta property="og:description" content="The open, student-owned record of achievement beyond marks. Signed Open Badges 3.0, private until shared, checkable by anyone.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0a1020" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="progress" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top" aria-label="OpenCredential, back to top">
+        <svg class="brand-mark" viewBox="0 0 32 36" aria-hidden="true"><path d="M16 1.5 30 6v12.5c0 8-5.6 13.4-14 16-8.4-2.6-14-8-14-16V6z" fill="var(--shield)" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round"/><path d="m10 18 4.5 4.5 8-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>OpenCredential</span>
+      </a>
+      <nav class="site-nav" aria-label="Sections">
+        <a href="#why">Why</a>
+        <a href="#how">How it works</a>
+        <a href="#beyond">Beyond the module</a>
+        <a href="#people">Who it's for</a>
+        <a href="#trust">Trust</a>
+        <a href="#status">Status</a>
+      </nav>
+      <a class="btn btn-small" href="https://github.com/bwoybcn/CanvasBadging">GitHub</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Open-source badges for Canvas LMS</p>
+          <h1>A record of what students do <span class="grad">beyond their marks</span>.</h1>
+          <p class="lede">OpenCredential turns real, evidenced achievement in Canvas, in a module or outside one, into signed Open Badges 3.0 badges. Students own them, share them when they choose and keep them for life. Anyone can check one in seconds.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#how">See how it works</a>
+            <a class="btn" href="#status">What is ready today</a>
+          </div>
+          <ul class="chips" aria-label="Key facts">
+            <li>Opens from the Canvas course menu</li>
+            <li>Open Badges 3.0</li>
+            <li>Private until the student shares</li>
+            <li>Graduate attributes built in</li>
+            <li>AGPL-3.0</li>
+          </ul>
+        </div>
+
+        <figure class="cred" aria-label="Illustration of a badge being checked">
+          <div class="cred-card">
+            <div class="cred-top">
+              <svg class="cred-badge" viewBox="0 0 120 132" aria-hidden="true">
+                <circle class="ring" cx="60" cy="66" r="58" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="3 7"/>
+                <path d="M60 14 100 27v36c0 24-16 40-40 48-24-8-40-24-40-48V27z" fill="var(--shield)" stroke="var(--gold)" stroke-width="6" stroke-linejoin="round"/>
+                <path class="tick" d="m43 62 12 12 23-26" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/>
+              </svg>
+              <div>
+                <p class="cred-kicker">Open Badges 3.0 badge</p>
+                <p class="cred-title">Digital Fluency: data story</p>
+                <p class="cred-meta">Academic Skills Centre</p>
+              </div>
+            </div>
+            <p class="cred-tags"><span>Digital Fluency</span><span>Confidence</span></p>
+            <ul class="checks">
+              <li><span class="dot"></span>Signature is valid</li>
+              <li><span class="dot"></span>Issuer's key checks out</li>
+              <li><span class="dot"></span>Not withdrawn or expired</li>
+            </ul>
+            <p class="verdict"><span>Verified</span></p>
+          </div>
+          <div class="cred-shadow" aria-hidden="true"></div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="band" aria-labelledby="what-h">
+      <div class="wrap">
+        <h2 id="what-h" class="visually-hidden">What OpenCredential is</h2>
+        <ul class="facts">
+          <li class="reveal">
+            <h3>It lives in Canvas</h3>
+            <p>Staff and students open <strong>Badges</strong> from the course menu (LTI 1.3). No second login and no separate site to learn.</p>
+          </li>
+          <li class="reveal">
+            <h3>It reads real course data</h3>
+            <p>Requirements are checked against Canvas itself: modules completed, work submitted and marks once they are released.</p>
+          </li>
+          <li class="reveal">
+            <h3>It issues real badges</h3>
+            <p>Every award is a signed Open Badges 3.0 credential that can be checked and withdrawn, not just a picture.</p>
+          </li>
+          <li class="reveal">
+            <h3>The university runs it</h3>
+            <p>Self-hosted and open source. The university keeps its issuer, its rules and its data, with no vendor to lock it in.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section" id="why" aria-labelledby="why-h">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow">Why it matters</p>
+          <h2 id="why-h">Make graduate attributes visible, and let students take the proof with them</h2>
+          <p>Marks say how well a student did in a module. They say little about the confidence gained mentoring first-years, the digital fluency shown in a project, or a year spent in industry. OpenCredential records that kind of achievement in the university's own words, and in a form employers and other universities can check.</p>
+        </header>
+        <div class="pillars">
+          <article class="pillar reveal">
+            <h3>In the university's own words</h3>
+            <p>Administrators keep a list of graduate attributes, and authors tick the ones a badge develops. Every issued badge carries them, and the student's page and the public page list them.</p>
+            <p class="note">A starter pack for the University of Liverpool adds Confidence, Digital Fluency and Global Citizenship, with six templates. Its wording is a draft to agree with the Centre for Innovation in Education.</p>
+          </article>
+          <article class="pillar reveal">
+            <h3>For life beyond the classroom</h3>
+            <p>Library, careers and volunteering activity can be recognised alongside course work, confirmed by the staff who run it.</p>
+          </article>
+          <article class="pillar reveal">
+            <h3>Owned by the student</h3>
+            <p>Nothing is public until the student turns on a link. They can add a badge to LinkedIn, print a certificate, or download the signed file and keep it after they leave.</p>
+          </article>
+        </div>
+        <ul class="nots reveal" aria-label="What OpenCredential will not do">
+          <li>No points, streaks or leaderboards</li>
+          <li>No badges for logging in</li>
+          <li>Never used to profile or predict students</li>
+          <li>No student name inside the badge</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section alt" id="how" aria-labelledby="how-h">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow">How it works</p>
+          <h2 id="how-h">From a course activity to a badge an employer can check</h2>
+          <p>Five steps, shown with screenshots from the demonstration stack as it stands today. All names are synthetic.</p>
+        </header>
+
+        <ol class="steps">
+          <li class="step">
+            <div class="step-copy reveal">
+              <span class="step-n" aria-hidden="true">1</span>
+              <h3>Staff create the badge</h3>
+              <p>A seven-step wizard covers what the badge is for, its learning outcomes, artwork and requirements. It saves as it goes. Authors can start from a template, so a lecturer adopting a graduate-attribute badge only fills in the details marked in [square brackets].</p>
+              <p>Requirements point at real things in the course:</p>
+              <ul class="ticks">
+                <li>complete one module, or several</li>
+                <li>submit an assignment</li>
+                <li>reach a score once the mark is released</li>
+                <li>or confirmation by course staff</li>
+              </ul>
+              <p>Combine them as "all of" or "any of". A requirement only counts when Canvas confirms it.</p>
+            </div>
+            <div class="shot reveal-shot">
+              <picture>
+                <source type="image/avif" srcset="assets/author-720.avif 720w, assets/author-1280.avif 1280w" sizes="(min-width: 900px) 620px, 92vw">
+                <img src="assets/author-1280.webp" srcset="assets/author-720.webp 720w, assets/author-1280.webp 1280w" sizes="(min-width: 900px) 620px, 92vw" width="1280" height="760" loading="lazy" decoding="async" alt="The Create a badge wizard at step 1 of 7, with the template list open: AI literacy, Confidence in practice, Digital Fluency in practice, Global Citizenship in practice, Sustainability literacy and Year in Industry.">
+              </picture>
+            </div>
+          </li>
+
+          <li class="step">
+            <div class="step-copy reveal">
+              <span class="step-n" aria-hidden="true">2</span>
+              <h3>A colleague reviews it</h3>
+              <p>Before students see a badge, a second person can check it against a short checklist: clear wording, an honest level, requirements that really evidence the outcomes, accessible artwork, and nothing that implies academic credit.</p>
+              <p>Each faculty, department or service sets whether review is required, left to the author, or not needed, for example for volunteering badges. A badge that claims credit always needs review. Published versions are locked, so a badge always matches the criteria it was awarded under.</p>
+            </div>
+            <div class="shot reveal-shot">
+              <picture>
+                <source type="image/avif" srcset="assets/review-720.avif 720w, assets/review-1280.avif 1280w" sizes="(min-width: 900px) 620px, 92vw">
+                <img src="assets/review-1280.webp" srcset="assets/review-720.webp 720w, assets/review-1280.webp 1280w" sizes="(min-width: 900px) 620px, 92vw" width="1280" height="930" loading="lazy" decoding="async" alt="A badge called Global Citizenship: community partner project, in review, with a seven-point checklist, a comment box and Approve and Return to author buttons. Its details list the graduate attribute Global Citizenship.">
+              </picture>
+            </div>
+          </li>
+
+          <li class="step">
+            <div class="step-copy reveal">
+              <span class="step-n" aria-hidden="true">3</span>
+              <h3>Students earn it</h3>
+              <p>OpenCredential reads Canvas and records who has met the requirements. Each badge chooses how it is awarded:</p>
+              <ul class="ticks">
+                <li><strong>Automatically</strong>, as soon as Canvas shows the requirements are met</li>
+                <li><strong>Staff confirm each award</strong>, one at a time or all waiting awards at once</li>
+                <li><strong>By hand</strong>, to one student or to a pasted list of student ID numbers or emails, with a justification</li>
+              </ul>
+              <p>A list is checked before anything is awarded, and only students in the badge's course can match. An area can ask for a second member of staff to approve awards made by hand.</p>
+            </div>
+            <div class="shot reveal-shot">
+              <picture>
+                <source type="image/avif" srcset="assets/award-720.avif 720w, assets/award-1280.avif 1280w" sizes="(min-width: 900px) 620px, 92vw">
+                <img src="assets/award-1280.webp" srcset="assets/award-720.webp 720w, assets/award-1280.webp 1280w" sizes="(min-width: 900px) 620px, 92vw" width="1280" height="1275" loading="lazy" decoding="async" alt="Award badges, on the tab A list of students. Five emails are pasted for the Peer Study Mentor badge. The check shows four synthetic students who will be awarded and one entry with no matching student, and a button reads Award to 4 students (of 5 entries).">
+              </picture>
+            </div>
+          </li>
+
+          <li class="step">
+            <div class="step-copy reveal">
+              <span class="step-n" aria-hidden="true">4</span>
+              <h3>The student keeps it</h3>
+              <p><strong>Badges in my courses</strong> shows what each badge needs and what is already confirmed. <strong>My badges</strong> collects every badge a student holds, across all their courses.</p>
+              <p>From each badge they can:</p>
+              <ul class="ticks">
+                <li>download a one-page certificate (PDF), with their name or without it</li>
+                <li>download the badge image for a CV or slides</li>
+                <li>download the signed credential file for a digital wallet</li>
+                <li>turn on a public link, with a preview of exactly what becomes visible</li>
+                <li>add it to LinkedIn with the fields filled in</li>
+              </ul>
+            </div>
+            <div class="shot reveal-shot">
+              <picture>
+                <source type="image/avif" srcset="assets/student-720.avif 720w, assets/student-1280.avif 1280w" sizes="(min-width: 900px) 620px, 92vw">
+                <img src="assets/student-1280.webp" srcset="assets/student-720.webp 720w, assets/student-1280.webp 1280w" sizes="(min-width: 900px) 620px, 92vw" width="1280" height="1045" loading="lazy" decoding="async" alt="A student's page for the badge Digital Fluency: data story, marked Valid and Verified, with its issuer, criteria, learning outcomes, related skills and the graduate attributes it develops, Digital Fluency and Confidence, followed by Download and keep with a certificate option.">
+              </picture>
+            </div>
+          </li>
+
+          <li class="step">
+            <div class="step-copy reveal">
+              <span class="step-n" aria-hidden="true">5</span>
+              <h3>Anyone can check it</h3>
+              <p>The public page checks the signature, the issuer's key and whether the badge has been withdrawn, then says so in plain English. It lists the criteria, outcomes, skills and graduate attributes. The student decides whether their name appears.</p>
+              <p>An employer sent the file instead can upload it to <strong>Check a credential file</strong>, or use any Open Badges 3.0 verifier. Badges signed while a service is still being set up say clearly that they are test badges, as in this screenshot.</p>
+            </div>
+            <div class="shot reveal-shot">
+              <picture>
+                <source type="image/avif" srcset="assets/verify-720.avif 720w, assets/verify-1280.avif 1280w" sizes="(min-width: 900px) 620px, 92vw">
+                <img src="assets/verify-1280.webp" srcset="assets/verify-720.webp 720w, assets/verify-1280.webp 1280w" sizes="(min-width: 900px) 620px, 92vw" width="1280" height="1500" loading="lazy" decoding="async" alt="The public page for the badge, headed Verified: this badge is genuine, has not been changed and has not been withdrawn. A notice says it is a test badge signed with a test key. Below are the badge, the holder's name, criteria, learning outcomes, skills and graduate attributes.">
+              </picture>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section" id="beyond" aria-labelledby="beyond-h">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow">Beyond the module</p>
+          <h2 id="beyond-h">Built for the Library, Careers and every scheme in between</h2>
+          <p>Much of what students achieve happens outside a module. OpenCredential handles it without a second system.</p>
+        </header>
+        <ul class="grid-list">
+          <li class="reveal">
+            <h3>Services as issuers</h3>
+            <p>A library or careers service can be an area of its own, beside faculties and departments, and run its badges from a Canvas course set up for it.</p>
+          </li>
+          <li class="reveal">
+            <h3>Ready-made templates</h3>
+            <p>Starter templates for volunteering hours, workshop attendance, event participation and CPD, plus the graduate-attribute pack.</p>
+          </li>
+          <li class="reveal">
+            <h3>Award from a register</h3>
+            <p>Paste the student ID numbers or emails from a sign-in sheet or log. Staff see who matches before anything is awarded.</p>
+          </li>
+          <li class="reveal">
+            <h3>Badge teams</h3>
+            <p>In a course shared by several teams, each badge is edited and awarded only by its owner, its named team and administrators.</p>
+          </li>
+          <li class="reveal">
+            <h3>Faculties from Canvas</h3>
+            <p>Administrators tick Canvas sub-accounts to become faculties and departments, and courses join the right one on their own.</p>
+          </li>
+          <li class="reveal">
+            <h3>Light on Canvas</h3>
+            <p>Courses whose badges are awarded by staff only refresh their class list every six hours, instead of reading progress every 30 minutes.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section alt" id="people" aria-labelledby="people-h">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow">Who it's for</p>
+          <h2 id="people-h">One tool, three points of view</h2>
+        </header>
+        <div class="cards">
+          <article class="card reveal">
+            <h3>Course staff</h3>
+            <p class="card-lede">Recognise skills without extra admin.</p>
+            <ul class="ticks">
+              <li>Build a badge in a guided wizard, or start from a template</li>
+              <li>Preview exactly what students will see</li>
+              <li>Let badges award themselves, or confirm each one</li>
+              <li>See every student's progress, export award history and ask for a badge to be withdrawn</li>
+            </ul>
+          </article>
+          <article class="card reveal">
+            <h3>Students</h3>
+            <p class="card-lede">Evidence you own and control.</p>
+            <ul class="ticks">
+              <li>See what each badge needs and how far along you are</li>
+              <li>Keep every badge in one place across courses</li>
+              <li>Share a public link, add it to LinkedIn or print a certificate</li>
+              <li>Download the signed file and keep it for good</li>
+            </ul>
+          </article>
+          <article class="card reveal">
+            <h3>Administrators</h3>
+            <p class="card-lede">Governance built in, not bolted on.</p>
+            <ul class="ticks">
+              <li>A setup checklist that says what to do next</li>
+              <li>Issuers, signing keys, staff roles and review rules by area</li>
+              <li>Graduate attributes and badge templates for the whole university</li>
+              <li>Withdrawal, reports, an audit log, retention and erasure</li>
+            </ul>
+          </article>
+        </div>
+        <figure class="wide-shot reveal">
+          <div class="shot">
+            <picture>
+              <source type="image/avif" srcset="assets/setup-720.avif 720w, assets/setup-1280.avif 1280w" sizes="(min-width: 76rem) 72rem, 92vw">
+              <img src="assets/setup-1280.webp" srcset="assets/setup-720.webp 720w, assets/setup-1280.webp 1280w" sizes="(min-width: 76rem) 72rem, 92vw" width="1280" height="1240" loading="lazy" decoding="async" alt="The Administration overview, headed Getting set up: 4 of 6 done. Steps are Canvas is connected (do this next), the public address for checking badges is set (to do), and four done steps about areas and issuers. The administration menu is on the left.">
+            </picture>
+          </div>
+          <figcaption>The Administration overview starts with a setup checklist. Each step is ticked from the real state of the service and links to the page that does it.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section" id="trust" aria-labelledby="trust-h">
+      <div class="wrap trust-grid">
+        <div>
+          <header class="section-head left reveal">
+            <p class="eyebrow">Trust and privacy</p>
+            <h2 id="trust-h">What makes a badge worth believing</h2>
+            <p>A badge picture can be copied by anyone. A signed badge cannot be changed without the check failing, and the issuer can withdraw it if it was awarded in error.</p>
+          </header>
+          <dl class="defs">
+            <div class="reveal">
+              <dt>Signed, not just displayed</dt>
+              <dd>Every badge carries an Ed25519 Data Integrity proof (<code>eddsa-rdfc-2022</code>). Only a separate signing service ever touches the private keys.</dd>
+            </div>
+            <div class="reveal">
+              <dt>Can be withdrawn</dt>
+              <dd>A status list lets the issuer revoke or suspend a badge, and every check sees the change. The student is told why, in plain words.</dd>
+            </div>
+            <div class="reveal">
+              <dt>Private by default</dt>
+              <dd>No student name or email is written into the badge; the student is identified by a salted hash. Sharing stays off until the student turns it on.</dd>
+            </div>
+            <div class="reveal">
+              <dt>Reads as little as it can</dt>
+              <dd>Marks are read only for assignments a badge uses, and a mark not yet released to the student is never stored. A course that has ended stops being read, and its progress data is deleted after a year.</dd>
+            </div>
+            <div class="reveal">
+              <dt>Checkable without us</dt>
+              <dd>On every change, 1EdTech's validator and the Digital Credentials Consortium's verifier check the badges the system issues.</dd>
+            </div>
+          </dl>
+        </div>
+
+        <figure class="code reveal" aria-label="Abridged example of a signed badge">
+          <figcaption><span class="code-dots" aria-hidden="true"><i></i><i></i><i></i></span>credential.json <small>(abridged)</small></figcaption>
+<pre tabindex="0"><code>{
+  <b>"type"</b>: ["VerifiableCredential", "OpenBadgeCredential"],
+  <b>"issuer"</b>: { "name": "Academic Skills Centre" },
+  <b>"validFrom"</b>: "2026-11-24T14:08:28Z",
+  <b>"credentialSubject"</b>: {
+    "type": "AchievementSubject",
+    "identifier": [{
+      "hashed": true, <mark>"identityType": "emailAddress"</mark>
+    }],
+    "achievement": {
+      "name": "Digital Fluency: data story",
+      "alignment": [{
+        "targetName": "Digital Fluency",
+        <mark>"targetType": "ext:GraduateAttribute"</mark>
+      }]
+    }
+  },
+  <b>"credentialStatus"</b>: { <mark>"type": "BitstringStatusListEntry"</mark> },
+  <b>"proof"</b>: {
+    "type": "DataIntegrityProof",
+    <mark>"cryptosuite": "eddsa-rdfc-2022"</mark>,
+    "proofValue": "z5Kq…"
+  }
+}</code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section alt" id="status" aria-labelledby="status-h">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow">Where the project is</p>
+          <h2 id="status-h">Works end to end. Not yet used with real students.</h2>
+          <p>OpenCredential is at version 0.1.0 and is tested on every change. It has run against a Canvas installed on a developer's computer. It is being built with the University of Liverpool as its first intended home, and it is not a live University service.</p>
+        </header>
+
+        <ul class="stats">
+          <li class="reveal"><strong>400+</strong><span>backend tests, run against a real database and signer, in a shuffled order</span></li>
+          <li class="reveal"><strong>2</strong><span>independent Open Badges 3.0 checkers run over the badges the system issues, on every change</span></li>
+          <li class="reveal"><strong>2.2 AA</strong><span>WCAG checks on every screen of the app, in a real browser, on desktop and phone</span></li>
+          <li class="reveal"><strong>3 rounds</strong><span>of hands-on testing, with every finding fixed</span></li>
+        </ul>
+
+        <div class="two-col">
+          <div class="panel reveal">
+            <h3>Before a pilot</h3>
+            <ul class="todo">
+              <li>Run on a hosted Canvas, and confirm the class list is read there</li>
+              <li>Choose the permanent web address badges are checked at</li>
+              <li>A data protection review with the university</li>
+              <li>Agree the graduate-attribute wording with the Centre for Innovation in Education</li>
+              <li>A manual screen-reader pass and a usability test with lecturers</li>
+              <li>Tell people when something happens: there are no emails or Canvas messages yet</li>
+            </ul>
+          </div>
+          <div class="panel reveal">
+            <h3>A note on conformance</h3>
+            <p>Badges pass the 1EdTech validator and an independent verifier in automated tests. OpenCredential has <strong>not</strong> been through 1EdTech certification, and does not claim to be certified.</p>
+            <h3 class="panel-sub">Ideas for after a pilot</h3>
+            <p>Not built, and not promised. A pilot should show which matter:</p>
+            <ul class="ideas">
+              <li>A skills list using the UK Standard Skills Classification</li>
+              <li>An export of verified co-curricular activity for the university's records</li>
+              <li>Students bundling badges into a Comprehensive Learner Record (CLR 2.0), the 1EdTech standard</li>
+              <li>"Send to my wallet" for standards-based digital wallets</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section cta" aria-labelledby="cta-h">
+      <div class="wrap cta-inner reveal">
+        <h2 id="cta-h">Try it on your own machine</h2>
+        <p>The whole stack runs from one command with demonstration data: nine example badges and twelve synthetic students. A production kit with TLS and rate limits is in the repository too.</p>
+        <div class="cmd">
+          <code id="cmd-text" tabindex="0">git clone https://github.com/bwoybcn/CanvasBadging.git &amp;&amp; cd CanvasBadging &amp;&amp; docker compose up --build</code>
+          <button type="button" class="btn btn-small" data-copy="#cmd-text">Copy</button>
+        </div>
+        <p class="status-line" role="status" aria-live="polite"></p>
+        <div class="cta-row center">
+          <a class="btn btn-primary" href="https://github.com/bwoybcn/CanvasBadging">Open the repository</a>
+          <a class="btn" href="https://github.com/bwoybcn/CanvasBadging/blob/main/docs/demo.md">Walk through the demo</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>OpenCredential is free software under AGPL-3.0-or-later. Documentation is CC BY-SA 4.0.</p>
+      <p>Canvas is a trademark of Instructure. Open Badges is a trademark of 1EdTech. This project is independent of both, and is not an official University of Liverpool service.</p>
+    </div>
+  </footer>
+</body>
+</html>
