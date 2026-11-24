@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, text
 
 from opencredential.db.base import Base, TenantMixin, choice, tenant_args, tenant_fk
 from opencredential.db.models._types import (
@@ -77,6 +77,12 @@ class Institution(Base):
         JSONB, default=lambda: dict(DEFAULT_RETENTION)
     )
     categories: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    #: The institution's graduate attributes (migration 0017): ``{key, name, description,
+    #: framework, url}`` each. Authors tag badges with them; issued badges carry them as Open
+    #: Badges alignments. See ``opencredential.governance.attributes``.
+    graduate_attributes: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb")
+    )
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(
         choice("active", "suspended", name="status"), default="active"

@@ -30,7 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from opencredential import audit
-from opencredential.authoring import rules_store
+from opencredential.authoring import attributes, rules_store
 from opencredential.authz import policy as authz
 from opencredential.db.models import (
     AchievementDefinition,
@@ -105,6 +105,7 @@ CONTENT_FIELDS = (
     "evidence_description",
     "validity_days",
     "skills",
+    "graduate_attributes",
     "asset_id",
     "award_policy",
 )
@@ -134,6 +135,11 @@ class DraftFields(BaseModel):
     evidence_description: str | None = Field(default=None, max_length=2000)
     validity_days: int | None = Field(default=None, ge=1, le=3650)
     skills: list[Skill] | None = Field(default=None, max_length=20)
+    graduate_attributes: list[str] | None = Field(
+        default=None,
+        max_length=20,
+        description="Keys from the institution's graduate attribute list",
+    )
     asset_id: uuid.UUID | None = None
     award_policy: str | None = Field(
         default=None, description="automatic | lecturer_confirmed | manual | null (default)"
@@ -207,6 +213,10 @@ def _apply(db: Session, version: AchievementVersion, fields: DraftFields) -> Non
             value = value or []
         if key == "skills":
             value = value or []
+        if key == "graduate_attributes":
+            value = attributes.snapshot(
+                db, version.institution_id, value or [], version.graduate_attributes
+            )
         if key == "achievement_type":
             value = value or "Badge"
         if key == "demonstration_kind":
@@ -265,6 +275,7 @@ def create(
         achievement_type="Badge",
         demonstration_kind="completing",
         skills=[],
+        graduate_attributes=[],
     )
     _apply(db, version, fields)
     db.add(version)
@@ -636,6 +647,10 @@ def readiness(
 def _content_hash(db: Session, version: AchievementVersion) -> str:
     rules = rules_store.load(db, version.id)
     content = {f: getattr(version, f) for f in CONTENT_FIELDS}
+    # Left out when empty, so badges submitted before graduate attributes existed (0017) keep
+    # the hash they were reviewed with.
+    if not content["graduate_attributes"]:
+        del content["graduate_attributes"]
     content["rules"] = rules_store.strip_ids(rules) if rules else None
     blob = json.dumps(content, sort_keys=True, default=str, separators=(",", ":"))
     return hashlib.sha256(blob.encode()).hexdigest()

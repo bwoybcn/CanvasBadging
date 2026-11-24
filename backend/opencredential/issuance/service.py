@@ -30,6 +30,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from opencredential import audit
+from opencredential.authoring.attributes import GRADUATE_ATTRIBUTE_TYPE
 from opencredential.db.models import (
     AchievementVersion,
     AwardDecision,
@@ -117,6 +118,22 @@ def alignments(version: AchievementVersion, achievement_url: str) -> tuple[dict[
             value = skill.get(key) or skill.get(authored)
             if value:
                 entry[key] = str(value)
+        out.append(entry)
+    # Graduate attributes (migration 0017) follow the skills, marked with their own target type
+    # so a reader can tell "develops Confidence" from "uses this skill".
+    for attribute in version.graduate_attributes or []:
+        entry = {
+            "targetName": str(attribute["name"]),
+            "targetUrl": str(
+                attribute.get("url") or f"{achievement_url}#attribute-{attribute['key']}"
+            ),
+            "targetCode": str(attribute["key"]),
+            "targetType": GRADUATE_ATTRIBUTE_TYPE,
+        }
+        if attribute.get("description"):
+            entry["targetDescription"] = str(attribute["description"])
+        if attribute.get("framework"):
+            entry["targetFramework"] = str(attribute["framework"])
         out.append(entry)
     return tuple(out)
 

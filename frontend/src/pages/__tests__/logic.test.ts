@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { hasScoreRule, ruleProblems } from "../../components/RuleBuilder";
 import { cellText } from "../CourseProgress";
-import { shortLabel, stepProblems, toDraftFields } from "../CreateBadge";
+import { attributeNames, fromTemplate, shortLabel, stepProblems, toDraftFields } from "../CreateBadge";
 
 const CATALOGUE = {
   categories: ["Completion", "Competency"],
@@ -29,6 +29,7 @@ function form(fields: Record<string, unknown> = {}) {
       validity_days: "",
       learning_outcomes: ["LO"],
       skills: [],
+      graduate_attributes: [],
       asset_id: null,
       award_policy: "",
       ...fields,
@@ -123,5 +124,31 @@ describe("the short label on badge artwork", () => {
     expect(shortLabel("Seminar Skills")).toBe("Seminar Skills");
     expect(shortLabel("Supercalifragilistic")).toBe("Supercalifragi");
     expect(shortLabel("🎓🎓")).toBe("");
+  });
+});
+
+describe("graduate attributes on a badge", () => {
+  it("come from a template as keys and go to the server as keys", () => {
+    const s = fromTemplate(
+      {
+        id: "t-1",
+        name: "Year in Industry",
+        description: null,
+        org_unit_id: null,
+        org_unit_name: null,
+        status: "active",
+        defaults: { title: "Year in Industry: [organisation]", graduate_attributes: ["confidence", 3] },
+      },
+      form(),
+    );
+    expect(s.fields.graduate_attributes).toEqual(["confidence"]);
+    expect(toDraftFields(s.fields).graduate_attributes).toEqual(["confidence"]);
+  });
+
+  it("are named from the list, or from the draft's own copy once the list has moved on", () => {
+    const a = (key: string, name: string) => ({ key, name, description: null, framework: null, url: null });
+    expect(
+      attributeNames(["confidence", "teamwork", "gone"], [a("confidence", "Confidence")], [a("teamwork", "Teamwork")]),
+    ).toEqual(["Confidence", "Teamwork", "gone"]);
   });
 });

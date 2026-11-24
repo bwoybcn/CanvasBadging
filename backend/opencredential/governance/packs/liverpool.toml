@@ -1,0 +1,205 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# University of Liverpool starter pack: graduate attributes and badge templates.
+#
+# DRAFT WORDING. This is a starting point to check with the Centre for Innovation in Education
+# (CIE) before a pilot, not wording the University has agreed. Check in particular whether the
+# graduate attributes changed when the Liverpool Curriculum Framework was relaunched as the
+# Liverpool Learning Framework.
+#
+# How to edit: change the text between the quotes and open a pull request. Nothing else needs
+# to change. Text in [square brackets] is for the lecturer to replace; a badge cannot be
+# submitted while any is left. Avoid words that suggest academic credit (degree, credits,
+# qualification, accredited, honours): they force a review of every badge made from the
+# template.
+#
+# Installing the pack only adds what is missing (attributes matched by key, templates by
+# name), so editing this file never changes an institution's list or templates that are already
+# installed. Administrators can edit both on screen afterwards.
+
+[pack]
+key = "liverpool"
+name = "University of Liverpool"
+description = "The three graduate attributes of the Liverpool Curriculum Framework (Confidence, Digital Fluency, Global Citizenship) and six badge templates written around them: one for each attribute, plus sustainability literacy, AI literacy and Year in Industry."
+
+# ---- graduate attributes ------------------------------------------------------------------
+# key: a short fixed identifier. Never change a key once badges use it; change the name instead.
+
+[[attributes]]
+key = "confidence"
+name = "Confidence"
+framework = "Liverpool Curriculum Framework"
+url = "https://www.liverpool.ac.uk/centre-for-innovation-in-education/curriculum-resources/"
+description = "Students are confident in their knowledge and abilities. They communicate and work well with others, take on challenges, learn from setbacks and take responsibility for their own development."
+
+[[attributes]]
+key = "digital-fluency"
+name = "Digital Fluency"
+framework = "Liverpool Curriculum Framework"
+url = "https://www.liverpool.ac.uk/centre-for-innovation-in-education/curriculum-resources/"
+description = "Students use digital tools and information confidently, critically and creatively to learn, create, collaborate and solve problems, and they use them safely, ethically and responsibly."
+
+[[attributes]]
+key = "global-citizenship"
+name = "Global Citizenship"
+framework = "Liverpool Curriculum Framework"
+url = "https://www.liverpool.ac.uk/centre-for-innovation-in-education/curriculum-resources/"
+description = "Students understand the global and local contexts of their discipline. They act ethically, value diversity and different perspectives, and consider the social and environmental effects of what they do."
+
+# ---- badge templates ----------------------------------------------------------------------
+# Each template pre-fills a new badge. "graduate_attributes" lists attribute keys from above.
+# demonstration_kind: attending | participating | completing | demonstrating | assessed
+# award_policy (optional): automatic | lecturer_confirmed | manual. Left out, the institution's
+# default applies.
+
+[[templates]]
+name = "Confidence in practice"
+description = "Recognises a student who has shown Confidence in a real task: presenting their work, leading a group activity or taking on a public-facing role, with a short reflection on what they learned. Suits a module activity or a co-curricular role."
+
+[templates.defaults]
+title = "Confidence in practice: [activity]"
+short_description = "Showed Confidence by [presenting / leading / representing others] in [activity] and reflected on how they developed."
+description = "Awarded to students who took on [activity] in [module or scheme], for example presenting their work to an audience, leading a group task or representing other students. The badge recognises that the student did this and reflected on it. It develops the Liverpool graduate attribute of Confidence."
+learning_outcomes = [
+    "Communicate ideas clearly and with confidence to [audience]",
+    "Take responsibility for a task or role and see it through",
+    "Reflect on feedback and setbacks and identify how to improve",
+]
+criteria_narrative = "Complete [activity], for example deliver a presentation or lead a group task, and submit a short reflection (around [300] words) on what went well, what was hard and what you would do differently. A member of staff confirms both."
+category = "Skills demonstration"
+achievement_type = "Badge"
+demonstration_kind = "demonstrating"
+evidence_description = "The presentation, role or task, confirmed by a member of staff, and the student's reflection."
+graduate_attributes = ["confidence"]
+skills = [{ name = "Communication" }, { name = "Leadership" }, { name = "Resilience" }]
+
+[templates.defaults.artwork]
+template = "shield"
+guidance = "Use the University's colours. Keep the label short, for example 'Confidence'."
+
+[[templates]]
+name = "Digital Fluency in practice"
+description = "Recognises a student who has used digital tools well to create something for a real purpose, and can explain the choices they made. Suits an assignment that produces a digital artefact."
+
+[templates.defaults]
+title = "Digital Fluency: [artefact or task]"
+short_description = "Created [a digital artefact] using [tools] and explained how and why they chose and used them."
+description = "Awarded to students who used digital tools to create [a website / dataset / video / model / podcast] for [purpose] in [module]. The badge recognises a finished piece of work and the student's account of their choices. It develops the Liverpool graduate attribute of Digital Fluency."
+learning_outcomes = [
+    "Choose and use suitable digital tools to create [artefact] for a stated purpose and audience",
+    "Find, evaluate and acknowledge digital information and sources critically",
+    "Work safely and responsibly online, including with data and other people's work",
+]
+criteria_narrative = "Submit [the artefact] and a short commentary explaining which tools you used, why, and how you checked the quality and sources of what you made. The work must meet the brief set in [assignment name]."
+category = "Digital literacy"
+achievement_type = "Badge"
+demonstration_kind = "demonstrating"
+evidence_description = "The digital artefact and the student's commentary, checked against the brief."
+graduate_attributes = ["digital-fluency"]
+skills = [{ name = "Digital content creation" }, { name = "Information literacy" }]
+
+[templates.defaults.artwork]
+template = "hexagon"
+guidance = "Use the University's colours. Keep the label short, for example 'Digital Fluency'."
+
+[[templates]]
+name = "Global Citizenship in practice"
+description = "Recognises a student who has worked on a task with a global, intercultural or community dimension and reflected on its ethical and social context. Suits fieldwork, international collaboration, community projects or study abroad."
+
+[templates.defaults]
+title = "Global Citizenship: [project or activity]"
+short_description = "Took part in [project] with [a community / partners abroad / a diverse team] and reflected on its wider impact."
+description = "Awarded to students who contributed to [project or activity], working with [community, international partners or a diverse team], and reflected on its ethical, social or global context. It develops the Liverpool graduate attribute of Global Citizenship."
+learning_outcomes = [
+    "Work respectfully and effectively with people from different backgrounds and cultures",
+    "Explain the global or local context of [project] and who it affects",
+    "Consider the ethical, social and environmental effects of decisions in [project]",
+]
+criteria_narrative = "Make a confirmed contribution to [project or activity] and submit a reflection (around [400] words) on its wider context: who it affects, the different perspectives involved and what you learned. A member of staff or the project lead confirms your contribution."
+category = "Skills demonstration"
+achievement_type = "Badge"
+demonstration_kind = "demonstrating"
+evidence_description = "Confirmation of the student's contribution from a member of staff or the project lead, and the student's reflection."
+graduate_attributes = ["global-citizenship"]
+skills = [{ name = "Intercultural awareness" }, { name = "Ethical reasoning" }, { name = "Teamwork" }]
+
+[templates.defaults.artwork]
+template = "roundel"
+guidance = "Use the University's colours. Keep the label short, for example 'Global Citizen'."
+
+[[templates]]
+name = "Sustainability literacy"
+description = "Recognises a student who has analysed the sustainability of a real problem in their subject and proposed a practical change. Supports the Liverpool 2031 commitment that all students gain an understanding of sustainability."
+
+[templates.defaults]
+title = "Sustainability literacy: [topic]"
+short_description = "Analysed the environmental, social and economic sustainability of [topic] and proposed a practical improvement."
+description = "Awarded to students who examined [topic, process or product] in [module or subject] for its sustainability, weighed its environmental, social and economic effects, and proposed a realistic change backed by evidence. It develops the Liverpool graduate attribute of Global Citizenship."
+learning_outcomes = [
+    "Explain the environmental, social and economic effects of [topic]",
+    "Use evidence to judge the trade-offs between options",
+    "Propose a practical change and explain who it would affect",
+]
+criteria_narrative = "Submit [a short report / poster / presentation] that analyses the sustainability of [topic], uses at least [three] credible sources, and proposes one practical improvement with its likely effects. It must meet the brief set in [assignment name]."
+category = "Skills demonstration"
+achievement_type = "Badge"
+demonstration_kind = "demonstrating"
+evidence_description = "The student's analysis and proposal, checked against the brief."
+graduate_attributes = ["global-citizenship"]
+skills = [{ name = "Sustainability" }, { name = "Critical thinking" }, { name = "Systems thinking" }]
+
+[templates.defaults.artwork]
+template = "hexagon"
+primary_colour = "#1b5e20"
+guidance = "A green main colour suits sustainability badges. Keep the label short, for example 'Sustainability'."
+
+[[templates]]
+name = "AI literacy"
+description = "Recognises a student who has used generative AI on a real task in line with University guidance: knowing what the tool can and cannot do, checking its output and saying openly how it was used."
+
+[templates.defaults]
+title = "AI literacy: [task]"
+short_description = "Used generative AI responsibly on [task]: checked its output, explained its limits and acknowledged how it was used."
+description = "Awarded to students who used a generative AI tool on [task] in [module] as the assignment allows, checked what it produced against reliable sources, and wrote an honest account of how they used it and where it fell short. It develops the Liverpool graduate attribute of Digital Fluency."
+learning_outcomes = [
+    "Explain in plain words how generative AI tools produce their output and where they go wrong",
+    "Check AI output for accuracy, bias and missing sources, and correct it",
+    "Acknowledge AI use openly and follow the University's guidance on AI in assessment",
+]
+criteria_narrative = "Complete [task] using [named AI tool] where the brief allows it, and submit a short log or commentary showing what you asked, what you kept or changed and why, and how you checked the result. Follow the University's guidance on using AI in your work."
+category = "Digital literacy"
+achievement_type = "Badge"
+demonstration_kind = "demonstrating"
+evidence_description = "The student's work and their AI-use log or commentary, checked against the brief."
+graduate_attributes = ["digital-fluency"]
+skills = [{ name = "AI literacy" }, { name = "Critical evaluation" }, { name = "Academic integrity" }]
+
+[templates.defaults.artwork]
+template = "hexagon"
+guidance = "Use the University's colours. Keep the label short, for example 'AI literacy'."
+
+[[templates]]
+name = "Year in Industry"
+description = "Recognises a student who has completed a Year in Industry placement, confirmed by the placement provider and the placement tutor, with a reflection on what they learned. Award it with a list award once placements are signed off."
+
+[templates.defaults]
+title = "Year in Industry: [organisation or sector]"
+short_description = "Completed a [12]-month Year in Industry placement with [organisation], confirmed by the employer and the placement tutor."
+description = "Awarded to students who completed a Year in Industry placement of at least [12] months with [organisation or sector], met the placement's requirements and reflected on how it developed their professional practice. It develops the Liverpool graduate attributes of Confidence and Global Citizenship."
+learning_outcomes = [
+    "Apply knowledge from [subject] to real work in [sector]",
+    "Work professionally with colleagues, clients or customers",
+    "Reflect on their development and plan next steps in their career",
+]
+criteria_narrative = "Complete the Year in Industry placement with [organisation], receive a satisfactory end-of-placement report from the employer, and submit a reflective report that the placement tutor signs off."
+category = "Employability"
+achievement_type = "Badge"
+demonstration_kind = "completing"
+evidence_description = "Employer's end-of-placement report and the student's reflective report, both confirmed by the placement tutor."
+award_policy = "manual"
+graduate_attributes = ["confidence", "global-citizenship"]
+skills = [{ name = "Professional practice" }, { name = "Teamwork" }, { name = "Communication" }]
+
+[templates.defaults.artwork]
+template = "ribbon"
+guidance = "Use the University's colours. Keep the label short, for example 'Year in Industry'."

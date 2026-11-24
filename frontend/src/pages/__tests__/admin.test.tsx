@@ -531,4 +531,53 @@ describe("administration", () => {
     expect(await screen.findByText(/1 issued badges kept; 1 public share links taken down/)).toBeInTheDocument();
     expect(calls.find((c) => c.method === "POST")!.body).toEqual({ confirm: "ERASE" });
   });
+  it("installs the Liverpool pack from the templates page", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/templates?include_archived=true": [],
+      "GET /api/v1/admin/template-packs": [
+        {
+          key: "liverpool",
+          name: "University of Liverpool",
+          description: "Graduate attributes and six templates.",
+          attributes: ["Confidence", "Digital Fluency", "Global Citizenship"],
+          templates: ["Confidence in practice", "AI literacy"],
+        },
+      ],
+      "POST /api/v1/admin/template-packs/liverpool/install": {
+        attributes: [{ key: "confidence", name: "Confidence" }],
+        templates: [{ id: "t-1", name: "AI literacy" }, { id: "t-2", name: "Confidence in practice" }],
+      },
+    });
+    renderAt("/admin/templates");
+    expect(await screen.findByText("Graduate attributes: Confidence, Digital Fluency, Global Citizenship.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Add the University of Liverpool pack" }));
+    expect(await screen.findByText("Added 1 graduate attribute and 2 templates.")).toBeInTheDocument();
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/liverpool/install"))).toBe(true);
+  });
+
+  it("saves the graduate attribute list, keeping keys and leaving new ones to the server", async () => {
+    const calls = admin({
+      "GET /api/v1/admin/graduate-attributes": [
+        { key: "confidence", name: "Confidence", description: null, framework: null, url: null },
+      ],
+      "PUT /api/v1/admin/graduate-attributes": (body: unknown) =>
+        (body as { attributes: { key: string | null; name: string }[] }).attributes.map((a) => ({
+          ...a,
+          key: a.key ?? "teamwork",
+        })),
+    });
+    renderAt("/admin/attributes");
+    expect(await screen.findByDisplayValue("Confidence")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Add an attribute" }));
+    const names = screen.getAllByLabelText("Name");
+    await userEvent.type(names[1], "Teamwork");
+    await userEvent.click(screen.getByRole("button", { name: "Save graduate attributes" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    expect(calls.find((c) => c.method === "PUT")!.body).toEqual({
+      attributes: [
+        { key: "confidence", name: "Confidence", description: null, framework: null, url: null },
+        { key: null, name: "Teamwork", description: null, framework: null, url: null },
+      ],
+    });
+  });
 });

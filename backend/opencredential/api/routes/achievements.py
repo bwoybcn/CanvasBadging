@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 
 from opencredential.api.deps import ActorDep, RequestIdDep, TenantDb
+from opencredential.authoring import attributes, rules_store
 from opencredential.authoring import preview as preview_mod
-from opencredential.authoring import rules_store
 from opencredential.authoring import service as authoring
 from opencredential.authz import policy as authz
 from opencredential.db.models import (
@@ -45,6 +45,7 @@ class VersionOut(BaseModel):
     evidence_description: str | None
     validity_days: int | None
     skills: list[dict[str, Any]]
+    graduate_attributes: list[attributes.GraduateAttribute] = []
     asset_id: uuid.UUID | None
     award_policy: str | None
     credit_claim_approved: bool
@@ -492,6 +493,8 @@ def list_categories(db: TenantDb, actor: ActorDep) -> dict[str, Any]:
         "demonstration_kinds": authoring.DEMONSTRATION_KINDS,
         "achievement_types": list(ACHIEVEMENT_TYPES),
         "review_checklist": list(authoring.REVIEW_CHECKLIST),
+        # The institution's graduate attributes, for tagging a badge (migration 0017).
+        "graduate_attributes": attributes.institution_list(db, actor.institution_id),
     }
 
 

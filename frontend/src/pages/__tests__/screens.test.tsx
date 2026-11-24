@@ -51,6 +51,7 @@ function definition(over: Record<string, unknown> = {}) {
       evidence_description: null,
       validity_days: null,
       skills: [],
+      graduate_attributes: [],
       asset_id: null,
       award_policy: null,
       credit_claim_approved: false,

@@ -117,9 +117,22 @@ export interface Catalogue {
   demonstration_kinds: Record<string, string>;
   achievement_types: string[];
   review_checklist: string[];
+  /** The institution's graduate attributes, to tag a badge with. */
+  graduate_attributes?: GraduateAttribute[];
 }
 
 export type Skill = Api.Skill;
+export type GraduateAttribute = Api.GraduateAttribute;
+export type GraduateAttributeIn = Api.AttributeIn;
+
+/** A template pack an administrator can install (graduate attributes and templates). */
+export interface TemplatePack {
+  key: string;
+  name: string;
+  description: string;
+  attributes: string[];
+  templates: string[];
+}
 
 export interface DraftFields {
   title?: string | null;
@@ -133,6 +146,8 @@ export interface DraftFields {
   evidence_description?: string | null;
   validity_days?: number | null;
   skills?: Skill[] | null;
+  /** Keys from the institution's graduate attribute list. */
+  graduate_attributes?: string[] | null;
   asset_id?: string | null;
   award_policy?: AwardPolicy | null;
 }
@@ -186,6 +201,7 @@ export interface Version {
   evidence_description: string | null;
   validity_days: number | null;
   skills: Skill[];
+  graduate_attributes: GraduateAttribute[];
   asset_id: string | null;
   award_policy: AwardPolicy | null;
   credit_claim_approved: boolean;
@@ -481,6 +497,7 @@ export interface CredentialDetail extends CredentialSummary {
   achievement_type: string | null;
   learning_outcomes: string[];
   skills: { name: string | null; url: string | null; framework?: string | null }[];
+  graduate_attributes?: { name: string | null; description?: string | null; framework?: string | null }[];
   evidence: Evidence[];
   issuer: { name: string; id: string; url: string | null; institution: string };
   verification: Verification;

@@ -25,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from opencredential import audit
+from opencredential.authoring.attributes import GRADUATE_ATTRIBUTE_TYPE
 from opencredential.db.models import (
     AchievementVersion,
     Credential,
@@ -192,7 +193,17 @@ def public_view(
                 "framework": a.get("targetFramework"),
             }
             for a in achievement.get("alignment") or []
-            if isinstance(a, dict)
+            if isinstance(a, dict) and a.get("targetType") != GRADUATE_ATTRIBUTE_TYPE
+        ],
+        # Graduate attributes travel as alignments too, marked with their own target type.
+        "graduate_attributes": [
+            {
+                "name": a.get("targetName"),
+                "description": a.get("targetDescription"),
+                "framework": a.get("targetFramework"),
+            }
+            for a in achievement.get("alignment") or []
+            if isinstance(a, dict) and a.get("targetType") == GRADUATE_ATTRIBUTE_TYPE
         ],
         "issuer": {
             "name": issuer_doc.get("name") or issuer.name,

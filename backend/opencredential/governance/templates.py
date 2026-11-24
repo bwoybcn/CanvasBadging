@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from opencredential import audit
+from opencredential.authoring.attributes import institution_list
 from opencredential.authoring.service import DraftFields
 from opencredential.authz import policy as authz
 from opencredential.db.models import BadgeTemplate, Course, OrgUnit
@@ -170,6 +171,11 @@ def apply(
     if t.status != "active" or not _applies_to(db, t, course):
         raise Forbidden("TEMPLATE_NOT_AVAILABLE", "That template is not available for this course.")
     base = {k: v for k, v in (t.defaults or {}).items() if k in DraftFields.model_fields}
+    if base.get("graduate_attributes"):
+        # Only the attributes still on the institution's list: an administrator may have
+        # removed one since the template was written.
+        known = {a["key"] for a in institution_list(db, actor.institution_id)}
+        base["graduate_attributes"] = [k for k in base["graduate_attributes"] if k in known]
     # Everything the author sent wins, an emptied field included: dropping empty values here
     # brought the template's wording back into a field the author had cleared.
     typed = fields.model_dump(exclude_unset=True)
@@ -280,14 +286,16 @@ STARTER_TEMPLATES: tuple[dict[str, Any], ...] = (
 )
 
 
-def install_starters(
+def install(
     db: Session,
     actor: authz.Actor,
+    specs: list[tuple[str, str | None, TemplateDefaults]],
     *,
     org_unit_id: uuid.UUID | None = None,
     request_id: str | None = None,
 ) -> list[BadgeTemplate]:
-    """Add the ready-made templates that are not there yet (matched by name in that scope)."""
+    """Add the templates in ``specs`` (name, description, defaults) that are not there yet
+    (matched by name in that scope). Returns the ones added."""
     _require_manage(db, actor, org_unit_id)
     existing = set(
         db.scalars(
@@ -298,19 +306,36 @@ def install_starters(
             )
         )
     )
-    added = []
-    for spec in STARTER_TEMPLATES:
-        if spec["name"] in existing:
-            continue
-        added.append(
-            create(
-                db,
-                actor,
-                name=spec["name"],
-                description=spec["description"],
-                org_unit_id=org_unit_id,
-                defaults=TemplateDefaults.model_validate(spec["defaults"]),
-                request_id=request_id,
-            )
+    return [
+        create(
+            db,
+            actor,
+            name=name,
+            description=description,
+            org_unit_id=org_unit_id,
+            defaults=defaults,
+            request_id=request_id,
         )
-    return added
+        for name, description, defaults in specs
+        if name not in existing
+    ]
+
+
+def install_starters(
+    db: Session,
+    actor: authz.Actor,
+    *,
+    org_unit_id: uuid.UUID | None = None,
+    request_id: str | None = None,
+) -> list[BadgeTemplate]:
+    """Add the ready-made templates that are not there yet (matched by name in that scope)."""
+    return install(
+        db,
+        actor,
+        [
+            (spec["name"], spec["description"], TemplateDefaults.model_validate(spec["defaults"]))
+            for spec in STARTER_TEMPLATES
+        ],
+        org_unit_id=org_unit_id,
+        request_id=request_id,
+    )

@@ -4,10 +4,17 @@ import { Button, Heading, NumberInput, SimpleSelect, Text, TextArea, TextInput, 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { apiFetch, apiSend, type BadgeTemplate, type OrgUnit } from "../../api";
+import {
+  apiFetch,
+  apiSend,
+  type BadgeTemplate,
+  type GraduateAttribute,
+  type OrgUnit,
+  type TemplatePack,
+} from "../../api";
 import { useAuth } from "../../auth";
 import { ColourField, LimitedTextArea } from "../../components/Fields";
-import { ErrorAlert, Loading } from "../../components/Page";
+import { ErrorAlert, Loading, roleFlags, useMe } from "../../components/Page";
 import { AdminPage } from "./AdminPage";
 
 const EMPTY = {
@@ -39,6 +46,7 @@ export const FIELD_NAMES: Record<string, string> = {
   evidence_description: "evidence",
   validity_days: "validity period",
   skills: "skills",
+  graduate_attributes: "graduate attributes",
   asset_id: "artwork",
   award_policy: "how it is awarded",
   artwork: "artwork conventions",
@@ -144,6 +152,7 @@ export function Templates() {
         )}
         {starters.isError && <ErrorAlert error={starters.error} />}
       </View>
+      <TemplatePacks onInstalled={refresh} />
       <View as="section" display="block" maxWidth="40rem" margin="medium 0 0">
         <Heading level="h2" margin="0 0 small">
           New template
@@ -189,5 +198,68 @@ export function Templates() {
         </Button>
       </View>
     </AdminPage>
+  );
+}
+
+/** Packs of graduate attributes and templates, such as the University of Liverpool one. */
+function TemplatePacks({ onInstalled }: { onInstalled: () => void }) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  const isInstAdmin = roleFlags(useMe().data).isInstAdmin;
+  const packs = useQuery({
+    queryKey: ["template-packs"],
+    enabled: isInstAdmin,
+    queryFn: () => apiFetch<TemplatePack[]>("/api/v1/admin/template-packs", token),
+  });
+  const install = useMutation({
+    mutationFn: (key: string) =>
+      apiSend<{ attributes: GraduateAttribute[]; templates: BadgeTemplate[] }>(
+        `/api/v1/admin/template-packs/${key}/install`,
+        token,
+        "POST",
+        {},
+      ),
+    onSuccess: () => {
+      onInstalled();
+      qc.invalidateQueries({ queryKey: ["graduate-attributes"] });
+      qc.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+  if (!isInstAdmin || !packs.data?.length) return null;
+  return (
+    <View as="section" display="block" maxWidth="40rem" margin="medium 0 0">
+      <Heading level="h2" margin="0 0 small">
+        Template packs
+      </Heading>
+      <Text as="p">
+        A pack adds graduate attributes and templates written around them. Anything you already have with the same name
+        is left alone, and you can change everything afterwards.
+      </Text>
+      {packs.data.map((p) => (
+        <View key={p.key} as="div" borderWidth="small" borderRadius="medium" padding="small" margin="0 0 small" display="block">
+          <Heading level="h3" margin="0">
+            {p.name}
+          </Heading>
+          <Text as="p">{p.description}</Text>
+          <Text as="p" size="small">
+            Graduate attributes: {p.attributes.join(", ")}.
+          </Text>
+          <Text as="p" size="small">
+            Templates: {p.templates.join(", ")}.
+          </Text>
+          <Button onClick={() => install.mutate(p.key)} interaction={install.isPending ? "disabled" : "enabled"}>
+            Add the {p.name} pack
+          </Button>
+        </View>
+      ))}
+      {install.isSuccess && (
+        <Text as="p" role="status">
+          {install.data.attributes.length + install.data.templates.length
+            ? `Added ${install.data.attributes.length} graduate attribute${install.data.attributes.length === 1 ? "" : "s"} and ${install.data.templates.length} template${install.data.templates.length === 1 ? "" : "s"}.`
+            : "You already have everything in this pack."}
+        </Text>
+      )}
+      {install.isError && <ErrorAlert error={install.error} />}
+    </View>
   );
 }

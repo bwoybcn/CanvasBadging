@@ -55,6 +55,15 @@ export interface AssignmentSubmitted {
   assignment_id: string;
 }
 
+/** One attribute as an administrator edits it; a new one may leave the key out. */
+export interface AttributeIn {
+  key?: string | null;
+  name: string;
+  description?: string | null;
+  framework?: string | null;
+  url?: string | null;
+}
+
 export interface AuthoriseIn {
   authority_basis: string;
 }
@@ -217,6 +226,7 @@ export interface CredentialDetail {
   achievement_type: string | null;
   learning_outcomes: string[];
   skills: Record<string, unknown>[];
+  graduate_attributes: Record<string, unknown>[];
   evidence: Record<string, unknown>[];
   issuer: Record<string, unknown>;
   verification: Record<string, unknown>;
@@ -340,6 +350,8 @@ export interface DraftFields {
   evidence_description?: string | null;
   validity_days?: number | null;
   skills?: Skill[] | null;
+  /** Keys from the institution's graduate attribute list */
+  graduate_attributes?: string[] | null;
   asset_id?: string | null;
   /** automatic | lecturer_confirmed | manual | null (default) */
   award_policy?: string | null;
@@ -377,6 +389,19 @@ export interface GovernanceTemplateIn {
   description?: string | null;
   org_unit_id?: string | null;
   defaults?: TemplateDefaults;
+}
+
+export interface GraduateAttribute {
+  /** Fixed identifier; badges refer to it */
+  key: string;
+  name: string;
+  description: string | null;
+  framework: string | null;
+  url: string | null;
+}
+
+export interface GraduateAttributesIn {
+  attributes: AttributeIn[];
 }
 
 export interface GrantIn {
@@ -579,6 +604,10 @@ export interface OwnerIn {
   user_id: string;
 }
 
+export interface PackInstallIn {
+  org_unit_id?: string | null;
+}
+
 export interface ReasonIn {
   reason: string;
 }
@@ -719,6 +748,8 @@ export interface TemplateDefaults {
   evidence_description?: string | null;
   validity_days?: number | null;
   skills?: Skill[] | null;
+  /** Keys from the institution's graduate attribute list */
+  graduate_attributes?: string[] | null;
   asset_id?: string | null;
   /** automatic | lecturer_confirmed | manual | null (default) */
   award_policy?: string | null;
@@ -776,6 +807,7 @@ export interface VersionOut {
   evidence_description: string | null;
   validity_days: number | null;
   skills: Record<string, unknown>[];
+  graduate_attributes: GraduateAttribute[];
   asset_id: string | null;
   award_policy: string | null;
   credit_claim_approved: boolean;
