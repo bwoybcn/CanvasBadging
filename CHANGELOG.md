@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **An explainer website** in `site/`: one static page (no build step, no third-party requests)
+  for course staff, students, technology-enhanced learning teams and decision makers. It
+  describes the product as it is on `main`, with screenshots from the demonstration stack, and
+  says plainly what is still to do before a pilot. Preview with
+  `python3 -m http.server 8765 --directory site`.
+
 ### Security
 - **`OC_ENV` is now required** by the api, the worker and the signer, and must be exactly
   `development`, `test` or `production` (whole-product review, finding 4). An unset or
