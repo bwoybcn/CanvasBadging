@@ -176,6 +176,9 @@ function ReviewPanel({
       qc.invalidateQueries({ queryKey: ["achievements"] });
     },
   });
+  // An approved badge that is not yet published can still be sent back (the server allows it);
+  // there is nothing left to approve, so only the return half of the panel is shown.
+  const approved = d.state === "approved";
   const all = checklistKeys.every((k) => checks[k]);
   return (
     <View
@@ -191,10 +194,11 @@ function ReviewPanel({
         Review
       </Heading>
       <Text as="p">
-        Confirm each point before approving. To send it back, explain what needs
-        to change.
+        {approved
+          ? "This badge is approved but not published yet. To send it back to the author, explain what needs to change."
+          : "Confirm each point before approving. To send it back, explain what needs to change."}
       </Text>
-      {checklistKeys.map((k) => (
+      {!approved && checklistKeys.map((k) => (
         <Checkbox
           key={k}
           label={CHECKLIST_LABELS[k] ?? k}
@@ -202,7 +206,7 @@ function ReviewPanel({
           onChange={(e) => setChecks((c) => ({ ...c, [k]: e.target.checked }))}
         />
       ))}
-      {creditWarning && (
+      {!approved && creditWarning && (
         <Checkbox
           label="I approve the wording that refers to credit or a qualification"
           checked={credit}
@@ -217,13 +221,15 @@ function ReviewPanel({
       />
       {act.isError && <ErrorAlert error={act.error} />}
       <Flex gap="small" margin="small 0 0">
-        <Button
-          color="primary"
-          interaction={all && !act.isPending ? "enabled" : "disabled"}
-          onClick={() => act.mutate("approve")}
-        >
-          Approve
-        </Button>
+        {!approved && (
+          <Button
+            color="primary"
+            interaction={all && !act.isPending ? "enabled" : "disabled"}
+            onClick={() => act.mutate("approve")}
+          >
+            Approve
+          </Button>
+        )}
         <Button
           color="secondary"
           interaction={
@@ -236,9 +242,9 @@ function ReviewPanel({
           Return to author
         </Button>
       </Flex>
-      {(!all || comment.trim().length < 5) && (
+      {((!approved && !all) || comment.trim().length < 5) && (
         <Text as="p" size="small">
-          {!all ? "Tick every point above to approve. " : ""}
+          {!approved && !all ? "Tick every point above to approve. " : ""}
           {comment.trim().length < 5
             ? "Write a comment to the author to return it."
             : ""}
@@ -691,7 +697,8 @@ export function BadgeDetail() {
             )}
           </>
         )}
-        {def.can_edit && def.state === "approved" && (
+        {/* The server lets the badge's reviewers publish and archive as well as its editors. */}
+        {(def.can_edit || def.can_review) && def.state === "approved" && (
           <ConfirmButton
             label="Publish"
             color="primary"
@@ -723,20 +730,20 @@ export function BadgeDetail() {
             />
           )}
         {def.can_edit && def.state === "published" && (
-          <>
-            <Button onClick={() => action.mutate("new-version")}>
-              Start a new version
-            </Button>
-            <ConfirmButton
-              label="Archive"
-              color="danger"
-              consequence="Archive this badge? No new awards will be made and students stop seeing it as something to earn. Badges already issued stay valid. You can restore it later from this page."
-              confirmLabel="Archive this badge"
-              cancelLabel="Keep it live"
-              busy={action.isPending}
-              onConfirm={() => action.mutate("archive")}
-            />
-          </>
+          <Button onClick={() => action.mutate("new-version")}>
+            Start a new version
+          </Button>
+        )}
+        {(def.can_edit || def.can_review) && def.state === "published" && (
+          <ConfirmButton
+            label="Archive"
+            color="danger"
+            consequence="Archive this badge? No new awards will be made and students stop seeing it as something to earn. Badges already issued stay valid. You can restore it later from this page."
+            confirmLabel="Archive this badge"
+            cancelLabel="Keep it live"
+            busy={action.isPending}
+            onConfirm={() => action.mutate("archive")}
+          />
         )}
         {(def.can_edit || def.can_review) && def.state === "archived" && (
           <Button
@@ -764,7 +771,9 @@ export function BadgeDetail() {
       {def.can_edit && def.state === "draft" && (
         <Readiness issues={def.readiness} />
       )}
-      {def.state === "in_review" && def.can_review && cat.data && (
+      {(def.state === "in_review" || def.state === "approved") &&
+        def.can_review &&
+        cat.data && (
         <ReviewPanel d={def} checklistKeys={cat.data.review_checklist} />
       )}
 

@@ -44,6 +44,28 @@ import { LimitedTextArea, SearchSelect } from "../components/Fields";
 import { ErrorAlert, Loading, Page } from "../components/Page";
 import { TableScroll } from "../components/TableScroll";
 
+type Blocked = "holds" | "revoked" | "suspended" | "expired";
+
+/** Why a student cannot be awarded the badge again, for the picker and the form. */
+const ALREADY_AWARDED: Record<Blocked, { tag: string; text: string }> = {
+  holds: {
+    tag: "already has this badge",
+    text: "This student already has this badge, so it cannot be awarded again.",
+  },
+  revoked: {
+    tag: "badge revoked",
+    text: "This student was awarded this badge and it was later revoked, so it cannot be awarded again here. If it was revoked by mistake, a system administrator can reissue it.",
+  },
+  suspended: {
+    tag: "badge suspended",
+    text: "This student's badge is suspended, not removed, so it cannot be awarded again.",
+  },
+  expired: {
+    tag: "badge expired",
+    text: "This student's badge has passed its expiry date. Awarding it again is not possible yet.",
+  },
+};
+
 export const EVIDENCE_KINDS: Record<string, string> = {
   lecturer_confirmation: "Staff confirmation",
   assessment_result: "Assessment result",
@@ -212,24 +234,26 @@ function ManualAward() {
       setNarrative("");
     },
   });
-  // Who already holds the chosen badge, so the form says so before Award is pressed (round 3, L6).
+  // Who was already awarded the chosen badge, so the form says so before Award is pressed
+  // (round 3, L6). The server refuses a second award either way; a badge that was revoked,
+  // suspended or has expired is not "held", so the form says which (review, 24 Nov 2026).
   const live = learners.data?.badges.find((b) => b.definition_id === badge);
-  const holders = new Set(
-    (learners.data?.learners ?? [])
-      .filter((l) =>
-        l.cells.some(
-          (c) =>
-            c.version_id === live?.version_id &&
-            (!!c.credential_id ||
-              c.decision_status === "ready" ||
-              c.decision_status === "issued"),
-        ),
-      )
-      .map((l) => l.user_id),
-  );
-  const alreadyHas = !!learner && holders.has(learner);
+  const awarded = new Map<string, Blocked>();
+  for (const l of learners.data?.learners ?? []) {
+    const c = l.cells.find((x) => x.version_id === live?.version_id);
+    if (!c) continue;
+    if (c.credential_state && c.credential_state !== "active")
+      awarded.set(l.user_id, c.credential_state);
+    else if (
+      c.credential_id ||
+      c.decision_status === "ready" ||
+      c.decision_status === "issued"
+    )
+      awarded.set(l.user_id, "holds");
+  }
+  const blocked = learner ? awarded.get(learner) : undefined;
   const ok =
-    badge && learner && !alreadyHas && justification.trim().length >= 20;
+    badge && learner && !blocked && justification.trim().length >= 20;
   return (
     <View as="section" aria-labelledby="manual-h" display="block">
       <Heading level="h2" id="manual-h">
@@ -268,14 +292,14 @@ function ManualAward() {
         }
         options={(learners.data?.learners ?? []).map((l) => ({
           id: l.user_id,
-          label: `${l.name ?? l.user_id}${holders.has(l.user_id) ? " (already has this badge)" : ""}`,
+          label: `${l.name ?? l.user_id}${awarded.has(l.user_id) ? ` (${ALREADY_AWARDED[awarded.get(l.user_id)!].tag})` : ""}`,
         }))}
         value={learner}
         onChange={setLearner}
       />
-      {alreadyHas && (
+      {blocked && (
         <Alert variant="info" margin="small 0">
-          This student already has this badge, so it cannot be awarded again.
+          {ALREADY_AWARDED[blocked].text}
         </Alert>
       )}
       <LimitedTextArea

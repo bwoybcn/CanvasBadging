@@ -119,6 +119,16 @@ All notable changes to this project are documented here. The format follows
   and a failed run says why at the end of its log.
 
 ### Fixed
+- Three faults from the architecture review of 24 November, where a screen disagreed with the
+  server:
+  - **An expired badge still showed as "Earned"** on the student's progress page, while the
+    staff Course progress screen said "Expired". The student page now says "Expired" too.
+  - **Reviewers could not see Publish or Archive** on a badge's page, though the server lets a
+    badge's reviewers do both. A reviewer can also now send an approved, unpublished badge back
+    to its author, which the server always allowed.
+  - **The manual award form called a student whose badge was revoked "already has this
+    badge".** It now says the badge was revoked, suspended or has expired, and why it cannot be
+    awarded again from the form.
 - Finding 19 of the whole-product review of 16 November (eleven small faults, and six suspected
   ones that reading the code confirmed):
   - **A revoked badge still showed as "Earned"** on the student's progress page, while the

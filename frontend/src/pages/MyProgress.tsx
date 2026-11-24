@@ -12,6 +12,7 @@ export const BADGE_STATUS: Record<string, { label: string; color: "success" | "i
   earned: { label: "Earned", color: "success" },
   revoked: { label: "Withdrawn by the issuer", color: "danger" },
   suspended: { label: "Suspended by the issuer", color: "warning" },
+  expired: { label: "Expired", color: "warning" },
   awarded: { label: "Awarded: being issued", color: "success" },
   awaiting_confirmation: { label: "Awaiting confirmation by course staff", color: "info" },
   requirements_met: { label: "Requirements met", color: "info" },
@@ -24,11 +25,14 @@ export const BADGE_STATUS: Record<string, { label: string; color: "success" | "i
 const HELD = new Set(["earned", "awarded"]);
 
 /** The badge was issued and the issuer has since taken it back, for good or for now. */
-const WITHDRAWN: Record<string, string> = {
+/** Statuses where the student was issued the badge but it no longer counts, and why. */
+const NOT_CURRENT: Record<string, string> = {
   revoked:
     "The issuer has withdrawn this badge, so it no longer counts as valid and anyone checking it is told so. The badge's page gives the reason.",
   suspended:
     "The issuer has suspended this badge for now, so anyone checking it is told it is not currently valid. The badge's page gives the reason.",
+  expired:
+    "This badge has passed its expiry date, so anyone checking it is told it is no longer current. You keep it as a record of what you achieved.",
 };
 
 /** Joins a requirement and its state without doubling punctuation ("quiz.: Awaiting" reads badly). */
@@ -124,12 +128,16 @@ function BadgeCard({ b }: { b: LearnerBadge }) {
           {b.credential_id && (
             <Text as="p">
               <AppLink to={`/me/credentials/${b.credential_id}`}>
-                {WITHDRAWN[b.status] ? "See this badge and why it was withdrawn" : "View, download or share this badge"}
+                {b.status === "expired"
+                  ? "See this badge"
+                  : NOT_CURRENT[b.status]
+                    ? "See this badge and why it was withdrawn"
+                    : "View, download or share this badge"}
               </AppLink>
             </Text>
           )}
-          {WITHDRAWN[b.status] ? (
-            <Text as="p">{WITHDRAWN[b.status]}</Text>
+          {NOT_CURRENT[b.status] ? (
+            <Text as="p">{NOT_CURRENT[b.status]}</Text>
           ) : held ? (
             <Text as="p">You have this badge. Nothing more is needed from you.</Text>
           ) : (
